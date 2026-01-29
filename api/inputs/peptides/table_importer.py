@@ -2,7 +2,7 @@
 
 import csv
 from dataclasses import dataclass, asdict
-from abc import ABC
+from abc import ABC, abstractmethod
 from typing import AsyncIterator
 import pandas as pd
 import aiofiles
