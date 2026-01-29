@@ -1,0 +1,133 @@
+erDiagram
+
+
+
+SAMPLE {
+    int id PK
+    string name UK
+    int subset_id FK
+    json additions
+}
+
+SPECTRE_FILE {
+    int id PK
+    int sample_id FK
+    string format
+    string path
+
+}
+
+SUBSET {
+    int id PK
+    string name UK
+    string details
+    string display_color
+}
+
+
+TOOL {
+    int id PK
+    string name UK
+    string type
+    json settings
+    string display_color
+}
+
+SPECTRE {
+    int id PK
+    int spectre_file_id FK
+    int seq_no
+    string title
+    int scans
+    int charge
+    float rt
+    float pepmass
+    blob intensity
+    blob mz_array
+    blob intensity_array
+    blob charge_array
+    int charge_array_common_value
+    json all_params
+}
+
+IDENTIFICATION_FILE {
+    int id PK
+    int spectre_file_id FK
+    int tool_id FK
+    string file_path
+}
+
+IDENTIFICATION {
+    int id PK
+    int spectre_id FK
+    int tool_id FK
+    int ident_file_id FK
+    bool is_preffered
+    string sequence
+    string canonical_sequence
+    float ppm
+    float theor_mass
+    float score
+    json positional_scores
+}
+
+PROTEIN {
+    string id PK
+    bool is_uniprot
+    string fasta_name
+    string sequence
+    string gene
+}
+
+PEPTIDE_MATCH {
+    int id PK
+    string protein_id FK
+    int identification_id FK
+    string matched_sequence
+    float identity
+    float matched_ppm
+    float matched_theor_mass
+}
+
+PROTEIN_IDENTIFICATION_RESULT {
+    int id PK
+    int protein_id FK
+    int sample_id FK
+    int peptide_count
+    int uq_evidence_count
+    float coverage
+}
+
+PROTEIN_QUANTIFICATION_RESULT {
+    int id PK
+    int protein_identification_id FK
+    string algorythm
+    float rel_value
+    float abs_value
+}
+
+GENERATED_REPORT {
+    int id PK
+    datetime datetime
+    json settings
+    blob plot
+    blob table
+}
+
+PROJECT_SETTINGS {
+    str key PK
+    str value
+}
+
+SUBSET ||--o{ SAMPLE : contains
+SAMPLE ||--o{ SPECTRE_FILE : contains
+SAMPLE ||--o{ IDENTIFICATION_FILE : describes
+TOOL ||--o{ IDENTIFICATION_FILE: produces
+IDENTIFICATION_FILE ||--o{ IDENTIFICATION: contains
+SPECTRE_FILE ||--o{ SPECTRE : includes
+SPECTRE ||--o{ IDENTIFICATION : describes
+PEPTIDE_MATCH ||--o{ IDENTIFICATION : describes
+PROTEIN ||--o{ PEPTIDE_MATCH : match
+PROTEIN ||--o{ PROTEIN_IDENTIFICATION_RESULT : describes
+SAMPLE ||--o{ PROTEIN_IDENTIFICATION_RESULT : describes
+PROTEIN_IDENTIFICATION_RESULT ||--o{ PROTEIN_QUANTIFICATION_RESULT : describes
