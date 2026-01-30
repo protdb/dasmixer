@@ -13,7 +13,7 @@ class AnalysisTab(ft.Container):
         
         # Build content
         self.content = self._build_content()
-        self.alignment = ft.alignment.center
+        self.alignment = ft.Alignment.CENTER
         self.expand = True
     
     def _build_content(self):
@@ -27,7 +27,7 @@ class AnalysisTab(ft.Container):
             ft.Text(
                 "Coming soon in Stage 5",
                 size=16,
-                color=
+                color=ft.Colors.GREY_500
             ),
             ft.Container(height=20),
             ft.Text(

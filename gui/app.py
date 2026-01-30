@@ -101,14 +101,15 @@ class DASMixerApp:
     def show_project_view(self):
         """Show project workspace."""
         from gui.views.project_view import ProjectView
-        
         self.page.clean()
         view = ProjectView(
             project=self.current_project,
             on_close=lambda _: self.page.run_task(self.close_project)
         )
+        print('project view initialized')
         self.page.add(view)
         self.page.update()
+        print('page updated')
         
         # Update menu
         self.setup_menu()
@@ -146,7 +147,7 @@ class DASMixerApp:
             
             # Update config
             config.add_recent_project(str(project_path))
-            
+            print('adding project view...')
             # Show project view
             self.show_project_view()
             

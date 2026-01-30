@@ -40,33 +40,33 @@ class ProjectView(ft.Container):
         from gui.views.tabs.proteins_tab import ProteinsTab
         from gui.views.tabs.analysis_tab import AnalysisTab
         
-        # Create tabs
+        # Create tabs using new Flet API
         tabs = ft.Tabs(
             selected_index=0,
-            animation_duration=300,
-            tabs=[
-                ft.Tab(
-                    text="Samples",
-                    icon=ft.Icons.SCIENCE,
-                    content=SamplesTab(self.project)
-                ),
-                ft.Tab(
-                    text="Peptides",
-                    icon=ft.Icons.BIOTECH,
-                    content=PeptidesTab(self.project)
-                ),
-                ft.Tab(
-                    text="Proteins",
-                    icon=ft.Icons.BUBBLE_CHART,
-                    content=ProteinsTab(self.project)
-                ),
-                ft.Tab(
-                    text="Analysis",
-                    icon=ft.Icons.ANALYTICS,
-                    content=AnalysisTab(self.project)
-                ),
-            ],
-            expand=True
+            length=4,
+            expand=True,
+            content=ft.Column(
+                expand=True,
+                controls=[
+                    ft.TabBar(
+                        tabs=[
+                            ft.Tab(label="Samples", icon=ft.Icons.SCIENCE),
+                            ft.Tab(label="Peptides", icon=ft.Icons.BIOTECH),
+                            # ft.Tab(label="Proteins", icon=ft.Icons.BUBBLE_CHART),
+                            # ft.Tab(label="Analysis", icon=ft.Icons.ANALYTICS),
+                        ]
+                    ),
+                    ft.TabBarView(
+                        expand=True,
+                        controls=[
+                            SamplesTab(self.project),
+                            PeptidesTab(self.project),
+                            # ProteinsTab(self.project),
+                            # AnalysisTab(self.project),
+                        ],
+                    ),
+                ],
+            ),
         )
         
         return tabs

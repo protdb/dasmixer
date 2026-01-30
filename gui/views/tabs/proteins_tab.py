@@ -27,7 +27,7 @@ class ProteinsTab(ft.Container):
             ft.Text(
                 "Coming soon in Stage 4",
                 size=16,
-                color=
+                color=ft.Colors.GREY_500
             ),
             ft.Container(height=20),
             ft.Text(

@@ -13,7 +13,9 @@ class PeptidesTab(ft.Container):
     """
     
     def __init__(self, project: Project):
+        print("peptides tab...")
         super().__init__()
+        print("peptides tab...")
         self.project = project
         
         # Build content
@@ -31,9 +33,9 @@ class PeptidesTab(ft.Container):
                     ft.Dropdown(
                         label="Search by",
                         options=[
-                            ft.dropdown.Option("seq_no", "Sequence Number"),
-                            ft.dropdown.Option("scans", "Scans"),
-                            ft.dropdown.Option("canonical_sequence", "Sequence")
+                            ft.DropdownOption("seq_no", "Sequence Number"),
+                            ft.DropdownOption("scans", "Scans"),
+                            ft.DropdownOption("canonical_sequence", "Sequence")
                         ],
                         value="seq_no",
                         width=200
@@ -44,7 +46,7 @@ class PeptidesTab(ft.Container):
                     ),
                     ft.Dropdown(
                         label="Sample",
-                        options=[ft.dropdown.Option("all", "All Samples")],
+                        options=[ft.DropdownOption("all", "All Samples")],
                         value="all",
                         width=200
                     ),
@@ -67,7 +69,7 @@ class PeptidesTab(ft.Container):
                 ft.Text(
                     "No search performed yet",
                     italic=True,
-                    color=
+                    color=ft.Colors.GREY_500
                 )
             ], spacing=10),
             padding=20,
@@ -83,7 +85,7 @@ class PeptidesTab(ft.Container):
                 ft.Text(
                     "Select an identification to view ion match",
                     italic=True,
-                    color=
+                    color=ft.Colors.GREY_500
                 )
             ], spacing=10),
             padding=20,
