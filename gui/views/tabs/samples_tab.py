@@ -25,6 +25,9 @@ class SamplesTab(ft.Container):
         self.expand = True
         self.padding = 0
         
+        # Track if we're currently updating to prevent loops
+        self._updating = False
+        
         # Build content immediately
         self.content = self._build_content()
     
@@ -41,11 +44,6 @@ class SamplesTab(ft.Container):
                         content=ft.Text("Add Group"),
                         icon=ft.Icons.ADD,
                         on_click=lambda e: self.page.run_task(self.show_add_group_dialog, e)
-                    ),
-                    ft.OutlinedButton(
-                        content=ft.Text("Delete Selected"),
-                        icon=ft.Icons.DELETE,
-                        on_click=self.delete_selected_group
                     )
                 ], spacing=10)
             ], spacing=10),
@@ -154,6 +152,12 @@ class SamplesTab(ft.Container):
                     ),
                     title=ft.Text(group.name, weight=ft.FontWeight.BOLD),
                     subtitle=ft.Text(f"{len(samples)} samples" + (f" • {group.details}" if group.details else "")),
+                    trailing=ft.IconButton(
+                        icon=ft.Icons.DELETE_OUTLINE,
+                        icon_color=ft.Colors.RED_400,
+                        tooltip="Delete group",
+                        on_click=lambda e, g=group: self.page.run_task(self.delete_group, e, g)
+                    ),
                     data=group.id
                 )
             )
@@ -185,11 +189,19 @@ class SamplesTab(ft.Container):
                     ),
                     title=ft.Text(tool.name, weight=ft.FontWeight.BOLD),
                     subtitle=ft.Text(f"{len(ident_files)} identification file(s)" + (f" • Type: {tool.type}" if tool.type else "")),
-                    trailing=ft.ElevatedButton(
-                        content=ft.Text("Import Identifications"),
-                        icon=ft.Icons.UPLOAD_FILE,
-                        on_click=lambda e, t=tool: self.page.run_task(self.show_import_mode_dialog, e, "identifications", t.id)
-                    ),
+                    trailing=ft.Row([
+                        ft.ElevatedButton(
+                            content=ft.Text("Import Identifications"),
+                            icon=ft.Icons.UPLOAD_FILE,
+                            on_click=lambda e, t=tool: self.page.run_task(self.show_import_mode_dialog, e, "identifications", t.id)
+                        ),
+                        ft.IconButton(
+                            icon=ft.Icons.DELETE_OUTLINE,
+                            icon_color=ft.Colors.RED_400,
+                            tooltip="Delete tool",
+                            on_click=lambda e, t=tool: self.page.run_task(self.delete_tool, e, t)
+                        )
+                    ], tight=True, spacing=5),
                     data=tool.id
                 )
             )
@@ -204,59 +216,282 @@ class SamplesTab(ft.Container):
     
     async def refresh_samples(self):
         """Refresh samples table."""
+        # Prevent updates during refresh to avoid loops
+        if self._updating:
+            print("Already updating, skipping refresh_samples...")
+            return
+        
         print("Refreshing samples...")
-        samples = await self.project.get_samples()
+        self._updating = True
         
-        if not samples:
-            self.samples_container.content = ft.Column([
-                ft.Text("Samples", size=18, weight=ft.FontWeight.BOLD),
-                ft.Container(
-                    content=ft.Text("No samples yet. Import spectra to add samples."),
-                    padding=20
-                )
-            ], spacing=10)
-        else:
-            # Build samples list
-            samples_list = ft.Column(spacing=5)
+        try:
+            samples = await self.project.get_samples()
+            groups = await self.project.get_subsets()
             
-            for sample in samples:
-                # Get tools for this sample
-                spectra_files = await self.project.get_spectra_files(sample_id=sample.id)
-                tools_info = []
-                
-                for _, sf in spectra_files.iterrows():
-                    # Check for identifications
-                    ident_files = await self.project.get_identification_files(spectra_file_id=sf['id'])
-                    if len(ident_files) > 0:
-                        for _, ident_file in ident_files.iterrows():
-                            tools_info.append(f"✓ {ident_file['tool_name']}")
-                
-                tools_display = ", ".join(tools_info) if tools_info else "No identifications"
-                
-                samples_list.controls.append(
-                    ft.ListTile(
-                        leading=ft.Icon(ft.Icons.SCIENCE, size=16),
-                        title=ft.Text(sample.name, weight=ft.FontWeight.BOLD, size=14),
-                        subtitle=ft.Text(
-                            f"Group: {sample.subset_name or 'None'} • Files: {sample.spectra_files_count} • {tools_display}",
-                            size=11
-                        ),
-                        dense=True
+            if not samples:
+                self.samples_container.content = ft.Column([
+                    ft.Text("Samples", size=18, weight=ft.FontWeight.BOLD),
+                    ft.Container(
+                        content=ft.Text("No samples yet. Import spectra to add samples."),
+                        padding=20
                     )
-                )
+                ], spacing=10)
+            else:
+                # Build samples list
+                samples_list = ft.Column(spacing=5)
+                
+                for sample in samples:
+                    # Get tools for this sample
+                    spectra_files = await self.project.get_spectra_files(sample_id=sample.id)
+                    tools_info = []
+                    
+                    for _, sf in spectra_files.iterrows():
+                        # Check for identifications
+                        ident_files = await self.project.get_identification_files(spectra_file_id=sf['id'])
+                        if len(ident_files) > 0:
+                            for _, ident_file in ident_files.iterrows():
+                                tools_info.append(f"✓ {ident_file['tool_name']}")
+                    
+                    tools_display = ", ".join(tools_info) if tools_info else "No identifications"
+                    
+                    # Create group selector dropdown
+                    group_options = [ft.dropdown.Option(key="None", text="None")]
+                    group_options.extend([
+                        ft.dropdown.Option(key=str(g.id), text=g.name)
+                        for g in groups
+                    ])
+                    
+                    current_group_value = str(sample.subset_id) if sample.subset_id else "None"
+                    
+                    samples_list.controls.append(
+                        ft.ListTile(
+                            leading=ft.Icon(ft.Icons.SCIENCE, size=16),
+                            title=ft.Text(sample.name, weight=ft.FontWeight.BOLD, size=14),
+                            subtitle=ft.Text(
+                                f"Files: {sample.spectra_files_count} • {tools_display}",
+                                size=11
+                            ),
+                            trailing=ft.Row([
+                                ft.Text("Group:", size=12),
+                                ft.Dropdown(
+                                    options=group_options,
+                                    value=current_group_value,
+                                    width=150,
+                                    height=40,
+                                    text_size=12,
+                                    on_text_change=lambda e, s=sample, cur_val=current_group_value: self.page.run_task(self.change_sample_group, e, s, cur_val)
+                                )
+                            ], tight=True, spacing=5),
+                            dense=True
+                        )
+                    )
+                
+                self.samples_container.content = ft.Column([
+                    ft.Text("Samples", size=18, weight=ft.FontWeight.BOLD),
+                    ft.Container(
+                        content=samples_list,
+                        padding=10,
+                        border=ft.border.all(1, ft.Colors.GREY_300),
+                        border_radius=5
+                    )
+                ], spacing=10)
             
-            self.samples_container.content = ft.Column([
-                ft.Text("Samples", size=18, weight=ft.FontWeight.BOLD),
-                ft.Container(
-                    content=samples_list,
-                    padding=10,
-                    border=ft.border.all(1, ft.Colors.GREY_300),
-                    border_radius=5
+            print(f"Samples loaded: {len(samples)}")
+            self.samples_container.update()
+        finally:
+            self._updating = False
+    
+    async def delete_group(self, e, group):
+        """Delete a comparison group with confirmation."""
+        async def confirm_delete(e):
+            try:
+                await self.project.delete_subset(group.id)
+                
+                # Close dialog
+                confirm_dialog.open = False
+                self.page.update()
+                
+                # Refresh UI
+                await self.refresh_groups()
+                await self.refresh_samples()  # Update samples display
+                
+                # Show success
+                self.page.snack_bar = ft.SnackBar(
+                    content=ft.Text(f"Deleted group: {group.name}"),
+                    bgcolor=ft.Colors.GREEN_400
                 )
-            ], spacing=10)
+                self.page.snack_bar.open = True
+                self.page.update()
+                
+            except ValueError as ex:
+                # Handle case where group has samples
+                confirm_dialog.open = False
+                self.page.update()
+                
+                self.page.snack_bar = ft.SnackBar(
+                    content=ft.Text(f"Cannot delete: {str(ex)}"),
+                    bgcolor=ft.Colors.ORANGE_400
+                )
+                self.page.snack_bar.open = True
+                self.page.update()
+            except Exception as ex:
+                confirm_dialog.open = False
+                self.page.update()
+                
+                self.page.snack_bar = ft.SnackBar(
+                    content=ft.Text(f"Error: {str(ex)}"),
+                    bgcolor=ft.Colors.RED_400
+                )
+                self.page.snack_bar.open = True
+                self.page.update()
         
-        print(f"Samples loaded: {len(samples)}")
-        self.samples_container.update()
+        confirm_dialog = ft.AlertDialog(
+            title=ft.Text("Delete Group?"),
+            content=ft.Text(
+                f"Are you sure you want to delete group '{group.name}'?\n\n"
+                "This action cannot be undone. The group can only be deleted "
+                "if no samples are assigned to it."
+            ),
+            actions=[
+                ft.TextButton(
+                    content="Cancel",
+                    on_click=lambda e: self._close_dialog(confirm_dialog)
+                ),
+                ft.ElevatedButton(
+                    content=ft.Text("Delete"),
+                    bgcolor=ft.Colors.RED_400,
+                    color=ft.Colors.WHITE,
+                    on_click=lambda e: self.page.run_task(confirm_delete, e)
+                )
+            ]
+        )
+        
+        self.page.overlay.append(confirm_dialog)
+        confirm_dialog.open = True
+        self.page.update()
+    
+    async def delete_tool(self, e, tool):
+        """Delete an identification tool with confirmation."""
+        async def confirm_delete(e):
+            try:
+                await self.project.delete_tool(tool.id)
+                
+                # Close dialog
+                confirm_dialog.open = False
+                self.page.update()
+                
+                # Refresh UI
+                await self.refresh_tools()
+                
+                # Show success
+                self.page.snack_bar = ft.SnackBar(
+                    content=ft.Text(f"Deleted tool: {tool.name}"),
+                    bgcolor=ft.Colors.GREEN_400
+                )
+                self.page.snack_bar.open = True
+                self.page.update()
+                
+            except ValueError as ex:
+                # Handle case where tool has identifications
+                confirm_dialog.open = False
+                self.page.update()
+                
+                self.page.snack_bar = ft.SnackBar(
+                    content=ft.Text(f"Cannot delete: {str(ex)}"),
+                    bgcolor=ft.Colors.ORANGE_400
+                )
+                self.page.snack_bar.open = True
+                self.page.update()
+            except Exception as ex:
+                confirm_dialog.open = False
+                self.page.update()
+                
+                self.page.snack_bar = ft.SnackBar(
+                    content=ft.Text(f"Error: {str(ex)}"),
+                    bgcolor=ft.Colors.RED_400
+                )
+                self.page.snack_bar.open = True
+                self.page.update()
+        
+        confirm_dialog = ft.AlertDialog(
+            title=ft.Text("Delete Tool?"),
+            content=ft.Text(
+                f"Are you sure you want to delete tool '{tool.name}'?\n\n"
+                "This action cannot be undone. The tool can only be deleted "
+                "if no identifications are associated with it."
+            ),
+            actions=[
+                ft.TextButton(
+                    content="Cancel",
+                    on_click=lambda e: self._close_dialog(confirm_dialog)
+                ),
+                ft.ElevatedButton(
+                    content=ft.Text("Delete"),
+                    bgcolor=ft.Colors.RED_400,
+                    color=ft.Colors.WHITE,
+                    on_click=lambda e: self.page.run_task(confirm_delete, e)
+                )
+            ]
+        )
+        
+        self.page.overlay.append(confirm_dialog)
+        confirm_dialog.open = True
+        self.page.update()
+    
+    async def change_sample_group(self, e, sample, old_value):
+        """Change the group assignment for a sample."""
+        try:
+            new_group_value = e.control.value
+            
+            # Check if value actually changed
+            if new_group_value == old_value:
+                print(f"Group value unchanged ({old_value}), skipping update")
+                return
+            
+            print(f"Changing group for {sample.name}: {old_value} -> {new_group_value}")
+            
+            # Convert to int or None
+            if new_group_value == "None":
+                new_subset_id = None
+            else:
+                new_subset_id = int(new_group_value)
+            
+            # Check if actually different from current value
+            current_subset_id = sample.subset_id
+            if new_subset_id == current_subset_id:
+                print(f"Subset ID unchanged, skipping update")
+                return
+            
+            # Update sample object
+            sample.subset_id = new_subset_id
+            
+            # Update in database
+            await self.project.update_sample(sample)
+            
+            # Only refresh groups to update sample counts (don't refresh samples to avoid loop)
+            await self.refresh_groups()
+            
+            # Show success
+            group_name = "None" if sample.subset_id is None else \
+                [g.name for g in await self.project.get_subsets() if g.id == sample.subset_id][0]
+            
+            self.page.snack_bar = ft.SnackBar(
+                content=ft.Text(f"Updated sample '{sample.name}' group to '{group_name}'"),
+                bgcolor=ft.Colors.GREEN_400
+            )
+            self.page.snack_bar.open = True
+            self.page.update()
+            
+        except Exception as ex:
+            import traceback
+            traceback.print_exc()
+            
+            self.page.snack_bar = ft.SnackBar(
+                content=ft.Text(f"Error updating sample group: {str(ex)}"),
+                bgcolor=ft.Colors.RED_400
+            )
+            self.page.snack_bar.open = True
+            self.page.update()
     
     async def show_add_group_dialog(self, e):
         """Show dialog for adding new group."""
@@ -335,7 +570,7 @@ class SamplesTab(ft.Container):
         # Get available identification parsers
         parsers = registry.get_identification_parsers()
         parser_options = [
-            ft.DropdownOption(key=name, text=name)
+            ft.dropdown.Option(key=name, text=name)
             for name in parsers.keys()
         ]
         
@@ -441,15 +676,6 @@ class SamplesTab(ft.Container):
         dialog.open = False
         self.page.update()
     
-    def delete_selected_group(self, e):
-        """Delete selected group (placeholder)."""
-        self.page.snack_bar = ft.SnackBar(
-            content=ft.Text("Select a group from the list first (feature coming soon)"),
-            bgcolor=ft.Colors.BLUE_400
-        )
-        self.page.snack_bar.open = True
-        self.page.update()
-    
     async def show_import_mode_dialog(self, e, import_type: str, tool_id: int | None = None):
         """
         Show dialog to select import mode: single files or pattern matching.
@@ -524,7 +750,7 @@ class SamplesTab(ft.Container):
         # Get available groups (only needed for spectra)
         if import_type == "spectra":
             groups = await self.project.get_subsets()
-            group_options = [ft.DropdownOption(key=str(g.id), text=g.name) for g in groups]
+            group_options = [ft.dropdown.Option(key=str(g.id), text=g.name) for g in groups]
             
             if not group_options:
                 self.page.snack_bar = ft.SnackBar(
@@ -554,7 +780,7 @@ class SamplesTab(ft.Container):
             default_id_pattern = "{id}*.mgf"
             
             parser_options = [
-                ft.DropdownOption(key=name, text=f"{name} - {parser_class.__doc__.split('.')[0].strip() if parser_class.__doc__ else name}")
+                ft.dropdown.Option(key=name, text=f"{name} - {parser_class.__doc__.split('.')[0].strip() if parser_class.__doc__ else name}")
                 for name, parser_class in parsers.items()
             ]
         else:
@@ -627,7 +853,11 @@ class SamplesTab(ft.Container):
         async def browse_folder(e):
             """Browse for folder using FilePicker."""
             try:
-                folder_path = await ft.FilePicker().get_directory_path(
+                file_picker = ft.FilePicker()
+                self.page.overlay.append(file_picker)
+                self.page.update()
+                
+                folder_path = await file_picker.get_directory_path(
                     dialog_title=f"Select Folder with {import_type.title()} Files"
                 )
                 if folder_path:
@@ -808,22 +1038,29 @@ class SamplesTab(ft.Container):
     async def show_import_single_files(self, import_type: str, tool_id: int | None = None):
         """Show dialog for importing individual files."""
         try:
-            # Use new async FilePicker API to select files
-            files = await ft.FilePicker().pick_files(
+            # Create FilePicker
+            file_picker = ft.FilePicker()
+            self.page.overlay.append(file_picker)
+            self.page.update()
+            
+            # Use FilePicker to select files
+            result = await file_picker.pick_files(
                 dialog_title=f"Select {import_type.title()} Files",
                 allow_multiple=True
             )
             
-            if not files or len(files) == 0:
+            if not result or not result.files:
                 return  # User cancelled
             
             # Convert to format expected by import function
-            file_list = [(Path(f.path), Path(f.name).stem) for f in files]
+            file_list = [(Path(f.path), Path(f.name).stem) for f in result.files]
             
             # Show configuration dialog
             await self.show_single_files_config(file_list, import_type, tool_id)
             
         except Exception as ex:
+            import traceback
+            traceback.print_exc()
             self.page.snack_bar = ft.SnackBar(
                 content=ft.Text(f"Error opening file picker: {ex}"),
                 bgcolor=ft.Colors.RED_400
@@ -840,7 +1077,7 @@ class SamplesTab(ft.Container):
             
             # Get groups
             groups = await self.project.get_subsets()
-            group_options = [ft.DropdownOption(key=str(g.id), text=g.name) for g in groups]
+            group_options = [ft.dropdown.Option(key=str(g.id), text=g.name) for g in groups]
             
             if not group_options:
                 self.page.snack_bar = ft.SnackBar(
@@ -852,7 +1089,7 @@ class SamplesTab(ft.Container):
                 return
             
             parser_options = [
-                ft.DropdownOption(key=name, text=name)
+                ft.dropdown.Option(key=name, text=name)
                 for name in parsers.keys()
             ]
             
@@ -901,7 +1138,7 @@ class SamplesTab(ft.Container):
             # Group dropdown only for spectra
             if import_type == "spectra":
                 groups = await self.project.get_subsets()
-                group_options = [ft.DropdownOption(key=str(g.id), text=g.name) for g in groups]
+                group_options = [ft.dropdown.Option(key=str(g.id), text=g.name) for g in groups]
                 group_dropdown = ft.Dropdown(
                     label="Comparison Group",
                     options=group_options,
@@ -1266,7 +1503,10 @@ class SamplesTab(ft.Container):
                 # Import identifications in batches
                 batch_count = 0
                 file_ident_count = 0
-                async for batch in parser.parse_batch(batch_size=1000):
+                async for batch_tuple in parser.parse_batch(batch_size=1000):
+                    # Unpack tuple (peptide_df, protein_df)
+                    batch = batch_tuple[0]  # Get peptide DataFrame
+                    
                     # Add spectre_id, tool_id, ident_file_id
                     batch['spectre_id'] = batch[parser.spectra_id_field].map(spectra_mapping)
                     batch['tool_id'] = tool.id

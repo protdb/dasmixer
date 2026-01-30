@@ -44,7 +44,7 @@ class ProjectView(ft.Container):
         # IMPORTANT: length must match the number of tabs in TabBar AND controls in TabBarView
         print("building tabs...")
         tabs = ft.Tabs(
-            selected_index=1,
+            selected_index=0,
             length=2,  # Currently only 2 tabs are active
             expand=True,
             content=ft.Column(

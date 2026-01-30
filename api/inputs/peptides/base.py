@@ -16,7 +16,13 @@ class IdentificationParser(BaseImporter):
     via Project.get_spectra_mapping().
     
     Supports various tabular formats (CSV, XLSX, tool-specific outputs).
+    
+    Attributes:
+        spectra_id_field: Field name to use for spectrum mapping ('scans' or 'seq_no')
     """
+    
+    # Default field for spectrum ID mapping - subclasses can override
+    spectra_id_field: str = 'seq_no'
     
     def __init__(self, file_path: str):
         """

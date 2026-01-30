@@ -50,6 +50,7 @@ class MaxQuantEvidenceParser(SimpleTableImporter):
     
     separator = '\t'
     renames = renames
+    spectra_id_field = 'scans'  # MaxQuant uses scan numbers
 
     @staticmethod
     def _fix_sequence(mod_seq: str) -> str:
