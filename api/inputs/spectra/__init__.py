@@ -2,9 +2,8 @@
 
 from .base import SpectralDataParser
 from .mgf import MGFParser
-from ..registry import registry
 
-# Register parsers
-registry.add_spectra_parser("MGF", MGFParser)
+# Note: Parser registration is now handled in api/inputs/__init__.py
+# to avoid circular imports
 
 __all__ = ['SpectralDataParser', 'MGFParser']

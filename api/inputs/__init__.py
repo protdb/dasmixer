@@ -40,17 +40,17 @@ def register_parsers():
     #     pass
     
     # Identification parsers
-    # try:
-    #     from .peptides.powernovo2 import PowerNovo2Parser
-    #     registry.add_identification_parser("PowerNovo2", PowerNovo2Parser)
-    # except ImportError:
-    #     pass
+    try:
+        from .peptides.PowerNovo2 import PowerNovo2Importer
+        registry.add_identification_parser("PowerNovo2", PowerNovo2Importer)
+    except ImportError:
+        pass
     
-    # try:
-    #     from .peptides.maxquant import MaxQuantParser
-    #     registry.add_identification_parser("MaxQuant", MaxQuantParser)
-    # except ImportError:
-    #     pass
+    try:
+        from .peptides.MQ_Evidences import MaxQuantEvidenceParser
+        registry.add_identification_parser("MaxQuant", MaxQuantEvidenceParser)
+    except ImportError:
+        pass
 
 
 # Auto-register on import

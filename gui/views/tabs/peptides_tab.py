@@ -4,7 +4,7 @@ import flet as ft
 from api.project.project import Project
 
 
-class PeptidesTab(ft.UserControl):
+class PeptidesTab(ft.Container):
     """
     Peptides tab for:
     - Searching identifications
@@ -15,8 +15,13 @@ class PeptidesTab(ft.UserControl):
     def __init__(self, project: Project):
         super().__init__()
         self.project = project
+        
+        # Build content
+        self.content = self._build_content()
+        self.padding = 20
+        self.expand = True
     
-    def build(self):
+    def _build_content(self):
         """Build the tab content."""
         # Search section
         search_section = ft.Container(
@@ -44,14 +49,14 @@ class PeptidesTab(ft.UserControl):
                         width=200
                     ),
                     ft.ElevatedButton(
-                        "Search",
-                        icon=ft.icons.SEARCH,
+                        content=ft.Text("Search"),
+                        icon=ft.Icons.SEARCH,
                         on_click=self.search_identifications
                     )
                 ], spacing=10)
             ], spacing=10),
             padding=20,
-            border=ft.border.all(1, ft.colors.OUTLINE),
+            border=ft.border.all(1, ft.Colors.GREY),
             border_radius=10
         )
         
@@ -62,11 +67,11 @@ class PeptidesTab(ft.UserControl):
                 ft.Text(
                     "No search performed yet",
                     italic=True,
-                    color=ft.colors.ON_SURFACE_VARIANT
+                    color=
                 )
             ], spacing=10),
             padding=20,
-            border=ft.border.all(1, ft.colors.OUTLINE),
+            border=ft.border.all(1, ft.Colors.GREY),
             border_radius=10,
             expand=True
         )
@@ -78,36 +83,32 @@ class PeptidesTab(ft.UserControl):
                 ft.Text(
                     "Select an identification to view ion match",
                     italic=True,
-                    color=ft.colors.ON_SURFACE_VARIANT
+                    color=
                 )
             ], spacing=10),
             padding=20,
-            border=ft.border.all(1, ft.colors.OUTLINE),
+            border=ft.border.all(1, ft.Colors.GREY),
             border_radius=10
         )
         
         # Main layout
-        return ft.Container(
-            content=ft.Column([
-                search_section,
-                ft.Container(height=10),
-                results_section,
-                ft.Container(height=10),
-                visualization_section
-            ],
-            spacing=10,
-            scroll=ft.ScrollMode.AUTO,
-            expand=True
-            ),
-            padding=20,
-            expand=True
+        return ft.Column([
+            search_section,
+            ft.Container(height=10),
+            results_section,
+            ft.Container(height=10),
+            visualization_section
+        ],
+        spacing=10,
+        scroll=ft.ScrollMode.AUTO,
+        expand=True
         )
     
     def search_identifications(self, e):
         """Search for identifications."""
         self.page.snack_bar = ft.SnackBar(
             content=ft.Text("Search functionality coming soon. Import identifications first."),
-            bgcolor=ft.colors.BLUE_400
+            bgcolor=ft.Colors.BLUE_400
         )
         self.page.snack_bar.open = True
         self.page.update()

@@ -54,31 +54,30 @@ class DASMixerApp:
         """Create application menu bar."""
         self.page.appbar = ft.AppBar(
             title=ft.Text("DASMixer", size=20, weight=ft.FontWeight.BOLD),
-            bgcolor=ft.colors.SURFACE_VARIANT,
             actions=[
                 ft.PopupMenuButton(
                     items=[
                         ft.PopupMenuItem(
-                            text="New Project",
-                            icon=ft.icons.CREATE_NEW_FOLDER,
-                            on_click=self.new_project
+                            content=ft.Text("New Project"),
+                            icon=ft.Icons.CREATE_NEW_FOLDER,
+                            on_click=lambda _: self.page.run_task(self.new_project)
                         ),
                         ft.PopupMenuItem(
-                            text="Open Project",
-                            icon=ft.icons.FOLDER_OPEN,
-                            on_click=self.open_project_dialog
+                            content=ft.Text("Open Project"),
+                            icon=ft.Icons.FOLDER_OPEN,
+                            on_click=lambda _: self.page.run_task(self.open_project_dialog)
                         ),
                         ft.PopupMenuItem(),  # Divider
                         ft.PopupMenuItem(
-                            text="Close Project",
-                            icon=ft.icons.CLOSE,
-                            on_click=self.close_project,
+                            content=ft.Text("Close Project"),
+                            icon=ft.Icons.CLOSE,
+                            on_click=lambda _: self.page.run_task(self.close_project),
                             disabled=self.current_project is None
                         ),
                         ft.PopupMenuItem(),  # Divider
                         ft.PopupMenuItem(
-                            text="Exit",
-                            icon=ft.icons.EXIT_TO_APP,
+                            content=ft.Text("Exit"),
+                            icon=ft.Icons.EXIT_TO_APP,
                             on_click=lambda _: self.page.window_close()
                         ),
                     ]
@@ -92,7 +91,7 @@ class DASMixerApp:
         
         self.page.clean()
         view = StartView(
-            on_create_project=self.new_project,
+            on_create_project=lambda _: self.page.run_task(self.new_project),
             on_open_project=lambda path: self.page.run_task(self.open_project, path),
             recent_projects=config.recent_projects
         )
@@ -106,7 +105,7 @@ class DASMixerApp:
         self.page.clean()
         view = ProjectView(
             project=self.current_project,
-            on_close=self.close_project
+            on_close=lambda _: self.page.run_task(self.close_project)
         )
         self.page.add(view)
         self.page.update()
@@ -116,80 +115,78 @@ class DASMixerApp:
     
     async def new_project(self, e=None):
         """Create new project."""
-        # Show file picker for save location
-        async def save_file_result(e: ft.FilePickerResultEvent):
-            if e.path:
-                project_path = Path(e.path)
-                
-                # Ensure .dasmix extension
-                if project_path.suffix != '.dasmix':
-                    project_path = project_path.with_suffix('.dasmix')
-                
-                # Create project
-                try:
-                    self.current_project = Project(path=project_path, create_if_not_exists=True)
-                    await self.current_project.initialize()
-                    
-                    # Create default Control group
-                    await self.current_project.add_subset(
-                        "Control",
-                        details="Default control group",
-                        display_color="#3B82F6"
-                    )
-                    
-                    # Update config
-                    config.add_recent_project(str(project_path))
-                    
-                    # Show project view
-                    self.show_project_view()
-                    
-                    # Show success message
-                    self.page.snack_bar = ft.SnackBar(
-                        content=ft.Text(f"Created project: {project_path.name}"),
-                        bgcolor=ft.colors.GREEN_400
-                    )
-                    self.page.snack_bar.open = True
-                    self.page.update()
-                    
-                except Exception as ex:
-                    self.page.snack_bar = ft.SnackBar(
-                        content=ft.Text(f"Error creating project: {ex}"),
-                        bgcolor=ft.colors.RED_400
-                    )
-                    self.page.snack_bar.open = True
-                    self.page.update()
-        
-        # Create file picker
-        save_picker = ft.FilePicker(on_result=save_file_result)
-        self.page.overlay.append(save_picker)
-        self.page.update()
-        
-        # Show save dialog
-        save_picker.save_file(
-            dialog_title="Create New Project",
-            file_name="project.dasmix",
-            allowed_extensions=["dasmix"],
-            file_type=ft.FilePickerFileType.CUSTOM
-        )
+        try:
+            # Use new async FilePicker API
+            file_path = await ft.FilePicker().save_file(
+                dialog_title="Create New Project",
+                file_name="project.dasmix",
+                file_type=ft.FilePickerFileType.CUSTOM,
+                allowed_extensions=["dasmix"]
+            )
+            
+            if not file_path:
+                return  # User cancelled
+            
+            project_path = Path(file_path)
+            
+            # Ensure .dasmix extension
+            if project_path.suffix != '.dasmix':
+                project_path = project_path.with_suffix('.dasmix')
+            
+            # Create project
+            self.current_project = Project(path=project_path, create_if_not_exists=True)
+            await self.current_project.initialize()
+            
+            # Create default Control group
+            await self.current_project.add_subset(
+                "Control",
+                details="Default control group",
+                display_color="#3B82F6"
+            )
+            
+            # Update config
+            config.add_recent_project(str(project_path))
+            
+            # Show project view
+            self.show_project_view()
+            
+            # Show success message
+            self.page.snack_bar = ft.SnackBar(
+                content=ft.Text(f"Created project: {project_path.name}"),
+                bgcolor=ft.Colors.GREEN_400
+            )
+            self.page.snack_bar.open = True
+            self.page.update()
+            
+        except Exception as ex:
+            self.page.snack_bar = ft.SnackBar(
+                content=ft.Text(f"Error creating project: {ex}"),
+                bgcolor=ft.Colors.RED_400
+            )
+            self.page.snack_bar.open = True
+            self.page.update()
     
     async def open_project_dialog(self, e=None):
         """Open project via file picker."""
-        async def pick_file_result(e: ft.FilePickerResultEvent):
-            if e.files:
-                file_path = e.files[0].path
-                await self.open_project(file_path)
-        
-        # Create file picker
-        pick_files = ft.FilePicker(on_result=pick_file_result)
-        self.page.overlay.append(pick_files)
-        self.page.update()
-        
-        # Show open dialog
-        pick_files.pick_files(
-            dialog_title="Open Project",
-            allowed_extensions=["dasmix"],
-            file_type=ft.FilePickerFileType.CUSTOM
-        )
+        try:
+            # Use new async FilePicker API
+            files = await ft.FilePicker().pick_files(
+                dialog_title="Open Project",
+                file_type=ft.FilePickerFileType.CUSTOM,
+                allowed_extensions=["dasmix"],
+                allow_multiple=False
+            )
+            
+            if files:
+                await self.open_project(files[0].path)
+                
+        except Exception as ex:
+            self.page.snack_bar = ft.SnackBar(
+                content=ft.Text(f"Error opening file picker: {ex}"),
+                bgcolor=ft.Colors.RED_400
+            )
+            self.page.snack_bar.open = True
+            self.page.update()
     
     async def open_project(self, path: str, e=None):
         """
@@ -205,7 +202,7 @@ class DASMixerApp:
             if not project_path.exists():
                 self.page.snack_bar = ft.SnackBar(
                     content=ft.Text(f"Project file not found: {path}"),
-                    bgcolor=ft.colors.RED_400
+                    bgcolor=ft.Colors.RED_400
                 )
                 self.page.snack_bar.open = True
                 self.page.update()
@@ -228,7 +225,7 @@ class DASMixerApp:
             # Show success message
             self.page.snack_bar = ft.SnackBar(
                 content=ft.Text(f"Opened project: {project_path.name}"),
-                bgcolor=ft.colors.GREEN_400
+                bgcolor=ft.Colors.GREEN_400
             )
             self.page.snack_bar.open = True
             self.page.update()
@@ -236,7 +233,7 @@ class DASMixerApp:
         except Exception as ex:
             self.page.snack_bar = ft.SnackBar(
                 content=ft.Text(f"Error opening project: {ex}"),
-                bgcolor=ft.colors.RED_400
+                bgcolor=ft.Colors.RED_400
             )
             self.page.snack_bar.open = True
             self.page.update()
@@ -256,7 +253,7 @@ class DASMixerApp:
                 
                 self.page.snack_bar = ft.SnackBar(
                     content=ft.Text("Project closed"),
-                    bgcolor=ft.colors.BLUE_400
+                    bgcolor=ft.Colors.BLUE_400
                 )
                 self.page.snack_bar.open = True
                 self.page.update()
@@ -264,7 +261,7 @@ class DASMixerApp:
             except Exception as ex:
                 self.page.snack_bar = ft.SnackBar(
                     content=ft.Text(f"Error closing project: {ex}"),
-                    bgcolor=ft.colors.RED_400
+                    bgcolor=ft.Colors.RED_400
                 )
                 self.page.snack_bar.open = True
                 self.page.update()

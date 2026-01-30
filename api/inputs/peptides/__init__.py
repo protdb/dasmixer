@@ -9,11 +9,9 @@ from .table_importer import (
 )
 from .PowerNovo2 import PowerNovo2Importer
 from .MQ_Evidences import MaxQuantEvidenceParser
-from ..registry import registry
 
-# Register parsers
-registry.add_identification_parser("PowerNovo2", PowerNovo2Importer)
-registry.add_identification_parser("MaxQuant", MaxQuantEvidenceParser)
+# Note: Parser registration is now handled in api/inputs/__init__.py
+# to avoid circular imports
 
 __all__ = [
     'IdentificationParser',

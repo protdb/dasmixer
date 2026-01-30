@@ -4,7 +4,6 @@ import flet as ft
 import multiprocessing
 import plotly.graph_objects as go
 import base64
-from io import BytesIO
 
 
 def show_webview(fig: go.Figure, title: str):
@@ -23,7 +22,7 @@ def show_webview(fig: go.Figure, title: str):
     webview.start()
 
 
-class PlotlyViewer(ft.UserControl):
+class PlotlyViewer(ft.Container):
     """
     Universal Plotly chart viewer with interactive mode.
     
@@ -61,8 +60,12 @@ class PlotlyViewer(ft.UserControl):
         self.height = height
         self.title = title
         self.show_interactive_button = show_interactive_button
+        
+        # Build content
+        self.content = self._build_content()
+        self.horizontal_alignment = ft.CrossAxisAlignment.CENTER
     
-    def build(self):
+    def _build_content(self):
         """Build the UI control."""
         # Render static image
         try:
@@ -86,11 +89,11 @@ class PlotlyViewer(ft.UserControl):
             image = ft.Container(
                 content=ft.Text(
                     f"Error rendering chart: {e}",
-                    color=ft.colors.RED
+                    color=ft.Colors.RED
                 ),
                 width=self.width,
                 height=self.height,
-                bgcolor=ft.colors.GREY_200,
+                bgcolor=ft.Colors.GREY_200,
                 alignment=ft.alignment.center
             )
         
@@ -99,8 +102,8 @@ class PlotlyViewer(ft.UserControl):
         # Add interactive button if enabled
         if self.show_interactive_button:
             button = ft.ElevatedButton(
-                text="Interactive Mode",
-                icon=ft.icons.OPEN_IN_NEW,
+                content=ft.Text("Interactive Mode"),
+                icon=ft.Icons.OPEN_IN_NEW,
                 on_click=self.launch_interactive,
                 tooltip="Open in interactive viewer"
             )
@@ -130,7 +133,7 @@ class PlotlyViewer(ft.UserControl):
             if self.page:
                 self.page.snack_bar = ft.SnackBar(
                     content=ft.Text(f"Error launching interactive mode: {ex}"),
-                    bgcolor=ft.colors.RED_400
+                    bgcolor=ft.Colors.RED_400
                 )
                 self.page.snack_bar.open = True
                 self.page.update()

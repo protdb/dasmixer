@@ -4,7 +4,7 @@ import flet as ft
 from api.project.project import Project
 
 
-class SamplesTab(ft.UserControl):
+class SamplesTab(ft.Container):
     """
     Samples tab for managing:
     - Comparison groups (subsets)
@@ -17,8 +17,13 @@ class SamplesTab(ft.UserControl):
         self.project = project
         self.groups_list = ft.Column(spacing=5)
         self.samples_table = None
+        
+        # Build content
+        self.content = self._build_content()
+        self.padding = 20
+        self.expand = True
     
-    def build(self):
+    def _build_content(self):
         """Build the tab content."""
         # Groups management section
         groups_section = ft.Container(
@@ -28,19 +33,19 @@ class SamplesTab(ft.UserControl):
                 ft.Container(height=10),
                 ft.Row([
                     ft.ElevatedButton(
-                        "Add Group",
-                        icon=ft.icons.ADD,
+                        content=ft.Text("Add Group"),
+                        icon=ft.Icons.ADD,
                         on_click=self.show_add_group_dialog
                     ),
                     ft.OutlinedButton(
-                        "Delete Selected",
-                        icon=ft.icons.DELETE,
+                        content=ft.Text("Delete Selected"),
+                        icon=ft.Icons.DELETE,
                         on_click=self.delete_selected_group
                     )
                 ], spacing=10)
             ], spacing=10),
             padding=20,
-            border=ft.border.all(1, ft.colors.OUTLINE),
+            border=ft.border.all(1, ft.Colors.GREY),
             border_radius=10
         )
         
@@ -50,19 +55,19 @@ class SamplesTab(ft.UserControl):
                 ft.Text("Import Data", size=18, weight=ft.FontWeight.BOLD),
                 ft.Row([
                     ft.ElevatedButton(
-                        "Import Spectra (MGF)",
-                        icon=ft.icons.UPLOAD_FILE,
+                        content=ft.Text("Import Spectra (MGF)"),
+                        icon=ft.Icons.UPLOAD_FILE,
                         on_click=self.show_import_spectra_dialog
                     ),
                     ft.ElevatedButton(
-                        "Import Identifications",
-                        icon=ft.icons.UPLOAD_FILE,
+                        content=ft.Text("Import Identifications"),
+                        icon=ft.Icons.UPLOAD_FILE,
                         on_click=self.show_import_identifications_dialog
                     )
                 ], spacing=10)
             ], spacing=10),
             padding=20,
-            border=ft.border.all(1, ft.colors.OUTLINE),
+            border=ft.border.all(1, ft.Colors.GREY),
             border_radius=10
         )
         
@@ -76,13 +81,13 @@ class SamplesTab(ft.UserControl):
                 )
             ], spacing=10),
             padding=20,
-            border=ft.border.all(1, ft.colors.OUTLINE),
+            border=ft.border.all(1, ft.Colors.GREY),
             border_radius=10,
             expand=True
         )
         
         # Main layout
-        content = ft.Column([
+        return ft.Column([
             groups_section,
             ft.Container(height=10),
             import_section,
@@ -92,12 +97,6 @@ class SamplesTab(ft.UserControl):
         spacing=10,
         scroll=ft.ScrollMode.AUTO,
         expand=True
-        )
-        
-        return ft.Container(
-            content=content,
-            padding=20,
-            expand=True
         )
     
     async def did_mount_async(self):
@@ -118,7 +117,7 @@ class SamplesTab(ft.UserControl):
             self.groups_list.controls.append(
                 ft.ListTile(
                     leading=ft.Container(
-                        content=ft.Icon(ft.icons.FOLDER, color=group.display_color or ft.colors.PRIMARY),
+                        content=ft.Icon(ft.Icons.FOLDER, color=group.display_color or ft.Colors.PRIMARY),
                         width=40
                     ),
                     title=ft.Text(group.name, weight=ft.FontWeight.BOLD),
@@ -174,7 +173,7 @@ class SamplesTab(ft.UserControl):
                 
                 self.page.snack_bar = ft.SnackBar(
                     content=ft.Text(f"Added group: {name_field.value}"),
-                    bgcolor=ft.colors.GREEN_400
+                    bgcolor=ft.Colors.GREEN_400
                 )
                 self.page.snack_bar.open = True
                 self.page.update()
@@ -182,7 +181,7 @@ class SamplesTab(ft.UserControl):
             except Exception as ex:
                 self.page.snack_bar = ft.SnackBar(
                     content=ft.Text(f"Error: {ex}"),
-                    bgcolor=ft.colors.RED_400
+                    bgcolor=ft.Colors.RED_400
                 )
                 self.page.snack_bar.open = True
                 self.page.update()
@@ -195,8 +194,8 @@ class SamplesTab(ft.UserControl):
                 color_field
             ], tight=True, width=400),
             actions=[
-                ft.TextButton("Cancel", on_click=lambda _: self.close_dialog(dialog)),
-                ft.ElevatedButton("Add", on_click=save_group)
+                ft.TextButton(content=ft.Text("Cancel"), on_click=lambda _: self.close_dialog(dialog)),
+                ft.ElevatedButton(content=ft.Text("Add"), on_click=save_group)
             ]
         )
         
@@ -208,7 +207,7 @@ class SamplesTab(ft.UserControl):
         """Delete selected group (placeholder)."""
         self.page.snack_bar = ft.SnackBar(
             content=ft.Text("Select a group from the list first (feature coming soon)"),
-            bgcolor=ft.colors.BLUE_400
+            bgcolor=ft.Colors.BLUE_400
         )
         self.page.snack_bar.open = True
         self.page.update()
@@ -217,7 +216,7 @@ class SamplesTab(ft.UserControl):
         """Show import spectra dialog."""
         self.page.snack_bar = ft.SnackBar(
             content=ft.Text("Import dialog coming soon. Use CLI for now: 'dasmixer project.dasmix import mgf-pattern'"),
-            bgcolor=ft.colors.BLUE_400
+            bgcolor=ft.Colors.BLUE_400
         )
         self.page.snack_bar.open = True
         self.page.update()
@@ -226,7 +225,7 @@ class SamplesTab(ft.UserControl):
         """Show import identifications dialog."""
         self.page.snack_bar = ft.SnackBar(
             content=ft.Text("Import identifications coming soon"),
-            bgcolor=ft.colors.BLUE_400
+            bgcolor=ft.Colors.BLUE_400
         )
         self.page.snack_bar.open = True
         self.page.update()

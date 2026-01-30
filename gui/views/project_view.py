@@ -4,7 +4,7 @@ import flet as ft
 from api.project.project import Project
 
 
-class ProjectView(ft.UserControl):
+class ProjectView(ft.Container):
     """
     Main project workspace with tabs.
     
@@ -26,8 +26,13 @@ class ProjectView(ft.UserControl):
         super().__init__()
         self.project = project
         self.on_close = on_close
+        
+        # Build content
+        self.content = self._build_content()
+        self.expand = True
+        self.padding = 0
     
-    def build(self):
+    def _build_content(self):
         """Build the view."""
         # Import tab views
         from gui.views.tabs.samples_tab import SamplesTab
@@ -42,30 +47,26 @@ class ProjectView(ft.UserControl):
             tabs=[
                 ft.Tab(
                     text="Samples",
-                    icon=ft.icons.SCIENCE,
+                    icon=ft.Icons.SCIENCE,
                     content=SamplesTab(self.project)
                 ),
                 ft.Tab(
                     text="Peptides",
-                    icon=ft.icons.BIOTECH,
+                    icon=ft.Icons.BIOTECH,
                     content=PeptidesTab(self.project)
                 ),
                 ft.Tab(
                     text="Proteins",
-                    icon=ft.icons.BUBBLE_CHART,
+                    icon=ft.Icons.BUBBLE_CHART,
                     content=ProteinsTab(self.project)
                 ),
                 ft.Tab(
                     text="Analysis",
-                    icon=ft.icons.ANALYTICS,
+                    icon=ft.Icons.ANALYTICS,
                     content=AnalysisTab(self.project)
                 ),
             ],
             expand=True
         )
         
-        return ft.Container(
-            content=tabs,
-            expand=True,
-            padding=0
-        )
+        return tabs

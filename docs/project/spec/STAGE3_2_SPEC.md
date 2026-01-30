@@ -469,7 +469,7 @@ import multiprocessing
 import webview
 import plotly.graph_objects as go
 
-class PlotlyViewer(ft.UserControl):
+class PlotlyViewer(ft.Container):
     """Universal Plotly chart viewer with interactive mode."""
     
     def __init__(
