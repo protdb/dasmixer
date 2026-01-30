@@ -2,6 +2,7 @@
 
 import flet as ft
 from api.project.project import Project
+from api.inputs.registry import registry
 from pathlib import Path
 
 
@@ -34,12 +35,12 @@ class SamplesTab(ft.Container):
                 ft.Container(height=10),
                 ft.Row([
                     ft.ElevatedButton(
-                        content=ft.Text("Add Group"),
+                        content="Add Group",
                         icon=ft.Icons.ADD,
                         on_click=lambda e: self.page.run_task(self.show_add_group_dialog, e)
                     ),
                     ft.OutlinedButton(
-                        content=ft.Text("Delete Selected"),
+                        content="Delete Selected",
                         icon=ft.Icons.DELETE,
                         on_click=self.delete_selected_group
                     )
@@ -56,12 +57,12 @@ class SamplesTab(ft.Container):
                 ft.Text("Import Data", size=18, weight=ft.FontWeight.BOLD),
                 ft.Row([
                     ft.ElevatedButton(
-                        content=ft.Text("Import Spectra (MGF)"),
+                        content="Import Spectra (MGF)",
                         icon=ft.Icons.UPLOAD_FILE,
                         on_click=lambda e: self.page.run_task(self.show_import_mode_dialog, e)
                     ),
                     ft.ElevatedButton(
-                        content=ft.Text("Import Identifications"),
+                        content="Import Identifications",
                         icon=ft.Icons.UPLOAD_FILE,
                         on_click=lambda e: self.page.run_task(self.show_import_identifications_dialog, e)
                     )
@@ -167,26 +168,27 @@ class SamplesTab(ft.Container):
                 )
                 
                 # Close dialog
-                self.page.pop_dialog()
+                dialog.open = False
+                self.page.update()
                 
                 # Refresh groups list
                 await self.refresh_groups()
                 
                 # Show success
-                self.page.show_dialog(
-                    ft.SnackBar(
-                        content=ft.Text(f"Added group: {name_field.value}"),
-                        bgcolor=ft.Colors.GREEN_400
-                    )
+                self.page.snack_bar = ft.SnackBar(
+                    content=ft.Text(f"Added group: {name_field.value}"),
+                    bgcolor=ft.Colors.GREEN_400
                 )
+                self.page.snack_bar.open = True
+                self.page.update()
                 
             except Exception as ex:
-                self.page.show_dialog(
-                    ft.SnackBar(
-                        content=ft.Text(f"Error: {ex}"),
-                        bgcolor=ft.Colors.RED_400
-                    )
+                self.page.snack_bar = ft.SnackBar(
+                    content=ft.Text(f"Error: {ex}"),
+                    bgcolor=ft.Colors.RED_400
                 )
+                self.page.snack_bar.open = True
+                self.page.update()
         
         dialog = ft.AlertDialog(
             title=ft.Text("Add Comparison Group"),
@@ -197,52 +199,61 @@ class SamplesTab(ft.Container):
             ], tight=True, width=400),
             actions=[
                 ft.TextButton(
-                    content=ft.Text("Cancel"), 
-                    on_click=lambda e: self.page.pop_dialog()
+                    content="Cancel", 
+                    on_click=lambda e: self._close_dialog(dialog)
                 ),
                 ft.ElevatedButton(
-                    content=ft.Text("Add"), 
+                    content="Add", 
                     on_click=lambda e: self.page.run_task(save_group, e)
                 )
             ]
         )
         
-        self.page.show_dialog(dialog)
+        self.page.overlay.append(dialog)
+        dialog.open = True
+        self.page.update()
+    
+    def _close_dialog(self, dialog):
+        """Helper to close dialog."""
+        dialog.open = False
+        self.page.update()
     
     def delete_selected_group(self, e):
         """Delete selected group (placeholder)."""
-        self.page.show_dialog(
-            ft.SnackBar(
-                content=ft.Text("Select a group from the list first (feature coming soon)"),
-                bgcolor=ft.Colors.BLUE_400
-            )
+        self.page.snack_bar = ft.SnackBar(
+            content=ft.Text("Select a group from the list first (feature coming soon)"),
+            bgcolor=ft.Colors.BLUE_400
         )
+        self.page.snack_bar.open = True
+        self.page.update()
     
     async def show_import_mode_dialog(self, e):
         """Show dialog to select import mode: single files or pattern matching."""
         
         async def import_single_files(e):
-            self.page.pop_dialog()
+            dialog.open = False
+            self.page.update()
             await self.show_import_single_files()
         
         async def import_with_pattern(e):
-            self.page.pop_dialog()
+            dialog.open = False
+            self.page.update()
             await self.show_import_pattern_dialog()
         
-        mode_dialog = ft.AlertDialog(
+        dialog = ft.AlertDialog(
             title=ft.Text("Import Spectra (MGF)"),
             content=ft.Column([
                 ft.Text("Choose import mode:", size=16),
                 ft.Container(height=10),
                 ft.ElevatedButton(
-                    content=ft.Text("Select individual files"),
+                    content="Select individual files",
                     icon=ft.Icons.INSERT_DRIVE_FILE,
                     on_click=lambda e: self.page.run_task(import_single_files, e),
                     width=300
                 ),
                 ft.Container(height=5),
                 ft.ElevatedButton(
-                    content=ft.Text("Pattern matching from folder"),
+                    content="Pattern matching from folder",
                     icon=ft.Icons.FOLDER_OPEN,
                     on_click=lambda e: self.page.run_task(import_with_pattern, e),
                     width=300
@@ -257,13 +268,15 @@ class SamplesTab(ft.Container):
             ], tight=True, width=400),
             actions=[
                 ft.TextButton(
-                    content=ft.Text("Cancel"),
-                    on_click=lambda e: self.page.pop_dialog()
+                    content="Cancel",
+                    on_click=lambda e: self._close_dialog(dialog)
                 )
             ]
         )
         
-        self.page.pop_dialog()
+        self.page.overlay.append(dialog)
+        dialog.open = True
+        self.page.update()
     
     async def show_import_pattern_dialog(self, e=None):
         """Show dialog for pattern-based import."""
@@ -271,15 +284,31 @@ class SamplesTab(ft.Container):
 
         # Get available groups
         groups = await self.project.get_subsets()
-        group_options = [ft.DropdownOption(key=str(g.id), text=g.name) for g in groups]
+        group_options = [ft.dropdown.Option(key=str(g.id), text=g.name) for g in groups]
         
         if not group_options:
-            self.page.show_dialog(
-                ft.SnackBar(
-                    content=ft.Text("Please create at least one comparison group first"),
-                    bgcolor=ft.Colors.ORANGE_400
-                )
+            self.page.snack_bar = ft.SnackBar(
+                content=ft.Text("Please create at least one comparison group first"),
+                bgcolor=ft.Colors.ORANGE_400
             )
+            self.page.snack_bar.open = True
+            self.page.update()
+            return
+        
+        # Get available spectra parsers
+        spectra_parsers = registry.get_spectra_parsers()
+        parser_options = [
+            ft.dropdown.Option(key=name, text=f"{name} - {parser_class.__doc__.split('.')[0].strip() if parser_class.__doc__ else name}")
+            for name, parser_class in spectra_parsers.items()
+        ]
+        
+        if not parser_options:
+            self.page.snack_bar = ft.SnackBar(
+                content=ft.Text("No spectra parsers available"),
+                bgcolor=ft.Colors.RED_400
+            )
+            self.page.snack_bar.open = True
+            self.page.update()
             return
         
         folder_field = ft.TextField(
@@ -302,6 +331,13 @@ class SamplesTab(ft.Container):
             expand=True
         )
         
+        parser_dropdown = ft.Dropdown(
+            label="File format / Parser",
+            options=parser_options,
+            value=parser_options[0].key,
+            width=300
+        )
+        
         group_dropdown = ft.Dropdown(
             label="Assign to group",
             options=group_options,
@@ -312,32 +348,41 @@ class SamplesTab(ft.Container):
         files_list = ft.Column(spacing=5)
         
         async def browse_folder(e):
-            folder_path = await ft.FilePicker().get_directory_path(
-                dialog_title="Select Folder with MGF Files"
-            )
-            if folder_path:
-                folder_field.value = folder_path
-                folder_field.update()
+            """Browse for folder using FilePicker."""
+            try:
+                folder_path = await ft.FilePicker().get_directory_path(
+                    dialog_title="Select Folder with Spectra Files"
+                )
+                if folder_path:
+                    folder_field.value = folder_path
+                    folder_field.update()
+            except Exception as ex:
+                self.page.snack_bar = ft.SnackBar(
+                    content=ft.Text(f"Error selecting folder: {ex}"),
+                    bgcolor=ft.Colors.RED_400
+                )
+                self.page.snack_bar.open = True
+                self.page.update()
         
         async def preview_files(e):
             if not folder_field.value:
-                self.page.show_dialog(
-                    ft.SnackBar(
-                        content=ft.Text("Please select a folder first"),
-                        bgcolor=ft.Colors.ORANGE_400
-                    )
+                self.page.snack_bar = ft.SnackBar(
+                    content=ft.Text("Please select a folder first"),
+                    bgcolor=ft.Colors.ORANGE_400
                 )
+                self.page.snack_bar.open = True
+                self.page.update()
                 return
             
             try:
                 folder_path = Path(folder_field.value)
                 if not folder_path.exists():
-                    self.page.show_dialog(
-                        ft.SnackBar(
-                            content=ft.Text("Folder does not exist"),
-                            bgcolor=ft.Colors.RED_400
-                        )
+                    self.page.snack_bar = ft.SnackBar(
+                        content=ft.Text("Folder does not exist"),
+                        bgcolor=ft.Colors.RED_400
                     )
+                    self.page.snack_bar.open = True
+                    self.page.update()
                     return
                 
                 # Find files using pattern
@@ -374,21 +419,21 @@ class SamplesTab(ft.Container):
                 files_list.update()
                 
             except Exception as ex:
-                self.page.show_dialog(
-                    ft.SnackBar(
-                        content=ft.Text(f"Error: {ex}"),
-                        bgcolor=ft.Colors.RED_400
-                    )
+                self.page.snack_bar = ft.SnackBar(
+                    content=ft.Text(f"Error: {ex}"),
+                    bgcolor=ft.Colors.RED_400
                 )
+                self.page.snack_bar.open = True
+                self.page.update()
         
         async def start_import(e):
             if not folder_field.value:
-                self.page.show_dialog(
-                    ft.SnackBar(
-                        content=ft.Text("Please select a folder first"),
-                        bgcolor=ft.Colors.ORANGE_400
-                    )
+                self.page.snack_bar = ft.SnackBar(
+                    content=ft.Text("Please select a folder first"),
+                    bgcolor=ft.Colors.ORANGE_400
                 )
+                self.page.snack_bar.open = True
+                self.page.update()
                 return
             
             try:
@@ -400,30 +445,35 @@ class SamplesTab(ft.Container):
                 )
                 
                 if not found_files:
-                    self.page.show_dialog(
-                        ft.SnackBar(
-                            content=ft.Text("No files found"),
-                            bgcolor=ft.Colors.ORANGE_400
-                        )
+                    self.page.snack_bar = ft.SnackBar(
+                        content=ft.Text("No files found"),
+                        bgcolor=ft.Colors.ORANGE_400
                     )
+                    self.page.snack_bar.open = True
+                    self.page.update()
                     return
                 
                 # Close pattern dialog
-                self.page.pop_dialog()
+                pattern_dialog.open = False
+                self.page.update()
                 
                 # Start import
-                await self.import_mgf_files(found_files, int(group_dropdown.value))
+                await self.import_spectra_files(
+                    found_files,
+                    int(group_dropdown.value),
+                    parser_dropdown.value
+                )
                 
             except Exception as ex:
-                self.page.show_dialog(
-                    ft.SnackBar(
-                        content=ft.Text(f"Error: {ex}"),
-                        bgcolor=ft.Colors.RED_400
-                    )
+                self.page.snack_bar = ft.SnackBar(
+                    content=ft.Text(f"Error: {ex}"),
+                    bgcolor=ft.Colors.RED_400
                 )
+                self.page.snack_bar.open = True
+                self.page.update()
         
         pattern_dialog = ft.AlertDialog(
-            title=ft.Text("Import MGF Files - Pattern Matching"),
+            title=ft.Text("Import Spectra Files - Pattern Matching"),
             content=ft.Column([
                 ft.Row([
                     folder_field,
@@ -436,10 +486,13 @@ class SamplesTab(ft.Container):
                     file_pattern_field,
                     id_pattern_field
                 ], spacing=10),
-                group_dropdown,
+                ft.Row([
+                    parser_dropdown,
+                    group_dropdown
+                ], spacing=10),
                 ft.Container(height=5),
                 ft.ElevatedButton(
-                    content=ft.Text("Preview Files"),
+                    content="Preview Files",
                     icon=ft.Icons.PREVIEW,
                     on_click=lambda e: self.page.run_task(preview_files, e)
                 ),
@@ -451,34 +504,34 @@ class SamplesTab(ft.Container):
                     border_radius=5,
                     padding=10
                 )
-            ], tight=True, width=600, scroll=ft.ScrollMode.AUTO),
+            ], tight=True, width=700, scroll=ft.ScrollMode.AUTO),
             actions=[
                 ft.TextButton(
-                    content=ft.Text("Cancel"),
-                    on_click=lambda e: self.page.pop_dialog()
+                    content="Cancel",
+                    on_click=lambda e: self._close_dialog(pattern_dialog)
                 ),
                 ft.ElevatedButton(
-                    content=ft.Text("Import"),
+                    content="Import",
                     icon=ft.Icons.DOWNLOAD,
                     on_click=lambda e: self.page.run_task(start_import, e)
                 )
             ]
         )
         
-        self.page.show_dialog(pattern_dialog)
+        self.page.overlay.append(pattern_dialog)
+        pattern_dialog.open = True
+        self.page.update()
     
     async def show_import_single_files(self):
         """Show dialog for importing individual files."""
         try:
             # Use new async FilePicker API to select files
             files = await ft.FilePicker().pick_files(
-                dialog_title="Select MGF Files",
-                file_type=ft.FilePickerFileType.CUSTOM,
-                allowed_extensions=["mgf"],
+                dialog_title="Select Spectra Files",
                 allow_multiple=True
             )
             
-            if not files:
+            if not files or len(files) == 0:
                 return  # User cancelled
             
             # Convert to format expected by import function
@@ -488,27 +541,51 @@ class SamplesTab(ft.Container):
             await self.show_single_files_config(file_list)
             
         except Exception as ex:
-            self.page.show_dialog(
-                ft.SnackBar(
-                    content=ft.Text(f"Error opening file picker: {ex}"),
-                    bgcolor=ft.Colors.RED_400
-                )
+            self.page.snack_bar = ft.SnackBar(
+                content=ft.Text(f"Error opening file picker: {ex}"),
+                bgcolor=ft.Colors.RED_400
             )
+            self.page.snack_bar.open = True
+            self.page.update()
     
     async def show_single_files_config(self, file_list):
         """Show configuration dialog for individually selected files."""
         # Get available groups for dropdown
         groups = await self.project.get_subsets()
-        group_options = [ft.DropdownOption(key=str(g.id), text=g.name) for g in groups]
+        group_options = [ft.dropdown.Option(key=str(g.id), text=g.name) for g in groups]
         
         if not group_options:
-            self.page.show_dialog(
-                ft.SnackBar(
-                    content=ft.Text("Please create at least one comparison group first"),
-                    bgcolor=ft.Colors.ORANGE_400
-                )
+            self.page.snack_bar = ft.SnackBar(
+                content=ft.Text("Please create at least one comparison group first"),
+                bgcolor=ft.Colors.ORANGE_400
             )
+            self.page.snack_bar.open = True
+            self.page.update()
             return
+        
+        # Get available spectra parsers
+        spectra_parsers = registry.get_spectra_parsers()
+        parser_options = [
+            ft.dropdown.Option(key=name, text=name)
+            for name in spectra_parsers.keys()
+        ]
+        
+        if not parser_options:
+            self.page.snack_bar = ft.SnackBar(
+                content=ft.Text("No spectra parsers available"),
+                bgcolor=ft.Colors.RED_400
+            )
+            self.page.snack_bar.open = True
+            self.page.update()
+            return
+        
+        # Parser selection (shared for all files)
+        parser_dropdown = ft.Dropdown(
+            label="File Format / Parser",
+            options=parser_options,
+            value=parser_options[0].key,
+            width=200
+        )
         
         # Create UI for each file
         file_configs = []
@@ -532,7 +609,19 @@ class SamplesTab(ft.Container):
             })
         
         # Build dialog content
-        config_controls = []
+        config_controls = [
+            ft.Container(
+                content=ft.Row([
+                    ft.Text("Parser:", weight=ft.FontWeight.BOLD),
+                    parser_dropdown
+                ]),
+                padding=10,
+                border=ft.border.all(1, ft.Colors.BLUE_300),
+                border_radius=5,
+                bgcolor=ft.Colors.BLUE_50
+            )
+        ]
+        
         for cfg in file_configs:
             config_controls.append(
                 ft.Container(
@@ -552,7 +641,8 @@ class SamplesTab(ft.Container):
         async def start_import(e):
             try:
                 # Close config dialog
-                self.page.pop_dialog()
+                config_dialog.open = False
+                self.page.update()
                 
                 # Prepare file list with updated sample IDs and groups
                 files_to_import = []
@@ -567,72 +657,88 @@ class SamplesTab(ft.Container):
                 # (can be enhanced later for per-file groups)
                 subset_id = int(file_configs[0]['group_dropdown'].value)
                 
-                await self.import_mgf_files(files_to_import, subset_id)
+                await self.import_spectra_files(
+                    files_to_import,
+                    subset_id,
+                    parser_dropdown.value
+                )
                 
             except Exception as ex:
-                self.page.show_dialog(
-                    ft.SnackBar(
-                        content=ft.Text(f"Import error: {ex}"),
-                        bgcolor=ft.Colors.RED_400
-                    )
+                self.page.snack_bar = ft.SnackBar(
+                    content=ft.Text(f"Import error: {ex}"),
+                    bgcolor=ft.Colors.RED_400
                 )
+                self.page.snack_bar.open = True
+                self.page.update()
         
         config_dialog = ft.AlertDialog(
-            title=ft.Text("Configure MGF Import"),
+            title=ft.Text("Configure Spectra Import"),
             content=ft.Column(
                 config_controls,
                 scroll=ft.ScrollMode.AUTO,
                 tight=True,
                 width=600,
-                height=min(400, len(config_controls) * 100 + 50)
+                height=min(450, len(config_controls) * 100 + 80)
             ),
             actions=[
                 ft.TextButton(
-                    content=ft.Text("Cancel"),
-                    on_click=lambda e: self.page.pop_dialog()
+                    content="Cancel",
+                    on_click=lambda e: self._close_dialog(config_dialog)
                 ),
                 ft.ElevatedButton(
-                    content=ft.Text("Import"),
+                    content="Import",
                     on_click=lambda e: self.page.run_task(start_import, e)
                 )
             ]
         )
         
-        self.page.show_dialog(config_dialog)
+        self.page.overlay.append(config_dialog)
+        config_dialog.open = True
+        self.page.update()
     
-    async def import_mgf_files(self, file_list, subset_id):
+    async def import_spectra_files(self, file_list, subset_id, parser_name):
         """
-        Import MGF files with progress indication.
+        Import spectra files with progress indication.
         
         Args:
             file_list: List of (file_path, sample_id) tuples
             subset_id: Group ID to assign samples
+            parser_name: Name of parser to use (from registry)
         """
         # Show progress dialog
         progress_text = ft.Text("Preparing import...")
         progress_bar = ft.ProgressBar(value=0)
+        progress_details = ft.Text("", size=11, color=ft.Colors.GREY_600)
         
         progress_dialog = ft.AlertDialog(
             title=ft.Text("Importing Spectra"),
             content=ft.Column([
                 progress_text,
-                progress_bar
+                progress_bar,
+                ft.Container(height=5),
+                progress_details
             ], tight=True, width=400),
             modal=True
         )
         
-        self.page.show_dialog(progress_dialog)
+        self.page.overlay.append(progress_dialog)
+        progress_dialog.open = True
+        self.page.update()
         
         try:
-            from api.inputs.spectra.mgf import MGFParser
+            # Get parser class from registry
+            parser_class = registry.get_parser(parser_name, "spectra")
             
             total_files = len(file_list)
+            total_spectra = 0
             
             for i, (file_path, sample_id) in enumerate(file_list):
                 progress_text.value = f"Importing {file_path.name} ({i+1}/{total_files})..."
                 progress_bar.value = i / total_files
+                progress_details.value = f"Processing file..."
                 progress_text.update()
                 progress_bar.update()
+                progress_details.update()
                 
                 # Get or create sample
                 sample = await self.project.get_sample_by_name(sample_id)
@@ -642,55 +748,88 @@ class SamplesTab(ft.Container):
                         subset_id=subset_id
                     )
                 
-                # Add spectra file
+                # Add spectra file record
                 spectra_file_id = await self.project.add_spectra_file(
                     sample_id=sample.id,
-                    format="MGF",
+                    format=parser_name,
                     path=str(file_path)
                 )
                 
                 # Parse and import spectra
-                parser = MGFParser(file_path)
-                async for batch in parser.parse_batch():
+                parser = parser_class(str(file_path))
+                
+                # Validate file
+                is_valid = await parser.validate()
+                if not is_valid:
+                    progress_dialog.open = False
+                    self.page.update()
+                    
+                    self.page.snack_bar = ft.SnackBar(
+                        content=ft.Text(f"Invalid file format: {file_path.name}"),
+                        bgcolor=ft.Colors.RED_400
+                    )
+                    self.page.snack_bar.open = True
+                    self.page.update()
+                    return
+                
+                # Import spectra in batches
+                batch_count = 0
+                file_spectra_count = 0
+                async for batch in parser.parse_batch(batch_size=1000):
                     await self.project.add_spectra_batch(spectra_file_id, batch)
+                    batch_count += 1
+                    file_spectra_count += len(batch)
+                    total_spectra += len(batch)
+                    
+                    progress_details.value = f"Imported {file_spectra_count} spectra (batch {batch_count})..."
+                    progress_details.update()
             
             # Complete
             progress_bar.value = 1.0
             progress_text.value = "Import complete!"
+            progress_details.value = f"Total: {total_spectra} spectra from {total_files} file(s)"
             progress_text.update()
             progress_bar.update()
+            progress_details.update()
             
             # Close progress dialog after a moment
             import asyncio
-            await asyncio.sleep(0.5)
-            self.page.pop_dialog()
+            await asyncio.sleep(1)
+            progress_dialog.open = False
+            self.page.update()
             
             # Refresh samples view
             await self.refresh_samples()
             await self.refresh_groups()
             
             # Show success
-            self.page.show_dialog(
-                ft.SnackBar(
-                    content=ft.Text(f"Successfully imported {total_files} file(s)"),
-                    bgcolor=ft.Colors.GREEN_400
-                )
+            self.page.snack_bar = ft.SnackBar(
+                content=ft.Text(f"Successfully imported {total_spectra} spectra from {total_files} file(s)"),
+                bgcolor=ft.Colors.GREEN_400
             )
+            self.page.snack_bar.open = True
+            self.page.update()
             
         except Exception as ex:
-            self.page.pop_dialog()
-            self.page.show_dialog(
-                ft.SnackBar(
-                    content=ft.Text(f"Import error: {ex}"),
-                    bgcolor=ft.Colors.RED_400
-                )
+            import traceback
+            error_details = traceback.format_exc()
+            print(f"Import error: {error_details}")
+            
+            progress_dialog.open = False
+            self.page.update()
+            
+            self.page.snack_bar = ft.SnackBar(
+                content=ft.Text(f"Import error: {str(ex)}"),
+                bgcolor=ft.Colors.RED_400
             )
+            self.page.snack_bar.open = True
+            self.page.update()
     
     async def show_import_identifications_dialog(self, e):
         """Show import identifications dialog."""
-        self.page.show_dialog(
-            ft.SnackBar(
-                content=ft.Text("Import identifications coming soon"),
-                bgcolor=ft.Colors.BLUE_400
-            )
+        self.page.snack_bar = ft.SnackBar(
+            content=ft.Text("Import identifications coming soon"),
+            bgcolor=ft.Colors.BLUE_400
         )
+        self.page.snack_bar.open = True
+        self.page.update()
