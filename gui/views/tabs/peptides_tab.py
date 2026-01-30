@@ -13,15 +13,14 @@ class PeptidesTab(ft.Container):
     """
     
     def __init__(self, project: Project):
-        print("peptides tab...")
+        print("PeptidesTab init...")
         super().__init__()
-        print("peptides tab...")
         self.project = project
-        
-        # Build content
-        self.content = self._build_content()
-        self.padding = 20
         self.expand = True
+        self.padding = 0
+        
+        # Build content immediately
+        self.content = self._build_content()
     
     def _build_content(self):
         """Build the tab content."""
@@ -95,15 +94,15 @@ class PeptidesTab(ft.Container):
         
         # Main layout
         return ft.Column([
-            search_section,
-            ft.Container(height=10),
-            results_section,
-            ft.Container(height=10),
-            visualization_section
-        ],
-        spacing=10,
-        scroll=ft.ScrollMode.AUTO,
-        expand=True
+                search_section,
+                ft.Container(height=10),
+                results_section,
+                ft.Container(height=10),
+                visualization_section
+            ],
+            spacing=10,
+            scroll=ft.ScrollMode.AUTO,
+            expand=True
         )
     
     def search_identifications(self, e):

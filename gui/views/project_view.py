@@ -41,9 +41,11 @@ class ProjectView(ft.Container):
         from gui.views.tabs.analysis_tab import AnalysisTab
         
         # Create tabs using new Flet API
+        # IMPORTANT: length must match the number of tabs in TabBar AND controls in TabBarView
+        print("building tabs...")
         tabs = ft.Tabs(
-            selected_index=0,
-            length=4,
+            selected_index=1,
+            length=2,  # Currently only 2 tabs are active
             expand=True,
             content=ft.Column(
                 expand=True,
@@ -52,8 +54,8 @@ class ProjectView(ft.Container):
                         tabs=[
                             ft.Tab(label="Samples", icon=ft.Icons.SCIENCE),
                             ft.Tab(label="Peptides", icon=ft.Icons.BIOTECH),
-                            # ft.Tab(label="Proteins", icon=ft.Icons.BUBBLE_CHART),
-                            # ft.Tab(label="Analysis", icon=ft.Icons.ANALYTICS),
+                            # ft.Tab(text=ft.Text("Proteins"), icon=ft.Icons.BUBBLE_CHART),
+                            # ft.Tab(text=ft.Text("Analysis"), icon=ft.Icons.ANALYTICS),
                         ]
                     ),
                     ft.TabBarView(

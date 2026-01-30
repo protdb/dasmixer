@@ -122,6 +122,8 @@ class Project:
         """Execute a query."""
         if not self._db:
             raise RuntimeError("Project not initialized")
+        print(query)
+        print(params)
         return await self._db.execute(query, params or ())
     
     async def _executemany(self, query: str, params_list: list) -> aiosqlite.Cursor:
@@ -758,13 +760,14 @@ class Project:
             ValueError: If 'by' parameter is invalid
             
         Example:
-            >>> # After importing spectra file
-            >>> mapping = await project.get_spectra_idlist(file_id, by="scans")
-            >>> # mapping = {1234: 5, 1235: 6, ...}  scans -> spectrum_id
-            >>> 
-            >>> # Use in identification import
-            >>> ident_df['spectre_id'] = ident_df['scans'].map(mapping)
-            >>> await project.add_identifications_batch(ident_df)
+            >>>async def your_function():
+            >>>     # After importing spectra file
+            >>>     mapping = await project.get_spectra_idlist(file_id, by="scans")
+            >>>     # mapping = {1234: 5, 1235: 6, ...}  scans -> spectrum_id
+            >>>
+            >>>     # Use in identification import
+            >>>     ident_df['spectre_id'] = ident_df['scans'].map(mapping)
+            >>>     await project.add_identifications_batch(ident_df)
         """
         if by not in ("seq_no", "scans"):
             raise ValueError(
@@ -793,6 +796,7 @@ class Project:
         file_path: str
     ) -> int:
         """Add identification file record."""
+        print(f"spectra_file_id: {spectra_file_id}, tool_id: {tool_id} file_path: {file_path}")
         cursor = await self._execute(
             "INSERT INTO identification_file (spectre_file_id, tool_id, file_path) VALUES (?, ?, ?)",
             (spectra_file_id, tool_id, file_path)
