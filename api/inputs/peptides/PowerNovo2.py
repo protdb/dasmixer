@@ -7,7 +7,7 @@ from .table_importer import SimpleTableImporter, ColumnRenames
 # Column mapping for PowerNovo2 output
 # Note: Column names in PowerNovo2 CSV files use these exact names
 renames = ColumnRenames(
-    seq_no='SPECTRUM_ID',  # Sequential spectrum number
+    seq_no='SCAN ID',  # Sequential spectrum number
     sequence='PEPTIDE',    # Peptide sequence with modifications
     canonical_sequence='CANONICAL SEQ.',  # Sequence without modifications
     ppm='PPM DIFFERENCE',  # Mass error in ppm
@@ -38,6 +38,13 @@ class PowerNovo2Importer(SimpleTableImporter):
     
     separator = ','
     renames = renames
+
+    @staticmethod
+    def process_positional_score(score):
+        if type(score) == str:
+            return [float(s) for s in score.split()]
+        else:
+            return None
     
     def transform_df(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -53,6 +60,6 @@ class PowerNovo2Importer(SimpleTableImporter):
         """
         if 'POSITIONAL SCORES' in df.columns:
             df['POSITIONAL SCORES'] = df['POSITIONAL SCORES'].apply(
-                lambda x: [float(s) for s in x.split()] if pd.notna(x) else None
+                self.process_positional_score
             )
         return df

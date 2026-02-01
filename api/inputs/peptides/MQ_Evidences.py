@@ -86,4 +86,5 @@ class MaxQuantEvidenceParser(SimpleTableImporter):
         """
         if 'Modified sequence' in df.columns:
             df['Modified sequence'] = df['Modified sequence'].apply(self._fix_sequence)
+            df = df.drop_duplicates(subset=['Modified sequence', 'MS/MS scan number'])
         return df

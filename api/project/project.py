@@ -739,7 +739,7 @@ class Project:
         self,
         spectra_file_id: int,
         by: str = "seq_no"
-    ) -> dict[int | str, int]:
+    ) -> list[dict[str, int]]:
         """
         Get mapping from seq_no or scans to spectrum database IDs.
         
@@ -769,6 +769,7 @@ class Project:
             >>>     ident_df['spectre_id'] = ident_df['scans'].map(mapping)
             >>>     await project.add_identifications_batch(ident_df)
         """
+        print(f'getting idlist: by {by} for id: {spectra_file_id}')
         if by not in ("seq_no", "scans"):
             raise ValueError(
                 f"Invalid 'by' parameter: {by}. Must be 'seq_no' or 'scans'"
@@ -781,10 +782,11 @@ class Project:
             AND {by} IS NOT NULL
         """
         
-        rows = await self._fetchall(query, (spectra_file_id,))
+        rows = await self._fetchall(query, (int(spectra_file_id),))
         
         # Create mapping: seq_no/scans -> spectrum_id
-        return {row[by]: row['id'] for row in rows}
+        # return {row[by]: row['id'] for row in rows}
+        return [{by: row[by], 'spectre_id': row['id']} for row in rows]
     
 
     # Identification file operations
@@ -892,6 +894,13 @@ class Project:
             )
             await self.save()
             logger.info(f"Added {len(rows_to_insert)} identifications")
+
+    async def add_all_identifications(self, file_id, parser, batch_size=1000):
+        spectra_ids = self.get_spectra_idlist(file_id, parser.spectra_id_field)
+        async for data, _ in parser.parse_batch(batch_size=batch_size):
+            res = pd.merge(spectra_ids, data, on=parser.spectra_id_field)
+            await self.add_identifications_batch(res)
+
     
     async def get_identifications(
         self,

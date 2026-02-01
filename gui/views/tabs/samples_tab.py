@@ -1,6 +1,8 @@
 """Samples tab - manage samples, groups, and import data."""
 
 import flet as ft
+import pandas as pd
+
 from api.project.project import Project
 from api.inputs.registry import registry
 from pathlib import Path
@@ -853,11 +855,7 @@ class SamplesTab(ft.Container):
         async def browse_folder(e):
             """Browse for folder using FilePicker."""
             try:
-                file_picker = ft.FilePicker()
-                self.page.overlay.append(file_picker)
-                self.page.update()
-                
-                folder_path = await file_picker.get_directory_path(
+                folder_path = await ft.FilePicker().get_directory_path(
                     dialog_title=f"Select Folder with {import_type.title()} Files"
                 )
                 if folder_path:
@@ -1038,22 +1036,17 @@ class SamplesTab(ft.Container):
     async def show_import_single_files(self, import_type: str, tool_id: int | None = None):
         """Show dialog for importing individual files."""
         try:
-            # Create FilePicker
-            file_picker = ft.FilePicker()
-            self.page.overlay.append(file_picker)
-            self.page.update()
-            
-            # Use FilePicker to select files
-            result = await file_picker.pick_files(
+            # Use new async FilePicker API directly
+            result = await ft.FilePicker().pick_files(
                 dialog_title=f"Select {import_type.title()} Files",
                 allow_multiple=True
             )
             
-            if not result or not result.files:
+            if not result:
                 return  # User cancelled
             
             # Convert to format expected by import function
-            file_list = [(Path(f.path), Path(f.name).stem) for f in result.files]
+            file_list = [(Path(f.path), Path(f.name).stem) for f in result]
             
             # Show configuration dialog
             await self.show_single_files_config(file_list, import_type, tool_id)
@@ -1424,6 +1417,7 @@ class SamplesTab(ft.Container):
                 raise ValueError(f"Tool with id={tool_id} not found")
             
             # Get parser class from registry (using tool.type as parser name)
+
             parser_class = registry.get_parser(tool.type, "identification")
             
             total_files = len(file_list)
@@ -1467,8 +1461,6 @@ class SamplesTab(ft.Container):
                 
                 # Use first spectra file
                 spectra_file_id = spectra_files.iloc[0]['id']
-                print(f'getting ids...')
-                print(sample_id, spectra_file_id)
                 
                 # Add identification file record
                 ident_file_id = await self.project.add_identification_file(
@@ -1479,9 +1471,11 @@ class SamplesTab(ft.Container):
                 
                 # Parse and import identifications
                 parser = parser_class(str(file_path))
+                print(f'Parser {type(parser)} init for {file_path}')
                 
                 # Validate file
                 is_valid = await parser.validate()
+                print(f'validation result: {is_valid}')
                 if not is_valid:
                     progress_dialog.open = False
                     self.page.update()
@@ -1499,21 +1493,22 @@ class SamplesTab(ft.Container):
                     spectra_file_id,
                     by=parser.spectra_id_field
                 )
-                
+                print(spectra_mapping)
                 # Import identifications in batches
                 batch_count = 0
                 file_ident_count = 0
                 async for batch_tuple in parser.parse_batch(batch_size=1000):
                     # Unpack tuple (peptide_df, protein_df)
-                    batch = batch_tuple[0]  # Get peptide DataFrame
-                    
+                    # batch = batch_tuple[0]  # Get peptide DataFrame
+                    print(batch_tuple)
+                    print(spectra_mapping)
+                    batch = pd.merge(batch_tuple[0], pd.json_normalize(spectra_mapping), on=parser.spectra_id_field, how='inner')
                     # Add spectre_id, tool_id, ident_file_id
-                    batch['spectre_id'] = batch[parser.spectra_id_field].map(spectra_mapping)
+                    # batch['spectre_id'] = batch[parser.spectra_id_field].map(spectra_mapping)
                     batch['tool_id'] = tool.id
                     batch['ident_file_id'] = ident_file_id
-                    
-                    # Filter out rows without matching spectrum
-                    batch = batch[batch['spectre_id'].notna()]
+                    print(batch)
+                    print(batch.columns)
                     
                     if len(batch) > 0:
                         await self.project.add_identifications_batch(batch)

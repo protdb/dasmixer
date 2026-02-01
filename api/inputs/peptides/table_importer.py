@@ -192,7 +192,9 @@ class SimpleTableImporter(TableImporter):
         """
         r = asdict(self.renames)
         rename_cols = {v: k for k, v in r.items() if v is not None and v != ''}
+        print(f'rename cols: {rename_cols}')
         result = df.rename(columns=rename_cols)
+        print(result)
         
         # Validate that at least one mapping column exists
         if 'scans' not in result.columns and 'seq_no' not in result.columns:
@@ -242,6 +244,7 @@ class SimpleTableImporter(TableImporter):
         
         # Transform and remap columns
         data = self.remap_columns(self.transform_df(sheet_df))
+        print(data)
         
         # Yield in batches
         cursor = 0
@@ -266,7 +269,8 @@ class SimpleTableImporter(TableImporter):
                 else self.get_sheet(**self.peptide_sheet_selector)
             self.remap_columns(self.transform_df(sheet_df))
             return True
-        except Exception:
+        except Exception as e:
+            print(e)
             return False
 
     async def get_metadata(self) -> dict:
