@@ -1,6 +1,7 @@
 """Spectrum plotting functions with ion annotations."""
 
 import pandas as pd
+import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
@@ -24,6 +25,72 @@ def get_ion_type_color(ion_type: str) -> str:
         'z': 'purple'
     }
     return color_map.get(ion_type, 'gray')
+
+
+def plot_ion_match(
+    mz_array: np.ndarray,
+    intensity_array: np.ndarray,
+    sequence: str,
+    charge: int | None = None,
+    ion_types: list[str] | None = None,
+    water_loss: bool = False,
+    nh3_loss: bool = False,
+    ppm_threshold: float = 20.0
+) -> go.Figure:
+    """
+    Plot ion match visualization for a spectrum and sequence.
+    
+    This is a simplified function for UI display. For full functionality
+    with actual ion matching, use the ion_match module.
+    
+    Args:
+        mz_array: m/z values
+        intensity_array: Intensity values
+        sequence: Peptide sequence
+        charge: Precursor charge (optional)
+        ion_types: List of ion types to match (e.g., ['b', 'y'])
+        water_loss: Include water loss ions
+        nh3_loss: Include ammonia loss ions
+        ppm_threshold: PPM threshold for matching
+    
+    Returns:
+        Plotly Figure object
+    
+    TODO: Implement full ion matching logic
+    - Generate theoretical fragments
+    - Match peaks with PPM threshold
+    - Annotate matched peaks
+    
+    For now, this creates a simple spectrum visualization.
+    """
+    # Create simple spectrum plot
+    fig = go.Figure()
+    
+    # Add spectrum as bar chart
+    fig.add_trace(go.Bar(
+        x=mz_array,
+        y=intensity_array,
+        name='Spectrum',
+        marker_color='lightgray',
+        hovertemplate=(
+            "m/z: %{x:.2f}<br>"
+            "Intensity: %{y:.0f}"
+            "<extra></extra>"
+        )
+    ))
+    
+    # Update layout
+    charge_text = f" (charge: {charge})" if charge else ""
+    fig.update_layout(
+        title=f"Spectrum: {sequence}{charge_text}",
+        xaxis_title="m/z",
+        yaxis_title="Intensity",
+        height=400,
+        showlegend=False,
+        hovermode='closest'
+    )
+    
+    return fig
 
 
 def generate_spectrum_plot(

@@ -103,6 +103,7 @@ CREATE TABLE IF NOT EXISTS identification (
     theor_mass REAL,
     score REAL,
     positional_scores TEXT,  -- JSON as TEXT
+    intensity_coverage REAL,  -- Percentage of spectrum intensity matched by theoretical ions
     FOREIGN KEY (spectre_id) REFERENCES spectre(id) ON DELETE CASCADE,
     FOREIGN KEY (tool_id) REFERENCES tool(id) ON DELETE CASCADE,
     FOREIGN KEY (ident_file_id) REFERENCES identification_file(id) ON DELETE CASCADE

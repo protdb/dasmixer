@@ -635,7 +635,7 @@ class Project:
                 int(row['seq_no']),
                 row.get('title'),
                 int(row['scans']) if row.get('scans') is not None else None,
-                int(row['charge']) if row.get('charge') is not None else None,
+                int(row['charge']) if row.get('charge') is not None and not np.isnan(row.get('charge')) else None,
                 float(row['rt']) if row.get('rt') is not None else None,
                 float(row['pepmass']),
                 intensity,
@@ -758,16 +758,6 @@ class Project:
             
         Raises:
             ValueError: If 'by' parameter is invalid
-            
-        Example:
-            >>>async def your_function():
-            >>>     # After importing spectra file
-            >>>     mapping = await project.get_spectra_idlist(file_id, by="scans")
-            >>>     # mapping = {1234: 5, 1235: 6, ...}  scans -> spectrum_id
-            >>>
-            >>>     # Use in identification import
-            >>>     ident_df['spectre_id'] = ident_df['scans'].map(mapping)
-            >>>     await project.add_identifications_batch(ident_df)
         """
         print(f'getting idlist: by {by} for id: {spectra_file_id}')
         if by not in ("seq_no", "scans"):
@@ -784,8 +774,6 @@ class Project:
         
         rows = await self._fetchall(query, (int(spectra_file_id),))
         
-        # Create mapping: seq_no/scans -> spectrum_id
-        # return {row[by]: row['id'] for row in rows}
         return [{by: row[by], 'spectre_id': row['id']} for row in rows]
     
 
@@ -865,6 +853,7 @@ class Project:
                 - theor_mass: float | None
                 - score: float | None
                 - positional_scores: dict | None
+                - intensity_coverage: float | None
         """
         rows_to_insert = []
         
@@ -881,15 +870,16 @@ class Project:
                 float(row['ppm']) if row.get('ppm') is not None else None,
                 float(row['theor_mass']) if row.get('theor_mass') is not None else None,
                 float(row['score']) if row.get('score') is not None else None,
-                positional_scores_json
+                positional_scores_json,
+                float(row['intensity_coverage']) if row.get('intensity_coverage') is not None else None
             ))
         
         if rows_to_insert:
             await self._executemany(
                 """INSERT INTO identification 
                    (spectre_id, tool_id, ident_file_id, is_preferred, sequence, canonical_sequence,
-                    ppm, theor_mass, score, positional_scores)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    ppm, theor_mass, score, positional_scores, intensity_coverage)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 rows_to_insert
             )
             await self.save()
@@ -906,7 +896,10 @@ class Project:
         self,
         spectra_file_id: int | None = None,
         tool_id: int | None = None,
-        sample_id: int | None = None
+        sample_id: int | None = None,
+        only_prefered: bool = False,
+        offset: int = 0,
+        limit: int | None = None,
     ) -> pd.DataFrame:
         """Get identifications as DataFrame with joined metadata."""
         query_parts = ["""
@@ -944,6 +937,55 @@ class Project:
         rows = await self._fetchall(query, tuple(params) if params else None)
         
         return pd.DataFrame(rows) if rows else pd.DataFrame()
+    
+    async def update_identification_coverage(
+        self,
+        identification_id: int,
+        intensity_coverage: float
+    ) -> None:
+        """
+        Update intensity coverage for an identification.
+        
+        Args:
+            identification_id: Identification ID
+            intensity_coverage: Percentage of spectrum intensity matched by ions
+        """
+        await self._execute(
+            "UPDATE identification SET intensity_coverage = ? WHERE id = ?",
+            (float(intensity_coverage), int(identification_id))
+        )
+        # Note: No auto-save here for batch operations efficiency
+        # Caller should call save() after batch updates
+    
+    async def set_preferred_identification(
+        self,
+        spectre_id: int,
+        identification_id: int
+    ) -> None:
+        """
+        Set preferred identification for a spectrum.
+        
+        Resets is_preferred to False for all identifications of this spectrum,
+        then sets it to True for the specified identification.
+        
+        Args:
+            spectre_id: Spectrum ID
+            identification_id: Identification ID to mark as preferred
+        """
+        # Reset all for this spectrum
+        await self._execute(
+            "UPDATE identification SET is_preferred = 0 WHERE spectre_id = ?",
+            (int(spectre_id),)
+        )
+        
+        # Set preferred
+        await self._execute(
+            "UPDATE identification SET is_preferred = 1 WHERE id = ?",
+            (int(identification_id),)
+        )
+        
+        await self.save()
+        logger.debug(f"Set preferred identification {identification_id} for spectrum {spectre_id}")
     
     # Protein operations
     
@@ -999,7 +1041,17 @@ class Project:
             rows = await self._fetchall("SELECT * FROM protein ORDER BY id")
         
         return [Protein.from_dict(row) for row in rows]
-    
+
+    async def get_protein_db_to_search(self) -> dict[str, str]:
+        """
+        Special function to get Protein data to apply search with npysearch
+        :return: dict {protein_id: sequence} for full protein DB loaded
+        """
+        rows = await self._fetchall(
+            "SELECT id, sequence FROM protein",
+        )
+        return {row['id']: row['sequence'] for row in rows}
+
     # Low-level SQL API
     
     async def execute_query(

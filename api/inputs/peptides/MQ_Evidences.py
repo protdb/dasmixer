@@ -16,11 +16,12 @@ renames = ColumnRenames(
 
 # PTM notation conversions from MaxQuant to ProForma-like notation
 ptm_replacements = [
-    ('(Deamidation (NQ))', '[Deamidation]'),
-    ('(de)', '[Deamidation]'),
+    ('(Deamidation (NQ))', '[Deamidated]'),
+    ('(de)', '[Deamidated]'),
     ('_', ''),  # Remove underscores
     ('(Pyridylethyl)', '[Pyridylethyl]'),
     ('(Oxidation (M))', '[Oxidation]'),
+    ('(Acetyl (Protein N-term))', '[-89.029920]-')
 ]
 
 

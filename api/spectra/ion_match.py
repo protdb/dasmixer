@@ -9,8 +9,32 @@ from peptacular.fragmentation import Fragmenter, Fragment
 from peptacular.score import (
     get_fragment_matches,
     FragmentMatch,
-    get_matched_intensity_percentage
 )
+
+def get_matched_intensity_percentage(
+    fragment_matches: list[FragmentMatch], intensities: list[float]
+) -> float:
+    """
+    Calculates the proportion of matched intensity to total intensity.
+
+    :param fragment_matches: List of fragment matches.
+    :type fragment_matches: List[FragmentMatch]
+    :param intensities: List of intensities from the experimental spectrum.
+    :type intensities: List[float]
+
+    :return: Proportion of matched intensity to total intensity.
+    :rtype: float
+    """
+
+    # group matches by mz
+    matches = {f.mz: f for f in fragment_matches}
+    matched_intensity = sum(f.intensity for f in matches.values())
+    total_intensity = sum(intensities)
+
+    if total_intensity == 0:
+        return 0
+
+    return matched_intensity / total_intensity
 
 
 @dataclass
@@ -24,8 +48,8 @@ class IonMatchParameters:
     Attributes:
         ions: List of ion types to generate and match (e.g., ['b', 'y']).
               If None, defaults to ['b', 'y'].
-        tolerance: Tolerance for m/z matching in Thomsons (Th).
-                   Default is 0.05 Th.
+        tolerance: Tolerance for m/z matching in PPM.
+                   Default is 20 PPM.
         mode: Match selection mode:
               - 'all': return all matches within tolerance
               - 'closest': return closest match for each theoretical ion
@@ -34,7 +58,7 @@ class IonMatchParameters:
         ammonia_loss: Include ammonia loss modifications (-NH3, -17.02655 Da)
     """
     ions: list[Literal['a', 'b', 'c', 'x', 'y', 'z']] | None = None
-    tolerance: float = 0.05  # Th tolerance
+    tolerance: float = 20.0  # PPM tolerance
     mode: Literal['all', 'closest', 'largest'] = 'largest'
     water_loss: bool = True
     ammonia_loss: bool = True
@@ -72,7 +96,7 @@ def match_predictions(
     matches them to experimental peaks within the specified tolerance.
     
     Args:
-        params: Ion matching parameters
+        params: Ion matching parameters (with tolerance in PPM)
         mz: List of experimental m/z values
         intensity: List of experimental intensities (same length as mz)
         charges: Charge state(s) for fragment calculation.
@@ -84,7 +108,7 @@ def match_predictions(
         MatchResult containing matched fragments and coverage statistics
         
     Example:
-        >>> params = IonMatchParameters(ions=['b', 'y'], tolerance=0.05)
+        >>> params = IonMatchParameters(ions=['b', 'y'], tolerance=20.0)
         >>> mz = [147.11, 276.15, 405.19]
         >>> intensity = [1000, 2000, 1500]
         >>> result = match_predictions(params, mz, intensity, 1, "PEPTIDE")
@@ -102,12 +126,12 @@ def match_predictions(
         ammonia_loss=params.ammonia_loss,
     )
     
-    # Match experimental peaks to theoretical fragments
+    # Match experimental peaks to theoretical fragments using PPM tolerance
     matches = get_fragment_matches(
         frags,
         mz,
         intensity,
-        tolerance_type='th',
+        tolerance_type='ppm',  # Changed from 'th' to 'ppm'
         tolerance_value=params.tolerance,
         mode=params.mode,
     )
