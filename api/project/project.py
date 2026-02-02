@@ -711,7 +711,7 @@ class Project:
         """
         row = await self._fetchone(
             "SELECT * FROM spectre WHERE id = ?",
-            (spectrum_id,)
+            (int(spectrum_id),)
         )
         
         if not row:
@@ -899,11 +899,11 @@ class Project:
         sample_id: int | None = None,
         only_prefered: bool = False,
         offset: int = 0,
-        limit: int | None = None,
+        limit: int | None = None
     ) -> pd.DataFrame:
         """Get identifications as DataFrame with joined metadata."""
         query_parts = ["""
-            SELECT i.*, s.title as spectrum_title, s.pepmass, s.rt,
+            SELECT i.*, s.title as spectrum_title, s.pepmass, s.rt, s.charge,
                    t.name as tool_name, t.type as tool_type,
                    sf.sample_id, sam.name as sample_name
             FROM identification i
@@ -928,10 +928,16 @@ class Project:
             conditions.append("sf.sample_id = ?")
             params.append(sample_id)
         
+        if only_prefered:
+            conditions.append("i.is_preferred = 1")
+        
         if conditions:
             query_parts.append("WHERE " + " AND ".join(conditions))
         
         query_parts.append("ORDER BY i.id")
+        
+        if limit is not None:
+            query_parts.append(f"LIMIT {limit} OFFSET {offset}")
         
         query = " ".join(query_parts)
         rows = await self._fetchall(query, tuple(params) if params else None)
@@ -986,6 +992,117 @@ class Project:
         
         await self.save()
         logger.debug(f"Set preferred identification {identification_id} for spectrum {spectre_id}")
+    
+    # Peptide match operations
+    
+    async def clear_peptide_matches(self) -> None:
+        """Clear all peptide matches (for re-mapping)."""
+        await self._execute("DELETE FROM peptide_match")
+        await self.save()
+        logger.info("Cleared all peptide matches")
+    
+    async def add_peptide_matches_batch(self, matches_df: pd.DataFrame) -> None:
+        """
+        Add batch of peptide matches.
+        
+        Args:
+            matches_df: DataFrame with columns:
+                - protein_id: str
+                - identification_id: int
+                - matched_sequence: str
+                - identity: float
+                - matched_ppm: float | None
+                - matched_theor_mass: float | None
+                - unique_evidence: bool | None
+                - matched_coverage_percent: float | None
+        """
+        rows_to_insert = []
+        
+        for _, row in matches_df.iterrows():
+            rows_to_insert.append((
+                row['protein_id'],
+                int(row['identification_id']),
+                row['matched_sequence'],
+                float(row['identity']),
+                float(row['matched_ppm']) if row.get('matched_ppm') is not None else None,
+                float(row['matched_theor_mass']) if row.get('matched_theor_mass') is not None else None,
+                1 if row.get('unique_evidence', False) else 0,
+                float(row['matched_coverage_percent']) if row.get('matched_coverage_percent') is not None else None
+            ))
+        
+        if rows_to_insert:
+            await self._executemany(
+                """INSERT INTO peptide_match 
+                   (protein_id, identification_id, matched_sequence, identity,
+                    matched_ppm, matched_theor_mass, unique_evidence, matched_coverage_percent)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                rows_to_insert
+            )
+            # Note: No auto-save for batch efficiency
+            logger.debug(f"Added {len(rows_to_insert)} peptide matches")
+    
+    async def get_peptide_matches(
+        self,
+        protein_id: str | None = None,
+        identification_id: int | None = None
+    ) -> pd.DataFrame:
+        """Get peptide matches as DataFrame."""
+        query_parts = ["SELECT * FROM peptide_match"]
+        
+        conditions = []
+        params = []
+        
+        if protein_id is not None:
+            conditions.append("protein_id = ?")
+            params.append(protein_id)
+        
+        if identification_id is not None:
+            conditions.append("identification_id = ?")
+            params.append(identification_id)
+        
+        if conditions:
+            query_parts.append("WHERE " + " AND ".join(conditions))
+        
+        query_parts.append("ORDER BY id")
+        
+        query = " ".join(query_parts)
+        rows = await self._fetchall(query, tuple(params) if params else None)
+        
+        return pd.DataFrame(rows) if rows else pd.DataFrame()
+    
+    async def update_peptide_match_metrics(
+        self,
+        match_id: int,
+        matched_ppm: float | None = None,
+        matched_coverage_percent: float | None = None
+    ) -> None:
+        """
+        Update metrics for a peptide match.
+        
+        Args:
+            match_id: Peptide match ID
+            matched_ppm: PPM error for matched sequence
+            matched_coverage_percent: Ion coverage for matched sequence
+        """
+        updates = []
+        params = []
+        
+        if matched_ppm is not None:
+            updates.append("matched_ppm = ?")
+            params.append(float(matched_ppm))
+        
+        if matched_coverage_percent is not None:
+            updates.append("matched_coverage_percent = ?")
+            params.append(float(matched_coverage_percent))
+        
+        if not updates:
+            return
+        
+        params.append(int(match_id))
+        
+        query = f"UPDATE peptide_match SET {', '.join(updates)} WHERE id = ?"
+        await self._execute(query, tuple(params))
+        # Note: No auto-save for batch efficiency
     
     # Protein operations
     

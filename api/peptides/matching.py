@@ -3,11 +3,9 @@ from typing import AsyncIterator
 
 import pandas as pd
 import npysearch as npy
-from click.core import batch
 
 from api.project.project import Project
 from utils.logger import logger
-from utils.ppm import calculate_ppm
 from pyteomics.mass import calculate_mass
 
 
@@ -46,20 +44,13 @@ async def select_preferred_identifications(
     
     Raises:
         ValueError: If invalid criterion or settings provided
-    
-    TODO: Implement the full logic
+
     - Ion fragment generation
     - PPM-based matching
     - Intensity coverage calculation
     - Database updates
     
     Example:
-        >>> ion_settings = {
-        ...     'ion_types': ['b', 'y'],
-        ...     'water_loss': False,
-        ...     'nh3_loss': False,
-        ...     'ppm_threshold': 20.0
-        ... }
         >>> tool_settings = {
         ...     1: {
         ...         'max_ppm': 50.0,
@@ -69,7 +60,7 @@ async def select_preferred_identifications(
         ... }
         >>> async def your_function():
         >>>     count = await select_preferred_identifications(
-        ...         project, "intensity", ion_settings, tool_settings
+        ...         project, "intensity", tool_settings
         ...     )
         >>>     print(f"Processed {count} spectra")
     """
@@ -142,14 +133,16 @@ async def map_proteins(
         query = {}
 
         for _, row in batch_data[['id', 'canonical_sequence']].iterrows():
-            query[row['id']] = row['canonical_sequence']
+            query[str(row['id'])] = row['canonical_sequence']
         blast = pd.DataFrame(npy.blast(
             query,
             fasta,
             maxAccepts=max_acc,
             maxRejects=max_rej,
+            alphabet='protein',
             minIdentity=tool_setting['min_protein_identity'],
         ))
+        print(blast.to_markdown(index=False))
         uq_evidences = set(blast['QueryId'].value_counts().reset_index(name='cnt').query('cnt==1')['QueryId'])
         all_res = []
         for _, row in blast.iterrows():
@@ -158,7 +151,7 @@ async def map_proteins(
                 'identification_id': int(row['QueryId']),
                 'matched_sequence': row['TargetMatchSeq'],
                 'identity': row['Identity'],
-                'uq_evidence': row['QueryId'] in uq_evidences,
+                'unique_evidence': row['QueryId'] in uq_evidences,
                 'matched_ppm': None,
                 'matched_theor_mass': calculate_mass(sequence=row['TargetMatchSeq'])
             })

@@ -135,6 +135,8 @@ CREATE TABLE IF NOT EXISTS peptide_match (
     identity REAL NOT NULL,
     matched_ppm REAL,
     matched_theor_mass REAL,
+    unique_evidence INTEGER,  -- BOOLEAN as INTEGER
+    matched_coverage_percent REAL,
     FOREIGN KEY (protein_id) REFERENCES protein(id) ON DELETE CASCADE,
     FOREIGN KEY (identification_id) REFERENCES identification(id) ON DELETE CASCADE
 );

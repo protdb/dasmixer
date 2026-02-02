@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import AsyncIterator
 import pandas as pd
 import aiofiles
+from uniprot_meta_tool import UniprotData
 
 from utils.logger import logger
 
@@ -192,6 +193,8 @@ class FastaParser:
         """
         if not self.enrich_from_uniprot:
             return df
+        else:
+
         
         logger.warning("UniProt enrichment not yet implemented")
         # TODO: Implement UniProt API integration
