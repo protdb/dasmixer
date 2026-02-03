@@ -27,7 +27,8 @@ CREATE TABLE IF NOT EXISTS subset (
 CREATE TABLE IF NOT EXISTS tool (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT UNIQUE NOT NULL,
-    type TEXT NOT NULL,
+    type TEXT NOT NULL,  -- "Library" or "De Novo"
+    parser TEXT NOT NULL,  -- Parser name (e.g., "PowerNovo2", "MaxQuant")
     settings TEXT,  -- JSON as TEXT
     display_color TEXT
 );
@@ -120,7 +121,9 @@ CREATE TABLE IF NOT EXISTS protein (
     is_uniprot INTEGER NOT NULL DEFAULT 0,  -- BOOLEAN as INTEGER
     fasta_name TEXT,
     sequence TEXT,
-    gene TEXT
+    gene TEXT,
+    name TEXT,  -- NEW: Short protein name
+    uniprot_data BLOB  -- NEW: Serialized UniprotData object (pickle + gzip)
 );
 
 CREATE INDEX IF NOT EXISTS idx_protein_uniprot ON protein(is_uniprot);

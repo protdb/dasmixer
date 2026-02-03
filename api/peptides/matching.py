@@ -38,6 +38,8 @@ async def select_preferred_identifications(
             - use_protein_from_file: Use protein IDs from file (bool)
             - min_protein_identity: Minimum protein sequence identity (float)
             - denovo_correction: Apply de novo correction (bool)
+            - min_peptide_length: Minimum peptide length (int, default 7) - NEW
+            - max_peptide_length: Maximum peptide length (int, default 30) - NEW
     
     Returns:
         Number of spectra processed
@@ -55,7 +57,9 @@ async def select_preferred_identifications(
         ...     1: {
         ...         'max_ppm': 50.0,
         ...         'min_score': 0.8,
-        ...         'min_ion_intensity_coverage': 25.0
+        ...         'min_ion_intensity_coverage': 25.0,
+        ...         'min_peptide_length': 7,
+        ...         'max_peptide_length': 30
         ...     }
         ... }
         >>> async def your_function():
@@ -77,13 +81,32 @@ async def select_preferred_identifications(
             max_ppm = tool_params.get("max_ppm", 50000)
             min_score = tool_params.get("min_score", 0)
             min_ion_intensity_coverage = tool_params["min_ion_intensity_coverage"]
+            min_len = tool_params.get("min_peptide_length", 7)  # NEW
+            max_len = tool_params.get("max_peptide_length", 30)  # NEW
+            
             idents = await project.get_identifications(
                 spectra_file['id'], tool_id
             )
+            
+            # Add length filtering - NEW
+            idents['canonical_length'] = idents['canonical_sequence'].str.len()
+            
             if not tool_params.get("denovo_correction", False):
-                query = "ppm <= @max_ppm and score >= @min_score and intensity_coverage >= @min_ion_intensity_coverage"
+                query = (
+                    "ppm <= @max_ppm and "
+                    "score >= @min_score and "
+                    "intensity_coverage >= @min_ion_intensity_coverage and "
+                    "canonical_length >= @min_len and "
+                    "canonical_length <= @max_len"
+                )
             else:
-                query = "ppm <= 50000 and score >= @min_score and intensity_coverage >= @min_ion_intensity_coverage"
+                query = (
+                    "ppm <= 50000 and "
+                    "score >= @min_score and "
+                    "intensity_coverage >= @min_ion_intensity_coverage and "
+                    "canonical_length >= @min_len and "
+                    "canonical_length <= @max_len"
+                )
             idents_not_merged.append(idents.query(query).copy())
         all_idents = pd.concat(idents_not_merged, ignore_index=True)
         spectras = await project.get_spectra(spectra_file['id'])
@@ -157,7 +180,9 @@ async def map_proteins(
                 maxRejects=max_rej,
                 alphabet='protein',
                 minIdentity=tool_setting['min_protein_identity'],
-            ))[['QueryId', 'TargetId', 'TargetMatchSeq', 'Identity']]
+            ))
+            print(blast)
+            blast = blast[['QueryId', 'TargetId', 'TargetMatchSeq', 'Identity']]
             # blast = pd.concat(
             #     [blast, pd.json_normalize(dumb_search_results)],
             # )

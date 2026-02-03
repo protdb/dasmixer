@@ -2,6 +2,8 @@
 
 import aiosqlite
 import json
+import pickle
+import gzip
 from datetime import datetime
 from pathlib import Path
 from typing import AsyncIterator
@@ -12,6 +14,32 @@ from .schema import CREATE_SCHEMA_SQL, DEFAULT_METADATA
 from .dataclasses import Subset, Tool, Sample, Protein
 from .array_utils import compress_array, decompress_array
 from utils.logger import logger
+
+
+# Helper functions for uniprot_data serialization/deserialization
+
+def _serialize_uniprot_data(uniprot_data) -> bytes | None:
+    """Serialize UniprotData object to compressed blob."""
+    if uniprot_data is None:
+        return None
+    try:
+        pickled = pickle.dumps(uniprot_data)
+        return gzip.compress(pickled)
+    except Exception as e:
+        logger.error(f"Error serializing uniprot_data: {e}")
+        return None
+
+
+def _deserialize_uniprot_data(blob: bytes | None):
+    """Deserialize compressed blob to UniprotData object."""
+    if blob is None:
+        return None
+    try:
+        decompressed = gzip.decompress(blob)
+        return pickle.loads(decompressed)
+    except Exception as e:
+        logger.error(f"Error deserializing uniprot_data: {e}")
+        return None
 
 
 class Project:
@@ -325,11 +353,24 @@ class Project:
     async def add_tool(
         self,
         name: str,
-        type: str,
+        type: str,  # "Library" or "De Novo"
+        parser: str,  # Parser name
         settings: dict | None = None,
         display_color: str | None = None
     ) -> Tool:
-        """Add a new identification tool."""
+        """
+        Add a new identification tool.
+        
+        Args:
+            name: Tool name (unique)
+            type: Tool type - "Library" or "De Novo"
+            parser: Parser name (e.g., "PowerNovo2", "MaxQuant")
+            settings: Tool-specific settings (JSON)
+            display_color: Color for UI display
+            
+        Returns:
+            Created Tool object
+        """
         # Check if exists
         existing = await self._fetchone(
             "SELECT id FROM tool WHERE name = ?",
@@ -341,19 +382,20 @@ class Project:
         settings_json = json.dumps(settings) if settings else None
         
         cursor = await self._execute(
-            "INSERT INTO tool (name, type, settings, display_color) VALUES (?, ?, ?, ?)",
-            (name, type, settings_json, display_color)
+            "INSERT INTO tool (name, type, parser, settings, display_color) VALUES (?, ?, ?, ?, ?)",
+            (name, type, parser, settings_json, display_color)
         )
         
         tool_id = cursor.lastrowid
         await self.save()
         
-        logger.info(f"Added tool: {name} (id={tool_id}, type={type})")
+        logger.info(f"Added tool: {name} (id={tool_id}, type={type}, parser={parser})")
         
         return Tool(
             id=tool_id,
             name=name,
             type=type,
+            parser=parser,
             settings=settings,
             display_color=display_color
         )
@@ -379,8 +421,8 @@ class Project:
         settings_json = json.dumps(tool.settings) if tool.settings else None
         
         await self._execute(
-            "UPDATE tool SET name = ?, type = ?, settings = ?, display_color = ? WHERE id = ?",
-            (tool.name, tool.type, settings_json, tool.display_color, tool.id)
+            "UPDATE tool SET name = ?, type = ?, parser = ?, settings = ?, display_color = ? WHERE id = ?",
+            (tool.name, tool.type, tool.parser, settings_json, tool.display_color, tool.id)
         )
         await self.save()
         logger.debug(f"Updated tool: {tool.name}")
@@ -806,7 +848,7 @@ class Project:
     ) -> pd.DataFrame:
         """Get identification files as DataFrame."""
         query_parts = ["""
-            SELECT if.*, t.name as tool_name, t.type as tool_type
+            SELECT if.*, t.name as tool_name, t.parser as tool_parser
             FROM identification_file if
             JOIN tool t ON if.tool_id = t.id
         """]
@@ -904,7 +946,7 @@ class Project:
         """Get identifications as DataFrame with joined metadata."""
         query_parts = ["""
             SELECT i.*, s.title as spectrum_title, s.pepmass, s.rt, s.charge,
-                   t.name as tool_name, t.type as tool_type,
+                   t.name as tool_name, t.parser as tool_parser,
                    sf.sample_id, sam.name as sample_name
             FROM identification i
             JOIN spectre s ON i.spectre_id = s.id
@@ -1106,34 +1148,65 @@ class Project:
     
     # Protein operations
     
-    async def add_protein(self, protein: Protein) -> None:
-        """Add or update protein."""
+    async def add_protein(
+        self,
+        protein_id: str,
+        sequence: str,
+        is_uniprot: bool = False,
+        fasta_name: str | None = None,
+        gene: str | None = None,
+        name: str | None = None,
+        uniprot_data=None  # UniprotData object
+    ) -> None:
+        """
+        Add or update protein.
+        
+        Args:
+            protein_id: Protein ID
+            sequence: Amino acid sequence
+            is_uniprot: Whether ID is from UniProt
+            fasta_name: Name from FASTA header
+            gene: Gene name
+            name: Short protein name (NEW)
+            uniprot_data: UniprotData object (NEW)
+        """
+        # Serialize uniprot_data
+        uniprot_blob = _serialize_uniprot_data(uniprot_data)
+        
         await self._execute(
-            """INSERT OR REPLACE INTO protein (id, is_uniprot, fasta_name, sequence, gene)
-               VALUES (?, ?, ?, ?, ?)""",
-            (protein.id, 1 if protein.is_uniprot else 0, protein.fasta_name,
-             protein.sequence, protein.gene)
+            """INSERT OR REPLACE INTO protein 
+               (id, is_uniprot, fasta_name, sequence, gene, name, uniprot_data)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (protein_id, 1 if is_uniprot else 0, fasta_name, sequence, gene, name, uniprot_blob)
         )
         await self.save()
-        logger.debug(f"Added/updated protein: {protein.id}")
+        logger.debug(f"Added/updated protein: {protein_id}")
     
     async def add_proteins_batch(self, proteins_df: pd.DataFrame) -> None:
         """Add batch of proteins from DataFrame."""
         rows_to_insert = []
         
         for _, row in proteins_df.iterrows():
+            # Serialize uniprot_data if present
+            uniprot_blob = None
+            if 'uniprot_data' in row and row['uniprot_data'] is not None:
+                uniprot_blob = _serialize_uniprot_data(row['uniprot_data'])
+            
             rows_to_insert.append((
                 row['id'],
                 1 if row.get('is_uniprot', False) else 0,
                 row.get('fasta_name'),
                 row.get('sequence'),
-                row.get('gene')
+                row.get('gene'),
+                row.get('name'),  # NEW
+                uniprot_blob  # NEW
             ))
         
         if rows_to_insert:
             await self._executemany(
-                """INSERT OR REPLACE INTO protein (id, is_uniprot, fasta_name, sequence, gene)
-                   VALUES (?, ?, ?, ?, ?)""",
+                """INSERT OR REPLACE INTO protein 
+                   (id, is_uniprot, fasta_name, sequence, gene, name, uniprot_data)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
                 rows_to_insert
             )
             await self.save()
@@ -1145,7 +1218,22 @@ class Project:
             "SELECT * FROM protein WHERE id = ?",
             (protein_id,)
         )
-        return Protein.from_dict(row) if row else None
+        
+        if not row:
+            return None
+        
+        # Deserialize uniprot_data
+        uniprot_data = _deserialize_uniprot_data(row.get('uniprot_data'))
+        
+        return Protein(
+            id=row['id'],
+            is_uniprot=bool(row.get('is_uniprot', False)),
+            fasta_name=row.get('fasta_name'),
+            sequence=row.get('sequence'),
+            gene=row.get('gene'),
+            name=row.get('name'),
+            uniprot_data=uniprot_data
+        )
     
     async def get_proteins(self, is_uniprot: bool | None = None) -> list[Protein]:
         """Get proteins, optionally filtered."""
@@ -1157,7 +1245,22 @@ class Project:
         else:
             rows = await self._fetchall("SELECT * FROM protein ORDER BY id")
         
-        return [Protein.from_dict(row) for row in rows]
+        proteins = []
+        for row in rows:
+            # Deserialize uniprot_data
+            uniprot_data = _deserialize_uniprot_data(row.get('uniprot_data'))
+            
+            proteins.append(Protein(
+                id=row['id'],
+                is_uniprot=bool(row.get('is_uniprot', False)),
+                fasta_name=row.get('fasta_name'),
+                sequence=row.get('sequence'),
+                gene=row.get('gene'),
+                name=row.get('name'),
+                uniprot_data=uniprot_data
+            ))
+        
+        return proteins
 
     async def get_protein_db_to_search(self) -> dict[str, str]:
         """
@@ -1168,6 +1271,279 @@ class Project:
             "SELECT id, sequence FROM protein",
         )
         return {row['id']: row['sequence'] for row in rows}
+    
+    async def get_protein_count(self) -> int:
+        """
+        Get total number of proteins in database.
+        
+        Returns:
+            int: Total protein count
+        """
+        query = "SELECT COUNT(*) as count FROM protein"
+        result = await self.execute_query_df(query)
+        if len(result) == 0:
+            return 0
+        return int(result.iloc[0]['count'])
+    
+    # NEW: Advanced query methods for peptides
+    
+    async def get_joined_peptide_data(
+        self,
+        is_preferred: bool | None = None,
+        sequence_identified: bool | None = None,
+        protein_identified: bool | None = None,
+        sample: str | None = None,
+        subset: str | None = None,
+        sample_id: int | None = None,
+        subset_id: int | None = None,
+        sequence: str | None = None,
+        canonical_sequence: str | None = None,
+        matched_sequence: str | None = None,
+        seq_no: int | None = None,
+        scans: int | None = None,
+        tool: str | None = None,
+        tool_id: int | None = None
+    ) -> pd.DataFrame:
+        """
+        Get joined peptide data with optional filtering.
+        
+        Joins spectre, identification, and peptide_match tables with
+        sample/subset/tool information. Applies filters via SQL WHERE clauses.
+        
+        Args:
+            is_preferred: Filter by is_preferred = true
+            sequence_identified: Filter by sequence IS NOT NULL
+            protein_identified: Filter by protein_id IS NOT NULL
+            sample: Filter by sample name (exact match)
+            subset: Filter by subset name (exact match)
+            sample_id: Filter by sample ID
+            subset_id: Filter by subset ID
+            sequence: Filter by sequence (LIKE %value%)
+            canonical_sequence: Filter by canonical_sequence (LIKE %value%)
+            matched_sequence: Filter by matched_sequence (LIKE %value%)
+            seq_no: Filter by spectrum sequence number (exact)
+            scans: Filter by scans value (exact)
+            tool: Filter by tool name (exact match)
+            tool_id: Filter by tool ID
+        
+        Returns:
+            DataFrame with columns:
+                - sample, subset, sample_id, subset_id
+                - seq_no, scans, charge, rt, pepmass, intensity
+                - tool, tool_id, identification_id
+                - sequence, canonical_sequence, ppm, is_preferred
+                - matched_sequence, matched_ppm, protein_id, unique_evidence, gene
+        """
+        # Base query
+        query = """
+            SELECT
+                sb.sample, sb.subset, sb.sample_id, sb.subset_id,
+                s.id as spectre_id, s.seq_no, s.scans, s.charge, s.rt, s.pepmass, s.intensity,
+                id.tool, id.tool_id, id.identification_id, id.sequence, 
+                id.canonical_sequence, id.ppm, id.is_preferred,
+                mp.matched_sequence, mp.matched_ppm, mp.protein_id, 
+                mp.unique_evidence, mp.gene
+            FROM
+                spectre AS s
+            LEFT JOIN
+                (SELECT 
+                    sm.id AS sample_id, 
+                    f.id AS spectre_file_id, 
+                    sm.name AS sample, 
+                    sb.name AS subset, 
+                    sb.id AS subset_id 
+                 FROM sample sm, subset sb, spectre_file f 
+                 WHERE sm.subset_id = sb.id AND f.sample_id = sm.id) AS sb
+                ON sb.spectre_file_id = s.spectre_file_id
+            LEFT JOIN
+                (SELECT 
+                    i.spectre_id, 
+                    t.name AS tool, 
+                    t.id AS tool_id, 
+                    i.id AS identification_id, 
+                    i.sequence, 
+                    i.canonical_sequence, 
+                    i.ppm, 
+                    i.is_preferred 
+                 FROM identification i, tool t 
+                 WHERE t.id = i.tool_id) AS id 
+                ON id.spectre_id = s.id
+            LEFT JOIN
+                (SELECT 
+                    m.matched_sequence, 
+                    m.matched_ppm, 
+                    m.protein_id, 
+                    m.identification_id, 
+                    m.unique_evidence, 
+                    p.gene
+                 FROM peptide_match m, protein p 
+                 WHERE p.id = m.protein_id) AS mp 
+                ON mp.identification_id = id.identification_id
+            WHERE 1=1
+        """
+        
+        # Build filter conditions and parameters
+        conditions = []
+        params = []
+        
+        if is_preferred is not None:
+            conditions.append("id.is_preferred = ?")
+            params.append(1 if is_preferred else 0)
+        
+        if sequence_identified is not None:
+            if sequence_identified:
+                conditions.append("id.sequence IS NOT NULL")
+            else:
+                conditions.append("id.sequence IS NULL")
+        
+        if protein_identified is not None:
+            if protein_identified:
+                conditions.append("mp.protein_id IS NOT NULL")
+            else:
+                conditions.append("mp.protein_id IS NULL")
+        
+        if sample is not None:
+            conditions.append("sb.sample = ?")
+            params.append(sample)
+        
+        if subset is not None:
+            conditions.append("sb.subset = ?")
+            params.append(subset)
+        
+        if sample_id is not None:
+            conditions.append("sb.sample_id = ?")
+            params.append(sample_id)
+        
+        if subset_id is not None:
+            conditions.append("sb.subset_id = ?")
+            params.append(subset_id)
+        
+        if sequence is not None:
+            conditions.append("id.sequence LIKE ?")
+            params.append(f"%{sequence}%")
+        
+        if canonical_sequence is not None:
+            conditions.append("id.canonical_sequence LIKE ?")
+            params.append(f"%{canonical_sequence}%")
+        
+        if matched_sequence is not None:
+            conditions.append("mp.matched_sequence LIKE ?")
+            params.append(f"%{matched_sequence}%")
+        
+        if seq_no is not None:
+            conditions.append("s.seq_no = ?")
+            params.append(seq_no)
+        
+        if scans is not None:
+            conditions.append("s.scans = ?")
+            params.append(scans)
+        
+        if tool is not None:
+            conditions.append("id.tool = ?")
+            params.append(tool)
+        
+        if tool_id is not None:
+            conditions.append("id.tool_id = ?")
+            params.append(tool_id)
+        
+        # Add conditions to query
+        if conditions:
+            query += " AND " + " AND ".join(conditions)
+        
+        # Execute query
+        return await self.execute_query_df(query, tuple(params) if params else None)
+    
+    async def get_spectrum_plot_data(self, spectrum_id: int) -> dict:
+        """
+        Get all data needed to plot spectrum with all identifications.
+        
+        Returns spectrum arrays and all identification sequences for this spectrum,
+        ready to be unpacked into make_full_spectrum_plot().
+        
+        Args:
+            spectrum_id: Spectrum ID
+        
+        Returns:
+            Dictionary with keys:
+                - mz: list[float] - m/z array
+                - intensity: list[float] - intensity array
+                - charges: list[int] | int - charge array or single charge
+                - sequences: list[str] - all identified sequences for this spectrum
+                - headers: list[str] - formatted headers for each sequence
+                    Format: "{tool_name} | Score: {score:.2f} | PPM: {ppm:.2f}"
+                - spectrum_info: dict - spectrum metadata
+                    - seq_no: int
+                    - scans: int
+                    - rt: float
+                    - pepmass: float
+                    - charge: int
+        
+        Example:
+            >>> data = await project.get_spectrum_plot_data(123)
+            >>> from api.spectra.plot_flow import make_full_spectrum_plot
+            >>> from api.spectra.ion_match import IonMatchParameters
+            >>> 
+            >>> params = IonMatchParameters(ions=['b', 'y'], tolerance=20.0)
+            >>> fig = make_full_spectrum_plot(
+            ...     params=params,
+            ...     **data  # Unpack dict directly
+            ... )
+        """
+        # Get spectrum with arrays
+        spectrum = await self.get_spectrum_full(spectrum_id)
+        
+        # Get all identifications for this spectrum
+        query = """
+            SELECT 
+                i.sequence, i.score, i.ppm, i.is_preferred,
+                t.name AS tool_name
+            FROM identification i
+            JOIN tool t ON i.tool_id = t.id
+            WHERE i.spectre_id = ?
+            ORDER BY i.is_preferred DESC, i.score DESC
+        """
+        ident_rows = await self._fetchall(query, (spectrum_id,))
+        
+        # Build sequences and headers
+        sequences = []
+        headers = []
+        
+        for row in ident_rows:
+            sequences.append(row['sequence'])
+            
+            # Format header
+            score_str = f"{row['score']:.2f}" if row['score'] is not None else "N/A"
+            ppm_str = f"{row['ppm']:.2f}" if row['ppm'] is not None else "N/A"
+            pref_marker = "★ " if row['is_preferred'] else ""
+            
+            header = f"{pref_marker}{row['tool_name']} | Score: {score_str} | PPM: {ppm_str}"
+            headers.append(header)
+        
+        # Determine charges
+        if spectrum.get('charge_array') is not None:
+            charges = spectrum['charge_array'].tolist()
+        elif spectrum.get('charge_array_common_value') is not None:
+            charges = int(spectrum['charge_array_common_value'])
+        elif spectrum.get('charge') is not None:
+            charges = int(spectrum['charge'])
+        else:
+            charges = 1  # Default fallback
+        
+        # Return data ready for unpacking
+        return {
+            'mz': spectrum['mz_array'].tolist(),
+            'intensity': spectrum['intensity_array'].tolist(),
+            'charges': charges,
+            'sequences': sequences,
+            'headers': headers,
+            'spectrum_info': {
+                'seq_no': spectrum['seq_no'],
+                'scans': spectrum.get('scans'),
+                'rt': spectrum.get('rt'),
+                'pepmass': spectrum['pepmass'],
+                'charge': spectrum.get('charge')
+            }
+        }
 
     # Low-level SQL API
     

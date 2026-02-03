@@ -2,7 +2,15 @@
 
 from dataclasses import dataclass, field
 import json
-from typing import Any
+import pickle
+import gzip
+from typing import Any, Literal
+
+# Import for type hints only
+try:
+    from uniprot_meta_tool import UniprotData
+except ImportError:
+    UniprotData = None
 
 
 @dataclass
@@ -40,7 +48,8 @@ class Tool:
     
     id: int | None = None
     name: str = ""
-    type: str = "library"  # "library", "denovo", etc.
+    type: Literal['Library', 'De Novo'] = "Library"  # NEW: Type of tool
+    parser: str = "library"  # RENAMED: Parser name (was 'type')
     settings: dict | None = None
     display_color: str | None = None
     
@@ -50,6 +59,7 @@ class Tool:
             'id': self.id,
             'name': self.name,
             'type': self.type,
+            'parser': self.parser,
             'settings': json.dumps(self.settings) if self.settings else None,
             'display_color': self.display_color
         }
@@ -64,7 +74,8 @@ class Tool:
         return cls(
             id=data.get('id'),
             name=data.get('name', ''),
-            type=data.get('type', 'library'),
+            type=data.get('type', 'Library'),
+            parser=data.get('parser', 'library'),
             settings=settings,
             display_color=data.get('display_color')
         )
@@ -118,9 +129,10 @@ class Protein:
     fasta_name: str | None = None
     sequence: str | None = None
     gene: str | None = None
+    name: str | None = None  # NEW: Short protein name
+    uniprot_data: 'UniprotData | None' = field(default=None, repr=False)  # NEW: UniprotData object
     
-    # Enrichment data (loaded optionally)
-    uniprot_data: dict | None = field(default=None, repr=False)
+    # Enrichment data (loaded optionally) - kept for future use
     protein_atlas_data: dict | None = field(default=None, repr=False)
     
     def to_dict(self) -> dict[str, Any]:
@@ -130,7 +142,8 @@ class Protein:
             'is_uniprot': self.is_uniprot,
             'fasta_name': self.fasta_name,
             'sequence': self.sequence,
-            'gene': self.gene
+            'gene': self.gene,
+            'name': self.name
         }
     
     @classmethod
@@ -142,6 +155,7 @@ class Protein:
             fasta_name=data.get('fasta_name'),
             sequence=data.get('sequence'),
             gene=data.get('gene'),
-            uniprot_data=None,  # Not stored in main table
+            name=data.get('name'),
+            uniprot_data=None,  # Will be loaded separately if needed
             protein_atlas_data=None  # Not stored in main table
         )

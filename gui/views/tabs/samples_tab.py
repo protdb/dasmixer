@@ -190,7 +190,7 @@ class SamplesTab(ft.Container):
                         width=40
                     ),
                     title=ft.Text(tool.name, weight=ft.FontWeight.BOLD),
-                    subtitle=ft.Text(f"{len(ident_files)} identification file(s)" + (f" • Type: {tool.type}" if tool.type else "")),
+                    subtitle=ft.Text(f"{len(ident_files)} identification file(s) • {tool.type} ({tool.parser})"),
                     trailing=ft.Row([
                         ft.ElevatedButton(
                             content=ft.Text("Import Identifications"),
@@ -566,7 +566,7 @@ class SamplesTab(ft.Container):
         self.page.overlay.append(dialog)
         dialog.open = True
         self.page.update()
-    
+
     async def show_add_tool_dialog(self, e):
         """Show dialog for adding new tool."""
         # Get available identification parsers
@@ -575,7 +575,7 @@ class SamplesTab(ft.Container):
             ft.dropdown.Option(key=name, text=name)
             for name in parsers.keys()
         ]
-        
+
         if not parser_options:
             self.page.snack_bar = ft.SnackBar(
                 content=ft.Text("No identification parsers available"),
@@ -584,49 +584,61 @@ class SamplesTab(ft.Container):
             self.page.snack_bar.open = True
             self.page.update()
             return
-        
+
         name_field = ft.TextField(
             label="Tool Name",
             hint_text="e.g., PowerNovo2, MaxQuant",
             autofocus=True
         )
-        
+
+        # NEW: Tool type selector
+        tool_type_group = ft.RadioGroup(
+            content=ft.Column([
+                ft.Radio(value="Library", label="Library Search"),
+                ft.Radio(value="De Novo", label="De Novo Sequencing")
+            ]),
+            value="Library"
+        )
+
+        # RENAMED: Parser dropdown (was "Type")
         parser_dropdown = ft.Dropdown(
             label="Parser / Format",
             options=parser_options,
             value=parser_options[0].key,
             width=300
         )
-        
+
         color_field = ft.TextField(
             label="Color (hex)",
             value="9333EA",
         )
-        
+
         async def save_tool(e):
             if not name_field.value:
                 name_field.error_text = "Name is required"
                 name_field.update()
                 return
-            
+
             try:
                 color = color_field.value
                 if not color.startswith('#'):
                     color = '#' + color
-                
+
+                # NEW: Pass both type and parser
                 await self.project.add_tool(
                     name=name_field.value,
-                    type=parser_dropdown.value,
+                    type=tool_type_group.value,  # "Library" or "De Novo"
+                    parser=parser_dropdown.value,  # Parser name
                     display_color=color
                 )
-                
+
                 # Close dialog
                 dialog.open = False
                 self.page.update()
-                
+
                 # Refresh tools list
                 await self.refresh_tools()
-                
+
                 # Show success
                 self.page.snack_bar = ft.SnackBar(
                     content=ft.Text(f"Added tool: {name_field.value}"),
@@ -634,7 +646,7 @@ class SamplesTab(ft.Container):
                 )
                 self.page.snack_bar.open = True
                 self.page.update()
-                
+
             except Exception as ex:
                 self.page.snack_bar = ft.SnackBar(
                     content=ft.Text(f"Error: {ex}"),
@@ -642,11 +654,13 @@ class SamplesTab(ft.Container):
                 )
                 self.page.snack_bar.open = True
                 self.page.update()
-        
+
         dialog = ft.AlertDialog(
             title=ft.Text("Add Identification Tool"),
             content=ft.Column([
                 name_field,
+                ft.Text("Tool Type:", weight=ft.FontWeight.W_500),
+                tool_type_group,
                 parser_dropdown,
                 color_field,
                 ft.Container(height=5),
@@ -659,7 +673,7 @@ class SamplesTab(ft.Container):
             ], tight=True, width=400),
             actions=[
                 ft.TextButton(
-                    content="Cancel", 
+                    content="Cancel",
                     on_click=lambda e: self._close_dialog(dialog)
                 ),
                 ft.ElevatedButton(
@@ -668,7 +682,7 @@ class SamplesTab(ft.Container):
                 )
             ]
         )
-        
+
         self.page.overlay.append(dialog)
         dialog.open = True
         self.page.update()
@@ -1418,7 +1432,7 @@ class SamplesTab(ft.Container):
             
             # Get parser class from registry (using tool.type as parser name)
 
-            parser_class = registry.get_parser(tool.type, "identification")
+            parser_class = registry.get_parser(tool.parser, "identification")
             
             total_files = len(file_list)
             total_identifications = 0
