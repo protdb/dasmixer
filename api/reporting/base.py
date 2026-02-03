@@ -51,7 +51,7 @@ class BaseReport(ABC):
         self,
         project: 'Project',
         params: ReportParameters
-    ) -> tuple[pd.DataFrame | None, go.Figure | None]:
+    ) -> tuple[list[pd.DataFrame], list[go.Figure]]:
         """
         Generate report.
         

@@ -435,13 +435,13 @@ class PeptidesTab(ft.Container):
         if not controls:
             return False, "Tool controls not found"
         try:
-            if float(controls['max_ppm'].value) <= 0:
+            if float(controls['max_ppm'].value) < 0:
                 return False, "Max PPM > 0"
-            if not (0 < float(controls['min_score'].value) <= 1):
+            if not (0 <= float(controls['min_score'].value) <= 1):
                 return False, "Min Score 0-1"
-            if not (0 < float(controls['min_ion_intensity_coverage'].value) <= 100):
+            if not (0 <= float(controls['min_ion_intensity_coverage'].value) <= 100):
                 return False, "Coverage 0-100"
-            if not (0 < float(controls['min_protein_identity'].value) <= 1):
+            if not (0 <= float(controls['min_protein_identity'].value) <= 1):
                 return False, "Identity 0-1"
             return True, None
         except ValueError as e:
@@ -1068,7 +1068,7 @@ class PeptidesTab(ft.Container):
             self.plot_container.content = ft.Column([
                 ft.Text(f"Seq# {ident_row['seq_no']}: {ident_row['sequence']}", weight=ft.FontWeight.BOLD, size=14),
                 ft.Text(f"Tool: {ident_row['tool_name']}" + (f" | Score: {ident_row['score']:.2f} | PPM: {ident_row['ppm']:.2f}" if pd.notna(ident_row.get('score')) else ""), size=11, color=ft.Colors.GREY_700),
-                ft.Image(src_base64=img_base64, width=780, height=400, fit=ft.ImageFit.CONTAIN)
+                ft.Image(src_base64=img_base64, width=780, height=400, fit=ft.BoxFit.CONTAIN)
             ], spacing=5)
             
             self.plot_container.update()

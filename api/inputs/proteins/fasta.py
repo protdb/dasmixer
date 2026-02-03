@@ -193,9 +193,6 @@ class FastaParser:
         """
         if not self.enrich_from_uniprot:
             return df
-        else:
-
-        
         logger.warning("UniProt enrichment not yet implemented")
         # TODO: Implement UniProt API integration
         # - Fetch additional data for each protein ID

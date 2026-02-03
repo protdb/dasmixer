@@ -109,7 +109,7 @@ async def map_proteins(
         project: Project,
         tool_settings: dict[int, dict],
         only_prefered: bool = False,
-        batch_size = 1000
+        batch_size = 100
 ) -> AsyncIterator[tuple[pd.DataFrame, int, int]]:
     """
     Performs protein mapping in batches
@@ -120,39 +120,58 @@ async def map_proteins(
     :return:
     """
     fasta = await project.get_protein_db_to_search()
-    counter = 0
     max_acc = int(await project.get_setting('max_blast_accept', '5'))
     max_rej = int(await project.get_setting('max_blast_reject', '16'))
     for tool_id, tool_setting in tool_settings.items():
-        batch_data = await project.get_identifications(
-            tool_id=tool_id,
-            only_prefered=only_prefered,
-            offset=counter,
-            limit=batch_size,
-        )
-        query = {}
-
-        for _, row in batch_data[['id', 'canonical_sequence']].iterrows():
-            query[str(row['id'])] = row['canonical_sequence']
-        blast = pd.DataFrame(npy.blast(
-            query,
-            fasta,
-            maxAccepts=max_acc,
-            maxRejects=max_rej,
-            alphabet='protein',
-            minIdentity=tool_setting['min_protein_identity'],
-        ))
-        print(blast.to_markdown(index=False))
-        uq_evidences = set(blast['QueryId'].value_counts().reset_index(name='cnt').query('cnt==1')['QueryId'])
-        all_res = []
-        for _, row in blast.iterrows():
-            all_res.append({
-                'protein_id': row['TargetId'],
-                'identification_id': int(row['QueryId']),
-                'matched_sequence': row['TargetMatchSeq'],
-                'identity': row['Identity'],
-                'unique_evidence': row['QueryId'] in uq_evidences,
-                'matched_ppm': None,
-                'matched_theor_mass': calculate_mass(sequence=row['TargetMatchSeq'])
-            })
-        yield pd.json_normalize(all_res), len(all_res), tool_id
+        counter = 0
+        has_batch_data = True
+        while has_batch_data:
+            batch_data = await project.get_identifications(
+                tool_id=tool_id,
+                only_prefered=only_prefered,
+                offset=counter,
+                limit=batch_size,
+            )
+            if len(batch_data) == 0:
+                has_batch_data = False
+                break
+            dumb_search_results = []
+            query = {}
+            for _, row in batch_data[['id', 'canonical_sequence']].iterrows():
+                dumb_found = False
+                # for p_id, seq in fasta.items():
+                #     if row['canonical_sequence'] in seq:
+                #         dumb_found = True
+                #         dumb_search_results.append({
+                #             'QueryId': str(row['id']),
+                #             'TargetId': p_id,
+                #             'TargetMatchSeq': row['canonical_sequence'],
+                #             'Identity': 1.0
+                #         })
+                if not dumb_found:
+                    query[str(row['id'])] = row['canonical_sequence']
+            blast = pd.DataFrame(npy.blast(
+                query,
+                fasta,
+                maxAccepts=max_acc,
+                maxRejects=max_rej,
+                alphabet='protein',
+                minIdentity=tool_setting['min_protein_identity'],
+            ))[['QueryId', 'TargetId', 'TargetMatchSeq', 'Identity']]
+            # blast = pd.concat(
+            #     [blast, pd.json_normalize(dumb_search_results)],
+            # )
+            uq_evidences = set(blast['QueryId'].value_counts().reset_index(name='cnt').query('cnt==1')['QueryId'])
+            all_res = []
+            for _, row in blast.iterrows():
+                all_res.append({
+                    'protein_id': row['TargetId'],
+                    'identification_id': int(row['QueryId']),
+                    'matched_sequence': row['TargetMatchSeq'],
+                    'identity': row['Identity'],
+                    'unique_evidence': row['QueryId'] in uq_evidences,
+                    'matched_ppm': None,
+                    'matched_theor_mass': calculate_mass(sequence=row['TargetMatchSeq'])
+                })
+            yield pd.json_normalize(all_res), len(all_res), tool_id
+            counter += batch_size

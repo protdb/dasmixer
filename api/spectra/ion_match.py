@@ -11,7 +11,7 @@ from peptacular.score import (
     FragmentMatch,
 )
 
-def get_matched_intensity_percentage(
+def _get_matched_intensity_percentage(
     fragment_matches: list[FragmentMatch], intensities: list[float]
 ) -> float:
     """
@@ -137,7 +137,7 @@ def match_predictions(
     )
     
     # Calculate intensity coverage
-    coverage = get_matched_intensity_percentage(
+    coverage = _get_matched_intensity_percentage(
         fragment_matches=matches,
         intensities=intensity
     )
