@@ -90,7 +90,7 @@ left join
 - Блок "Protein detection": Позволяет задать основные настройки поиска достоверных идентификаций белков:
   - Мин кол-во пептидов
   - Мин кол-во уникальных пептидов
-  - Кнопка "Calculate protein identifications": вызывает логику заполнения таблицы `protein_identification_result`
+  - Кнопка "Calculate protein identifications": вызывает функцию `find_protein_identifications()` из `api/proteins/map_identifications.py`, сохраняет данные в `protein_identifications_result`
 - Блок "Label-free quantification", содержит параметры расчета алгоритмов квантификации. Содержит контролы:
   - Чекбокс emPAI
   - Чекбокс iBAQ
@@ -100,9 +100,10 @@ left join
   - Выпадающий список Enzyme (пока одно значение, trypsin)
   - Минимальная и максимальная длина теоретического пептида (по умолчанию 7-30)
   - Числовое поле max clevage sites (по умолчанию 2)
-  - Кнопка Calculate LFQ
-- Таблица данных: показывается объединение данных из таблиц `protein_identification_result` и `protein_quantification result`, получение данных сейчас делаем заглушкой. Таблица будет содержать:
+  - Кнопка Calculate LFQ: функция `calculate_lfq()` из `api/proteins/lfq.py`
+- Таблица данных: показывается объединение данных из таблиц `protein_identification_result` и `protein_quantification result`. Таблица должна содержать:
   - sample
+  - subset
   - protein_id
   - gene
   - weight
@@ -113,3 +114,14 @@ left join
   - iBAQ
   - NSAF
   - Top3
+
+Доработки project:
+- Добавить методы получения/сохранения данных protein_identification_result, protein_quantification_result, а также методы для их очистки в случае если нужно выполнить повторный расчет значений
+- Добавить вызов представления для отображения таблицы данных
+- Добавить метод получения идентифицированных белков, используемый при расчете LFQ (см. #TODO в функции calculate_lfq())
+- Добавить поле intensity_sum (REAL, nullable) в таблицу protein_identification_result (никаких миграций, только изменение схемы).
+
+Технические детали:
+- Необходимо обратить внимание на текущую реализацию вкладки пептидов, модуль `gui/views/tabs/peptides`, делать технически максимально близко к нему, т.е.:
+  - использовать такие же контролы
+  - разделить на модули в такой же логике
