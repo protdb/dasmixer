@@ -1,5 +1,5 @@
 """Peptide identification matching and selection."""
-from typing import AsyncIterator
+from typing import AsyncIterator, Literal
 
 import pandas as pd
 import npysearch as npy
@@ -75,10 +75,16 @@ async def select_preferred_identifications(
     if criterion not in ("ppm", "intensity"):
         raise ValueError(f"Invalid criterion: {criterion}. Must be 'ppm' or 'intensity'")
     spectra_files = await project.get_spectra_files()
+    with open('processed_spectra_files.txt') as f:
+        processed_spectra_files = set(f.read().splitlines(keepends=False))
     for _, spectra_file in spectra_files.iterrows():
+        if str(spectra_file['id']) in processed_spectra_files:
+            print(f'skipping {spectra_file["id"]} as processed')
+            continue
         idents_not_merged = []
         for tool_id, tool_params in tool_settings.items():
             max_ppm = tool_params.get("max_ppm", 50000)
+            min_ppm = max_ppm * -1
             min_score = tool_params.get("min_score", 0)
             min_ion_intensity_coverage = tool_params["min_ion_intensity_coverage"]
             min_len = tool_params.get("min_peptide_length", 7)  # NEW
@@ -90,6 +96,7 @@ async def select_preferred_identifications(
             
             # Add length filtering - NEW
             idents['canonical_length'] = idents['canonical_sequence'].str.len()
+            idents['ppm'] = idents['ppm'].abs()
             
             if not tool_params.get("denovo_correction", False):
                 query = (
@@ -110,6 +117,7 @@ async def select_preferred_identifications(
             idents_not_merged.append(idents.query(query).copy())
         all_idents = pd.concat(idents_not_merged, ignore_index=True)
         spectras = await project.get_spectra(spectra_file['id'])
+        best_ids = []
         for _, spectrum in spectras.iterrows():
             spectra_id = spectrum['id']
             spectra_idents = all_idents.query("spectre_id == @spectra_id")
@@ -122,7 +130,13 @@ async def select_preferred_identifications(
                 crit = 'intensity_coverage'
                 asc = False
             best_id = spectra_idents.sort_values(crit, ascending=asc).iloc[0]['id']
-            await project.set_preferred_identification(spectra_id, best_id)
+            best_ids.append(str(best_id))
+        with open('best_ids.txt', 'a') as f:
+            f.write('\n'.join(best_ids))
+            f.write('\n')
+        with open('processed_spectra_files.txt', 'a') as f:
+            f.write(str(spectra_file['id'])+'\n')
+            # await project.set_preferred_identification(spectra_id, best_id)
             counter += 1
 
     return counter
@@ -200,3 +214,64 @@ async def map_proteins(
                 })
             yield pd.json_normalize(all_res), len(all_res), tool_id
             counter += batch_size
+
+
+async def calculate_preferred_identifications_for_file(
+    project: Project,
+    spectra_file_id: int,
+    criterion: Literal['ppm', 'intensity'],
+    tool_settings: dict[int, dict]
+) -> list[int]:
+    if criterion not in ("ppm", "intensity"):
+        raise ValueError(f"Invalid criterion: {criterion}. Must be 'ppm' or 'intensity'")
+    idents_not_merged = []
+    for tool_id, tool_params in tool_settings.items():
+        max_ppm = tool_params.get("max_ppm", 50000)
+        min_ppm = max_ppm * -1
+        min_score = tool_params.get("min_score", 0)
+        min_ion_intensity_coverage = tool_params["min_ion_intensity_coverage"]
+        min_len = tool_params.get("min_peptide_length", 7)  # NEW
+        max_len = tool_params.get("max_peptide_length", 30)  # NEW
+
+        idents = await project.get_identifications(
+            spectra_file_id, tool_id
+        )
+
+        # Add length filtering - NEW
+        idents['canonical_length'] = idents['canonical_sequence'].str.len()
+        idents['ppm'] = idents['ppm'].abs()
+
+        if not tool_params.get("denovo_correction", False):
+            query = (
+                "ppm <= @max_ppm and "
+                "score >= @min_score and "
+                "intensity_coverage >= @min_ion_intensity_coverage and "
+                "canonical_length >= @min_len and "
+                "canonical_length <= @max_len"
+            )
+        else:
+            query = (
+                "ppm <= 50000 and "
+                "score >= @min_score and "
+                "intensity_coverage >= @min_ion_intensity_coverage and "
+                "canonical_length >= @min_len and "
+                "canonical_length <= @max_len"
+            )
+        idents_not_merged.append(idents.query(query).copy())
+    all_idents = pd.concat(idents_not_merged, ignore_index=True)
+    spectras = await project.get_spectra(spectra_file_id)
+    best_ids = []
+    for _, spectrum in spectras.iterrows():
+        spectra_id = spectrum['id']
+        spectra_idents = all_idents.query("spectre_id == @spectra_id")
+        if len(spectra_idents) == 0:
+            continue
+        if criterion == "ppm":
+            crit = 'ppm'
+            asc = True
+        else:
+            crit = 'intensity_coverage'
+            asc = False
+        best_id = spectra_idents.sort_values(crit, ascending=asc).iloc[0]['id']
+        best_ids.append(str(best_id))
+    return best_ids

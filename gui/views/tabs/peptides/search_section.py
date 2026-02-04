@@ -22,14 +22,14 @@ class SearchSection(BaseSection):
         # Search filters
         self.search_sample_dropdown = ft.Dropdown(
             label="Sample",
-            options=[ft.dropdown.Option(key="all", text="All Samples")],
+            options=[ft.DropdownOption(key="all", text="All Samples")],
             value="all",
             width=200
         )
         
         self.search_tool_dropdown = ft.Dropdown(
             label="Tool",
-            options=[ft.dropdown.Option(key="all", text="All Tools")],
+            options=[ft.DropdownOption(key="all", text="All Tools")],
             value="all",
             width=200
         )
@@ -37,10 +37,10 @@ class SearchSection(BaseSection):
         self.search_by_dropdown = ft.Dropdown(
             label="Search by",
             options=[
-                ft.dropdown.Option(key="seq_no", text="Sequence Number"),
-                ft.dropdown.Option(key="scans", text="Scans"),
-                ft.dropdown.Option(key="sequence", text="Sequence"),
-                ft.dropdown.Option(key="canonical_sequence", text="Canonical Sequence")
+                ft.DropdownOption(key="seq_no", text="Sequence Number"),
+                ft.DropdownOption(key="scans", text="Scans"),
+                ft.DropdownOption(key="sequence", text="Sequence"),
+                ft.DropdownOption(key="canonical_sequence", text="Canonical Sequence")
             ],
             value="seq_no",
             width=200
@@ -104,16 +104,16 @@ class SearchSection(BaseSection):
             tools = await self.project.get_tools()
             
             self.search_sample_dropdown.options = [
-                ft.dropdown.Option(key="all", text="All Samples")
+                ft.DropdownOption(key="all", text="All Samples")
             ] + [
-                ft.dropdown.Option(key=str(s.id), text=s.name)
+                ft.DropdownOption(key=str(s.id), text=s.name)
                 for s in samples
             ]
             
             self.search_tool_dropdown.options = [
-                ft.dropdown.Option(key="all", text="All Tools")
+                ft.DropdownOption(key="all", text="All Tools")
             ] + [
-                ft.dropdown.Option(key=str(t.id), text=t.name)
+                ft.DropdownOption(key=str(t.id), text=t.name)
                 for t in tools
             ]
             

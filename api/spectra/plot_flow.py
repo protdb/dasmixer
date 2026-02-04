@@ -1,5 +1,6 @@
 from .ion_match import IonMatchParameters, match_predictions, get_matches_dataframe
 from .plot_matches import generate_spectrum_plot
+from typing import Any
 
 
 def make_full_spectrum_plot(
@@ -8,8 +9,10 @@ def make_full_spectrum_plot(
         intensity: list[float],
         charges: list[int] | int,
         sequences: str | list[str] | None,
-        headers: list[str] | str
+        headers: list[str] | str,
+        spectrum_info: Any
 ):
+    print(spectrum_info)
     if type(params) is dict:
         params = IonMatchParameters(**params)
     if type(sequences) is not list:

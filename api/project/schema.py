@@ -122,8 +122,8 @@ CREATE TABLE IF NOT EXISTS protein (
     fasta_name TEXT,
     sequence TEXT,
     gene TEXT,
-    name TEXT,  -- NEW: Short protein name
-    uniprot_data BLOB  -- NEW: Serialized UniprotData object (pickle + gzip)
+    name TEXT,  -- Short protein name
+    uniprot_data BLOB  -- Serialized UniprotData object (pickle + gzip)
 );
 
 CREATE INDEX IF NOT EXISTS idx_protein_uniprot ON protein(is_uniprot);
@@ -155,6 +155,7 @@ CREATE TABLE IF NOT EXISTS protein_identification_result (
     peptide_count INTEGER NOT NULL,
     uq_evidence_count INTEGER NOT NULL,
     coverage REAL,
+    intensity_sum REAL,  -- Sum of peptide intensities for this protein
     FOREIGN KEY (protein_id) REFERENCES protein(id) ON DELETE CASCADE,
     FOREIGN KEY (sample_id) REFERENCES sample(id) ON DELETE CASCADE
 );

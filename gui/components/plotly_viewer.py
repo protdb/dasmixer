@@ -79,10 +79,10 @@ class PlotlyViewer(ft.Container):
             img_base64 = base64.b64encode(img_bytes).decode()
             
             image = ft.Image(
-                src_base64=img_base64,
+                src=img_base64,
                 width=self.width,
                 height=self.height,
-                fit=ft.ImageFit.CONTAIN
+                fit=ft.BoxFit.CONTAIN
             )
         except Exception as e:
             # Fallback if rendering fails
@@ -94,7 +94,7 @@ class PlotlyViewer(ft.Container):
                 width=self.width,
                 height=self.height,
                 bgcolor=ft.Colors.GREY_200,
-                alignment=ft.alignment.center
+                alignment=ft.Alignment.CENTER
             )
         
         components = [image]

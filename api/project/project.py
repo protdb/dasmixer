@@ -1034,7 +1034,17 @@ class Project:
         
         await self.save()
         logger.debug(f"Set preferred identification {identification_id} for spectrum {spectre_id}")
-    
+
+    async def set_preferred_identifications_for_file(self, spectra_file_id: int, preferred_ids: list[int]) -> None:
+        ids_df = await self.get_identifications(spectra_file_id)
+        ids = list(ids_df["id"])
+        await self._execute(
+            f"UPDATE identification SET is_preferred = 0 WHERE id in ({', '.join(ids)})",
+        )
+        await self._execute(
+            f"UPDATE identification SET is_preferred = 1 WHERE id in ({', '.join([str(x) for x in preferred_ids])})",
+        )
+
     # Peptide match operations
     
     async def clear_peptide_matches(self) -> None:
@@ -1545,6 +1555,230 @@ class Project:
             }
         }
 
+    # Protein identification results operations
+    
+    async def clear_protein_identifications(self) -> None:
+        """
+        Clear all protein identification results.
+        
+        Deletes all records from protein_identification_result.
+        Cascade deletes linked quantification results.
+        """
+        await self._execute("DELETE FROM protein_identification_result")
+        await self.save()
+        logger.info("Cleared all protein identifications")
+    
+    async def add_protein_identifications_batch(
+        self,
+        identifications_df: pd.DataFrame
+    ) -> None:
+        """
+        Add batch of protein identification results.
+        
+        Args:
+            identifications_df: DataFrame with columns:
+                - protein_id: str
+                - sample_id: int
+                - peptide_count: int
+                - uq_evidence_count: int
+                - coverage: float (percentage)
+                - intensity_sum: float
+        """
+        rows_to_insert = []
+        
+        for _, row in identifications_df.iterrows():
+            rows_to_insert.append((
+                row['protein_id'],
+                int(row['sample_id']),
+                int(row['peptide_count']),
+                int(row['uq_evidence_count']),
+                float(row['coverage']) if row.get('coverage') is not None else None,
+                float(row['intensity_sum']) if row.get('intensity_sum') is not None else None
+            ))
+        
+        if rows_to_insert:
+            await self._executemany(
+                """INSERT INTO protein_identification_result 
+                   (protein_id, sample_id, peptide_count, uq_evidence_count, coverage, intensity_sum)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                rows_to_insert
+            )
+            await self.save()
+            logger.info(f"Added {len(rows_to_insert)} protein identifications")
+    
+    async def get_protein_identifications(
+        self,
+        sample_id: int | None = None
+    ) -> pd.DataFrame:
+        """
+        Get protein identification results.
+        
+        Args:
+            sample_id: Optional filter by sample
+        
+        Returns:
+            DataFrame with columns:
+                - id, protein_id, sample_id, peptide_count,
+                  uq_evidence_count, coverage, intensity_sum
+        """
+        query = "SELECT * FROM protein_identification_result"
+        params = None
+        
+        if sample_id is not None:
+            query += " WHERE sample_id = ?"
+            params = (int(sample_id),)
+        
+        query += " ORDER BY id"
+        print(query, params)
+        return await self.execute_query_df(query, params)
+    
+    async def get_protein_identification_count(self) -> int:
+        """Get total number of protein identifications."""
+        query = "SELECT COUNT(*) as count FROM protein_identification_result"
+        result = await self.execute_query_df(query)
+        if len(result) == 0:
+            return 0
+        return int(result.iloc[0]['count'])
+    
+    # Protein quantification results operations
+    
+    async def clear_protein_quantifications(self) -> None:
+        """Clear all protein quantification results."""
+        await self._execute("DELETE FROM protein_quantification_result")
+        await self.save()
+        logger.info("Cleared all protein quantifications")
+    
+    async def add_protein_quantifications_batch(
+        self,
+        quantifications_df: pd.DataFrame
+    ) -> None:
+        """
+        Add batch of protein quantification results.
+        
+        Args:
+            quantifications_df: DataFrame with columns:
+                - protein_identification_id: int
+                - algorithm: str ('emPAI', 'iBAQ', 'NSAF', 'Top3')
+                - rel_value: float
+                - abs_value: float | None
+        """
+        rows_to_insert = []
+        
+        for _, row in quantifications_df.iterrows():
+            rows_to_insert.append((
+                int(row['protein_identification_id']),
+                row['algorithm'],
+                float(row['rel_value']) if row.get('rel_value') is not None else None,
+                float(row['abs_value']) if row.get('abs_value') is not None else None
+            ))
+        
+        if rows_to_insert:
+            await self._executemany(
+                """INSERT INTO protein_quantification_result 
+                   (protein_identification_id, algorithm, rel_value, abs_value)
+                   VALUES (?, ?, ?, ?)""",
+                rows_to_insert
+            )
+            await self.save()
+            logger.info(f"Added {len(rows_to_insert)} protein quantifications")
+    
+    async def get_protein_quantification_count(self) -> int:
+        """Get total number of protein quantifications."""
+        query = "SELECT COUNT(*) as count FROM protein_quantification_result"
+        result = await self.execute_query_df(query)
+        if len(result) == 0:
+            return 0
+        return int(result.iloc[0]['count'])
+    
+    async def get_protein_results_joined(
+        self,
+        sample: str | None = None,
+        limit=100,
+        offset=0
+    ) -> pd.DataFrame:
+        """
+        Get joined protein identification and quantification results.
+        
+        Returns one row per protein_identification_result with
+        pivoted columns for each LFQ method.
+        
+        Args:
+            sample: Optional filter by sample name
+        
+        Returns:
+            DataFrame with columns:
+                - sample: str - sample name
+                - subset: str - subset name
+                - protein_id: str
+                - gene: str | None
+                - weight: float | None - molecular weight from sequence
+                - peptide_count: int
+                - unique_evidence_count: int (renamed from uq_evidence_count)
+                - coverage_percent: float - coverage as percentage
+                - intensity_sum: float
+                - EmPAI: float | None
+                - iBAQ: float | None
+                - NSAF: float | None
+                - Top3: float | None
+        """
+        # Main query with JOINs
+        query = """
+            SELECT 
+                pir.id,
+                pir.protein_id,
+                pir.sample_id,
+                s.name AS sample,
+                sub.name AS subset,
+                p.gene,
+                p.sequence,
+                pir.peptide_count,
+                pir.uq_evidence_count AS unique_evidence_count,
+                pir.coverage AS coverage_percent,
+                pir.intensity_sum,
+                pqr_empai.rel_value AS EmPAI,
+                pqr_ibaq.rel_value AS iBAQ,
+                pqr_nsaf.rel_value AS NSAF,
+                pqr_top3.rel_value AS Top3
+            FROM protein_identification_result pir
+            JOIN sample s ON pir.sample_id = s.id
+            LEFT JOIN subset sub ON s.subset_id = sub.id
+            LEFT JOIN protein p ON pir.protein_id = p.id
+            LEFT JOIN protein_quantification_result pqr_empai 
+                ON pir.id = pqr_empai.protein_identification_id AND pqr_empai.algorithm = 'emPAI'
+            LEFT JOIN protein_quantification_result pqr_ibaq 
+                ON pir.id = pqr_ibaq.protein_identification_id AND pqr_ibaq.algorithm = 'iBAQ'
+            LEFT JOIN protein_quantification_result pqr_nsaf 
+                ON pir.id = pqr_nsaf.protein_identification_id AND pqr_nsaf.algorithm = 'NSAF'
+            LEFT JOIN protein_quantification_result pqr_top3 
+                ON pir.id = pqr_top3.protein_identification_id AND pqr_top3.algorithm = 'Top3'
+        """
+        
+        params = None
+        
+        if sample is not None:
+            query += " WHERE s.name = ?"
+            params = (sample, )
+        
+        query += " ORDER BY s.name, pir.protein_id"
+        query += f" LIMIT {offset} {limit}"
+        
+        df = await self.execute_query_df(query, params)
+        
+        # Calculate weight from sequence
+        if len(df) > 0 and 'sequence' in df.columns:
+            def calc_weight(seq):
+                if seq is None or pd.isna(seq):
+                    return None
+                try:
+                    from pyteomics import mass
+                    return mass.calculate_mass(sequence=seq)
+                except:
+                    return None
+            
+            df['weight'] = df['sequence'].apply(calc_weight)
+            df = df.drop(columns=['sequence', 'id', 'sample_id'])
+        
+        return df
     # Low-level SQL API
     
     async def execute_query(

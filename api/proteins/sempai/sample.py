@@ -111,8 +111,8 @@ class ProteomicSample:
         self,
         all_protein_details: bool = True,
         quantification_methods: Union[
-            Literal['NSAF', 'iBAQ', 'emPAI', 'top3', 'all'], 
-            List[Literal['NSAF', 'iBAQ', 'emPAI', 'top3']]
+            Literal['NSAF', 'iBAQ', 'emPAI', 'Top3', 'all'],
+            List[Literal['NSAF', 'iBAQ', 'emPAI', 'Top3']]
         ] = 'all',
         calculate_coverage: bool = True,
         absolute_concentrations: Literal['all', 'gramm', 'mol', 'none'] = 'all'
@@ -131,7 +131,7 @@ class ProteomicSample:
         """
         # Determine which methods to calculate
         if quantification_methods == 'all':
-            methods = ['emPAI', 'NSAF', 'iBAQ', 'top3']
+            methods = ['emPAI', 'NSAF', 'iBAQ', 'Top3']
         elif isinstance(quantification_methods, str):
             methods = [quantification_methods]
         else:
@@ -193,7 +193,7 @@ class ProteomicSample:
                 normalized_values[method] = normalized_nsaf
             elif method == 'iBAQ':
                 raw_vals = [p.ibaq for p in self._proteins]
-            elif method == 'top3':
+            elif method == 'Top3':
                 raw_vals = [p.top3 for p in self._proteins]
             else:
                 raise ValidationError(f"Unknown quantification method: {method}")

@@ -20,14 +20,15 @@ async def find_protein_identifications(
         joined_data: pd.DataFrame, # project.get_joined_peptide_data(is_preferred==True, protein_identified=True)
         sequences_db: dict[str, str], # project.get_protein_db_to_search()
         min_peptides: int,
-        min_uq_evidence: int) -> AsyncIterator[tuple[pd.DataFrame, str]]:
+        min_uq_evidence: int) -> AsyncIterator[tuple[pd.DataFrame, int]]:
     """
-
-    :param joined_data:
-    :param sequences_db:
-    :param min_peptides:
-    :param min_uq_evidence:
-    :return:
+    Find protein identifications based on peptide matches.
+    
+    :param joined_data: DataFrame from project.get_joined_peptide_data()
+    :param sequences_db: Dict from project.get_protein_db_to_search()
+    :param min_peptides: Minimum number of peptides required
+    :param min_uq_evidence: Minimum number of unique peptides required
+    :return: AsyncIterator yielding (result DataFrame, sample_id)
     """
     samples = joined_data['sample_id'].unique()
     for sample in samples:
@@ -41,13 +42,14 @@ async def find_protein_identifications(
             intensity_sum = data.query('protein_id == @protein')['intensity'].sum()
             if len(peptides) < min_peptides or len(uq_evidence) < min_uq_evidence:
                 continue
-            coverage = get_coverage(sequence, peptides)
+            # Get coverage percentage (second element of tuple)
+            _, coverage_percent = get_coverage(sequence, peptides)
             result_proteins.append({
                 'sample_id': sample,
                 'protein_id': protein,
                 'peptide_count': len(peptides),
                 'uq_evidence_count': len(uq_evidence),
-                'coverage': coverage,
+                'coverage': coverage_percent,
                 'intensity_sum': intensity_sum
             })
         yield pd.DataFrame(result_proteins), sample

@@ -2,13 +2,10 @@
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import TYPE_CHECKING
 import pandas as pd
 import plotly.graph_objects as go
 from pydantic import BaseModel
-
-if TYPE_CHECKING:
-    from api.project.project import Project
+from api.project.project import Project
 
 
 class ReportParameters(BaseModel):
