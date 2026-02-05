@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ report_name }}</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #555;
+            margin-top: 30px;
+        }
+        h3 {
+            color: #666;
+            margin-top: 20px;
+        }
+        .settings-section {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-left: 3px solid #4CAF50;
+            margin: 20px 0;
+        }
+        .param-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+        .param-table th,
+        .param-table td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        .param-table th {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        .data-table th,
+        .data-table td {
+            padding: 10px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+        .data-table th {
+            background-color: #2196F3;
+            color: white;
+        }
+        .data-table tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        .plot-container {
+            margin: 30px 0;
+            padding: 20px;
+            background-color: #fafafa;
+            border: 1px solid #e0e0e0;
+        }
+        .plot-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #444;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>{{ report_name }}</h1>
+        
+        {% if show_parameters %}
+        <div class="settings-section">
+            <h2>Project Settings</h2>
+            
+            {% if settings.project_parameters %}
+            <h3>Project Parameters</h3>
+            <table class="param-table">
+                <thead>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for param in settings.project_parameters %}
+                    <tr>
+                        <td>{{ param.key }}</td>
+                        <td>{{ param.value }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+            
+            {% if settings.tools %}
+            <h3>Tools Configuration</h3>
+            {% for tool in settings.tools %}
+            <h4>{{ tool.name }} ({{ tool.type }})</h4>
+            {% if tool.settings %}
+            <table class="param-table">
+                <thead>
+                    <tr>
+                        <th>Setting</th>
+                        <th>Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for setting in tool.settings %}
+                    <tr>
+                        <td>{{ setting.key }}</td>
+                        <td>{{ setting.value }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p>No settings configured</p>
+            {% endif %}
+            {% endfor %}
+            {% endif %}
+            
+            {% if report_parameters %}
+            <h3>Report Parameters</h3>
+            <table class="param-table">
+                <thead>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for param in report_parameters %}
+                    <tr>
+                        <td>{{ param.key }}</td>
+                        <td>{{ param.value }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        {% if figures %}
+        <h2>Visualizations</h2>
+        {% for figure in figures %}
+        <div class="plot-container">
+            <div class="plot-title">{{ figure.name }}</div>
+            <div id="plot-{{ loop.index }}"></div>
+            <script>
+                var plotData = {{ figure.json | safe }};
+                Plotly.newPlot('plot-{{ loop.index }}', plotData.data, plotData.layout);
+            </script>
+        </div>
+        {% endfor %}
+        {% endif %}
+        
+        {% if tables %}
+        <h2>Data Tables</h2>
+        {% for table in tables %}
+        <h3>{{ table.name }}</h3>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    {% for header in table.data.headers %}
+                    <th>{{ header }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in table.data.rows %}
+                <tr>
+                    {% for cell in row %}
+                    <td>{{ cell }}</td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endfor %}
+        {% endif %}
+    </div>
+</body>
+</html>

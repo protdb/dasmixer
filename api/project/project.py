@@ -11,6 +11,7 @@ from .mixins import (
     ProteinMixin,
     PlotMixin,
     QueryMixin,
+    ReportMixin,
 )
 
 
@@ -30,6 +31,7 @@ class Project(
     # Utility mixins
     PlotMixin,
     QueryMixin,
+    ReportMixin,
 ):
     """
     Main class for managing DASMixer project data.
@@ -48,6 +50,7 @@ class Project(
     - ProteinMixin: Protein, identification results, and quantification management
     - PlotMixin: Data preparation for plotting
     - QueryMixin: Low-level SQL query interface
+    - ReportMixin: Report generation and management
     
     Usage:
         # Create or open

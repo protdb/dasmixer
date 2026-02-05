@@ -176,16 +176,29 @@ CREATE TABLE IF NOT EXISTS protein_quantification_result (
 CREATE INDEX IF NOT EXISTS idx_prot_quant_ident ON protein_quantification_result(protein_identification_id);
 CREATE INDEX IF NOT EXISTS idx_prot_quant_algo ON protein_quantification_result(algorithm);
 
--- Generated reports
-CREATE TABLE IF NOT EXISTS generated_report (
+-- Generated reports (updated for Stage 5)
+CREATE TABLE IF NOT EXISTS generated_reports (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    datetime TEXT NOT NULL,
-    settings TEXT,  -- JSON as TEXT
-    plot BLOB,
-    table_data BLOB
+    report_name TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    plots BLOB,  -- pickle + gzip: list[tuple[str, go.Figure]]
+    tables BLOB,  -- pickle + gzip: list[tuple[str, pd.DataFrame, bool]]
+    project_settings TEXT,  -- JSON as TEXT
+    tools_settings TEXT,  -- JSON as TEXT
+    report_settings TEXT  -- JSON as TEXT
 );
 
-CREATE INDEX IF NOT EXISTS idx_report_datetime ON generated_report(datetime);
+CREATE INDEX IF NOT EXISTS idx_generated_reports_name ON generated_reports(report_name);
+CREATE INDEX IF NOT EXISTS idx_generated_reports_created ON generated_reports(created_at);
+
+-- Report parameters (Stage 5)
+CREATE TABLE IF NOT EXISTS report_parameters (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    report_name TEXT UNIQUE NOT NULL,
+    parameters TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_report_parameters_name ON report_parameters(report_name);
 """
 
 # Default project metadata

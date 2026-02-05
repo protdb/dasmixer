@@ -11,8 +11,8 @@ class ProjectView(ft.Container):
     Tabs:
     - Samples: Manage samples, groups, import data
     - Peptides: View identifications, ion matches
-    - Proteins: Protein identifications (stub)
-    - Analysis: Comparative analysis (stub)
+    - Proteins: Protein identifications
+    - Reports: Generate and view reports
     """
     
     def __init__(self, project: Project, on_close):
@@ -36,16 +36,15 @@ class ProjectView(ft.Container):
         """Build the view."""
         # Import tab views
         from gui.views.tabs.samples_tab import SamplesTab
-        from gui.views.tabs.peptides import PeptidesTab  # CHANGED: Import from peptides package
+        from gui.views.tabs.peptides import PeptidesTab
         from gui.views.tabs.proteins import ProteinsTab
-        # from gui.views.tabs.analysis_tab import AnalysisTab
+        from gui.views.tabs.reports import ReportsTab
         
         # Create tabs using new Flet API
-        # IMPORTANT: length must match the number of tabs in TabBar AND controls in TabBarView
         print("building tabs...")
         tabs = ft.Tabs(
             selected_index=0,
-            length=3,  # Currently only 2 tabs are active
+            length=4,  # Number of tabs
             expand=True,
             content=ft.Column(
                 expand=True,
@@ -55,7 +54,7 @@ class ProjectView(ft.Container):
                             ft.Tab(label="Samples", icon=ft.Icons.SCIENCE),
                             ft.Tab(label="Peptides", icon=ft.Icons.BIOTECH),
                             ft.Tab(label="Proteins", icon=ft.Icons.BUBBLE_CHART),
-                            # ft.Tab(text=ft.Text("Analysis"), icon=ft.Icons.ANALYTICS),
+                            ft.Tab(label="Reports", icon=ft.Icons.ASSESSMENT),
                         ]
                     ),
                     ft.TabBarView(
@@ -64,7 +63,7 @@ class ProjectView(ft.Container):
                             SamplesTab(self.project),
                             PeptidesTab(self.project),
                             ProteinsTab(self.project),
-                            # AnalysisTab(self.project),
+                            ReportsTab(self.project),
                         ],
                     ),
                 ],

@@ -1,5 +1,14 @@
-"""Reporting and visualization modules."""
+"""Reporting module."""
 
-from .base import BaseReport, ReportParameters
+from .base import BaseReport
+from .registry import registry
+from .viewer import ReportViewer
 
-__all__ = ['BaseReport', 'ReportParameters']
+# Import all reports to trigger registration
+from .reports import *
+
+__all__ = [
+    'BaseReport',
+    'registry',
+    'ReportViewer'
+]

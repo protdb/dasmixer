@@ -9,6 +9,7 @@ from .peptide_mixin import PeptideMixin
 from .protein_mixin import ProteinMixin
 from .plot_mixin import PlotMixin
 from .query_mixin import QueryMixin
+from .report_mixin import ReportMixin
 
 __all__ = [
     'SubsetMixin',
@@ -20,4 +21,5 @@ __all__ = [
     'ProteinMixin',
     'PlotMixin',
     'QueryMixin',
+    'ReportMixin',
 ]
