@@ -3,6 +3,7 @@
 import pandas as pd
 import plotly.graph_objects as go
 from typing import Optional
+from flet import Icons
 
 from ..base import BaseReport
 
@@ -16,7 +17,7 @@ class SampleReport(BaseReport):
     
     name = "Sample Report"
     description = "Demonstrates report system with sample data"
-    icon = "bar_chart"
+    icon = Icons.BAR_CHART
     
     @staticmethod
     def get_parameter_defaults() -> dict[str, tuple[type, str]]:

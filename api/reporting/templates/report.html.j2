@@ -171,6 +171,7 @@
                 var plotData = {{ figure.json | safe }};
                 Plotly.newPlot('plot-{{ loop.index }}', plotData.data, plotData.layout);
             </script>
+
         </div>
         {% endfor %}
         {% endif %}

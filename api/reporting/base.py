@@ -9,6 +9,7 @@ import gzip
 import pickle
 import json
 from datetime import datetime
+import flet as ft
 
 
 class BaseReport(ABC):
@@ -27,7 +28,7 @@ class BaseReport(ABC):
     # Report metadata (must be overridden in subclasses)
     name: str = "Base Report"
     description: str = "Base report class"
-    icon: str = "assessment"  # flet.Icons name
+    icon: str = ft.Icons.REPORT  # flet.Icons name
     
     def __init__(
         self,
@@ -196,7 +197,7 @@ class BaseReport(ABC):
             {
                 'name': tool.name,
                 'type': tool.type,
-                'settings': json.loads(tool.settings) if tool.settings else {}
+                'settings': tool.settings
             }
             for tool in tools
         ]

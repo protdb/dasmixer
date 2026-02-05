@@ -28,16 +28,18 @@ class ReportItem(ft.Container):
         state: ReportsTabState
     ):
         super().__init__()
+        print('report items init...')
         self.report_class = report_class
         self.project = project
         self.state = state
-        
+        print(f'Report {report_class.__name__}.')
         # Controls
         self.include_checkbox = ft.Checkbox(
             label="Generate with all",
             value=True,
             on_change=self._on_include_changed
         )
+        print('checkbox Generate_all init...')
         
         # Default parameters
         defaults = report_class.get_parameter_defaults()
@@ -54,41 +56,47 @@ class ReportItem(ft.Container):
             max_lines=6,
             expand=True
         )
+        print('params_field init...')
         
         # Saved reports dropdown
         self.saved_reports_dropdown = ft.Dropdown(
             label="Saved Reports",
             hint_text="Select a saved report to view",
             width=300,
-            on_change=self._on_saved_report_selected
+            options=[ft.DropdownOption('New', 'New report')],
+            on_text_change=self._on_saved_report_selected
         )
+        print('saved_reports_dropdown init...')
         
         # Buttons
         self.generate_btn = ft.ElevatedButton(
-            "Generate",
+            content="Generate",
             icon=ft.Icons.PLAY_ARROW,
             on_click=self._on_generate
         )
+        print('generate_btn...')
         
         self.view_btn = ft.ElevatedButton(
-            "View",
+            content="View",
             icon=ft.Icons.VISIBILITY,
             on_click=self._on_view,
             disabled=True
         )
-        
+        print('view_btn...')
         self.export_btn = ft.ElevatedButton(
-            "Export",
+            content="Export",
             icon=ft.Icons.FILE_DOWNLOAD,
             on_click=self._on_export,
             disabled=True
         )
+        print('export_btn...')
         
         # Current selected report_id
         self.current_report_id: int | None = None
         
         # Build UI
         self.content = self._build_content()
+        print('content built...')
         self.padding = 15
         self.border = ft.border.all(1, ft.Colors.BLUE_200)
         self.border_radius = 8
@@ -96,10 +104,11 @@ class ReportItem(ft.Container):
     
     def _build_content(self) -> ft.Control:
         """Build content."""
-        return ft.Column([
+        print('Building content...')
+        res = ft.Column([
             # Header
             ft.Row([
-                ft.Icon(name=self.report_class.icon, size=30),
+                ft.Icon(self.report_class.icon, size=30),
                 ft.Column([
                     ft.Text(
                         self.report_class.name,
@@ -113,15 +122,15 @@ class ReportItem(ft.Container):
                     )
                 ], spacing=0, expand=True),
                 self.include_checkbox
-            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+            ]),
             
             ft.Divider(),
-            
+
             # Parameters
             self.params_field,
-            
+
             ft.Container(height=10),
-            
+
             # Controls
             ft.Row([
                 self.generate_btn,
@@ -130,6 +139,8 @@ class ReportItem(ft.Container):
                 self.export_btn
             ], spacing=10)
         ])
+        print('content inits...')
+        return res
     
     async def load_data(self):
         """Load data (parameters and saved reports list)."""
@@ -177,7 +188,7 @@ class ReportItem(ft.Container):
     async def _on_generate(self, e):
         """Generate report."""
         # Show loading dialog
-        self._show_loading("Generating report...")
+        loading_dialog = self._show_loading("Generating report...")
         
         try:
             # Parse parameters
@@ -198,14 +209,14 @@ class ReportItem(ft.Container):
             # Reload saved reports list
             await self._load_saved_reports()
             
-            self._close_loading()
+            self._close_loading(loading_dialog)
             self._show_success("Report generated successfully")
             
             if self.page:
                 self.update()
             
         except Exception as ex:
-            self._close_loading()
+            self._close_loading(loading_dialog)
             self._show_error(f"Generation failed: {ex}")
             import traceback
             traceback.print_exc()
@@ -256,7 +267,7 @@ class ReportItem(ft.Container):
             from jinja2 import Environment, FileSystemLoader
             from pathlib import Path
             
-            template_dir = Path(__file__).parent.parent.parent.parent / 'api' / 'reporting' / 'templates'
+            template_dir = Path(__file__).parent.parent.parent.parent.parent / 'api' / 'reporting' / 'templates'
             env = Environment(loader=FileSystemLoader(str(template_dir)))
             template = env.get_template('report.html.j2')
             html = template.render(**context)
@@ -274,15 +285,18 @@ class ReportItem(ft.Container):
         if not self.current_report_id:
             return
         
-        # Select folder
-        def on_folder_selected(e: ft.FilePickerResultEvent):
-            if e.path:
-                self.page.run_task(self._export_to_folder, e.path)
-        
-        folder_picker = ft.FilePicker(on_result=on_folder_selected)
-        self.page.overlay.append(folder_picker)
-        self.page.update()
-        await folder_picker.get_directory_path(dialog_title="Select Export Folder")
+        # Select folder using new async API
+        try:
+            folder_path = await ft.FilePicker().get_directory_path(
+                dialog_title="Select Export Folder"
+            )
+            
+            if folder_path:
+                await self._export_to_folder(folder_path)
+        except Exception as ex:
+            self._show_error(f"Failed to select folder: {ex}")
+            import traceback
+            traceback.print_exc()
     
     async def _export_to_folder(self, folder_path: str):
         """Export to selected folder."""
@@ -305,21 +319,27 @@ class ReportItem(ft.Container):
     
     def _show_loading(self, message: str):
         """Show loading dialog."""
-        if self.page:
-            self.page.dialog = ft.AlertDialog(
-                modal=True,
-                content=ft.Column([
-                    ft.ProgressRing(),
-                    ft.Text(message)
-                ], tight=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-            )
-            self.page.dialog.open = True
-            self.page.update()
+        if not self.page:
+            return None
+        
+        loading_dialog = ft.AlertDialog(
+            modal=True,
+            content=ft.Column([
+                ft.ProgressRing(),
+                ft.Text(message)
+            ], tight=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+        )
+        
+        self.page.overlay.append(loading_dialog)
+        loading_dialog.open = True
+        self.page.update()
+        
+        return loading_dialog
     
-    def _close_loading(self):
+    def _close_loading(self, dialog):
         """Close loading dialog."""
-        if self.page and self.page.dialog:
-            self.page.dialog.open = False
+        if self.page and dialog:
+            dialog.open = False
             self.page.update()
     
     def _show_error(self, message: str):

@@ -1,7 +1,6 @@
 """Main Reports Tab."""
 
 import flet as ft
-from pathlib import Path
 
 from api.project.project import Project
 from api.reporting.registry import registry
@@ -27,13 +26,14 @@ class ReportsTab(ft.Container):
         
         # State
         self.state = ReportsTabState()
-        
+        print('initializing reports tab')
         # Sections
         self.settings_section = SettingsSection(self.project, self.state, self)
-        
+        print('settings initialized')
         # Reports
         self.report_items: list[ReportItem] = []
         self._create_report_items()
+        print('reports items initialized')
         
         # Build UI
         self.content = self._build_content()
@@ -113,15 +113,18 @@ class ReportsTab(ft.Container):
     
     async def export_selected_reports(self):
         """Export all selected reports."""
-        # Select folder
-        def on_folder_selected(e: ft.FilePickerResultEvent):
-            if e.path:
-                self.page.run_task(self._export_all_to_folder, e.path)
-        
-        folder_picker = ft.FilePicker(on_result=on_folder_selected)
-        self.page.overlay.append(folder_picker)
-        self.page.update()
-        await folder_picker.get_directory_path(dialog_title="Select Export Folder for All Reports")
+        # Select folder using new async API
+        try:
+            folder_path = await ft.FilePicker().get_directory_path(
+                dialog_title="Select Export Folder for All Reports"
+            )
+            
+            if folder_path:
+                await self._export_all_to_folder(folder_path)
+        except Exception as ex:
+            print(f"Failed to select folder: {ex}")
+            import traceback
+            traceback.print_exc()
     
     async def _export_all_to_folder(self, folder_path: str):
         """
