@@ -82,6 +82,10 @@
             margin-bottom: 10px;
             color: #444;
         }
+        .plot-image {
+            max-width: 100%;
+            height: auto;
+        }
     </style>
 </head>
 <body>
@@ -171,7 +175,9 @@
                 var plotData = {{ figure.json | safe }};
                 Plotly.newPlot('plot-{{ loop.index }}', plotData.data, plotData.layout);
             </script>
-
+            <noscript>
+                <img src="data:image/png;base64,{{ figure.png_base64 }}" alt="{{ figure.name }}" style="width: 400px; height: 200px;" class="plot-image">
+            </noscript>
         </div>
         {% endfor %}
         {% endif %}

@@ -4,6 +4,8 @@ import aiosqlite
 from datetime import datetime
 from pathlib import Path
 
+from flet.controls.core import row
+
 from .base import ProjectBase
 from ..schema import CREATE_SCHEMA_SQL, DEFAULT_METADATA
 from utils.logger import logger
@@ -154,3 +156,7 @@ class ProjectLifecycle(ProjectBase):
             (key,)
         )
         return row['value'] if row else default
+
+    async def get_all_settings(self) -> dict:
+        res = await self._fetchall("SELECT key, value FROM project_settings")
+        return {r['key']: r['value'] for r in res}

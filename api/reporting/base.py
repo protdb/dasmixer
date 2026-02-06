@@ -8,7 +8,9 @@ import plotly.graph_objects as go
 import gzip
 import pickle
 import json
+import base64
 from datetime import datetime
+from ..project import Project
 import flet as ft
 
 
@@ -32,7 +34,7 @@ class BaseReport(ABC):
     
     def __init__(
         self,
-        project: 'Project',
+        project: Project,
         plots: Optional[list[tuple[str, go.Figure]]] = None,
         tables: Optional[list[tuple[str, pd.DataFrame, bool]]] = None,
         project_settings: Optional[dict] = None,
@@ -180,15 +182,17 @@ class BaseReport(ABC):
     
     async def _collect_project_settings(self) -> dict:
         """Collect project settings."""
-        font_size = await self.project.get_setting('plot_font_size', '12')
-        plot_width = await self.project.get_setting('plot_width', '1200')
-        plot_height = await self.project.get_setting('plot_height', '800')
-        
-        return {
-            'plot_font_size': int(font_size),
-            'plot_width': int(plot_width),
-            'plot_height': int(plot_height)
-        }
+        settings = await self.project.get_all_settings()
+        return settings
+        # font_size = await self.project.get_setting('plot_font_size', '12')
+        # plot_width = await self.project.get_setting('plot_width', '1200')
+        # plot_height = await self.project.get_setting('plot_height', '800')
+        #
+        # return {
+        #     'plot_font_size': int(font_size),
+        #     'plot_width': int(plot_width),
+        #     'plot_height': int(plot_height)
+        # }
     
     async def _collect_tools_settings(self) -> list[dict]:
         """Collect tools settings."""
@@ -214,12 +218,15 @@ class BaseReport(ABC):
         """
         if not self._project_settings:
             return fig
-        
+
+        font_size = int(self._project_settings.get('plot_font_size', 12))
         fig.update_layout(
-            font=dict(size=self._project_settings['plot_font_size']),
-            width=self._project_settings['plot_width'],
-            height=self._project_settings['plot_height']
+            template='plotly_white',
+            font=dict(size=font_size),
+            width=int(self._project_settings.get('plot_width', 1200)),
+            height=int(self._project_settings.get('plot_height')),
         )
+        fig.update_annotations(font_size=font_size)
         
         return fig
     
@@ -327,7 +334,7 @@ class BaseReport(ABC):
             show_parameters: Include parameters in context
             
         Returns:
-            dict: Context for jinja2/docxtpl
+            dict: Context for jinja2/html4docx
             
         Raises:
             ValueError: If report has no data
@@ -399,8 +406,9 @@ class BaseReport(ABC):
         figures = []
         if self._plots:
             for name, fig in self._plots:
-                # PNG for Word
+                # PNG for Word and noscript
                 png_bytes = fig.to_image(format='png')
+                png_base64 = base64.b64encode(png_bytes).decode('utf-8')
                 
                 # JSON for HTML
                 plotly_json = fig.to_json()
@@ -408,37 +416,19 @@ class BaseReport(ABC):
                 figures.append({
                     "name": name,
                     "png": png_bytes,
+                    "png_base64": png_base64,
                     "json": plotly_json
                 })
         
         return figures
     
-    async def export(self, output_path: Path | str) -> None:
+    def _render_html(self) -> str:
         """
-        Export report to files.
+        Render report to HTML string.
         
-        Args:
-            output_path: Path to folder for saving
-            
-        Creates:
-            - report_name.html
-            - report_name.docx (stub)
-            - report_name.xlsx (stub)
+        Returns:
+            str: HTML content
         """
-        output_path = Path(output_path)
-        output_path.mkdir(parents=True, exist_ok=True)
-        
-        # HTML - functional implementation
-        await self._export_html(output_path)
-        
-        # Word - stub
-        await self._export_word(output_path)
-        
-        # Excel - stub
-        await self._export_excel(output_path)
-    
-    async def _export_html(self, output_path: Path) -> None:
-        """Export to HTML."""
         from jinja2 import Environment, FileSystemLoader
         
         # Load template
@@ -450,22 +440,141 @@ class BaseReport(ABC):
         context = self.get_context()
         html = template.render(**context)
         
+        return html
+    
+    async def export(self, output_path: Path | str) -> dict[str, Path]:
+        """
+        Export report to files.
+        
+        Args:
+            output_path: Path to folder for saving
+            
+        Returns:
+            dict: Paths to created files
+            
+        Creates:
+            - {report_name}-{datetime}.html
+            - {report_name}-{datetime}.docx
+            - {report_name}-{datetime}.xlsx
+        """
+        output_path = Path(output_path)
+        output_path.mkdir(parents=True, exist_ok=True)
+        
+        # Generate timestamp for filenames
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        base_filename = f"{self.name}-{timestamp}"
+        
+        # Export to all formats
+        html_path = await self._export_html(output_path, base_filename)
+        docx_path = await self._export_word(output_path, base_filename)
+        xlsx_path = await self._export_excel(output_path, base_filename)
+        
+        return {
+            'html': html_path,
+            'docx': docx_path,
+            'xlsx': xlsx_path
+        }
+    
+    async def _export_html(self, output_path: Path, base_filename: str) -> Path:
+        """
+        Export to HTML.
+        
+        Args:
+            output_path: Output directory
+            base_filename: Base filename without extension
+            
+        Returns:
+            Path to created file
+        """
+        html = self._render_html()
+        
         # Save
-        output_file = output_path / f"{self.name}.html"
+        output_file = output_path / f"{base_filename}.html"
         output_file.write_text(html, encoding='utf-8')
-    
-    async def _export_word(self, output_path: Path) -> None:
-        """
-        Export to Word (stub).
         
-        TODO: Implement using docxtpl
-        """
-        pass
+        return output_file
     
-    async def _export_excel(self, output_path: Path) -> None:
+    async def _export_word(self, output_path: Path, base_filename: str) -> Path:
         """
-        Export to Excel (stub).
+        Export to Word using html4docx.
         
-        TODO: Implement table export to separate sheets
+        Args:
+            output_path: Output directory
+            base_filename: Base filename without extension
+            
+        Returns:
+            Path to created file
         """
-        pass
+        from docx import Document
+        from html4docx import HtmlToDocx
+        
+        # Render HTML
+        html = self._render_html()
+        
+        # Create Word document
+        doc = Document()
+        html_converter = HtmlToDocx()
+        html_converter.add_html_to_document(html, doc)
+        
+        # Save
+        output_file = output_path / f"{base_filename}.docx"
+        doc.save(str(output_file))
+        
+        return output_file
+    
+    async def _export_excel(self, output_path: Path, base_filename: str) -> Path:
+        """
+        Export tables to Excel with each table on separate sheet.
+        
+        Args:
+            output_path: Output directory
+            base_filename: Base filename without extension
+            
+        Returns:
+            Path to created file
+        """
+        if not self._tables:
+            # Create empty file if no tables
+            output_file = output_path / f"{base_filename}.xlsx"
+            pd.DataFrame().to_excel(output_file, index=False)
+            return output_file
+        
+        output_file = output_path / f"{base_filename}.xlsx"
+        
+        # Create Excel writer
+        with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
+            for name, df, _ in self._tables:
+                # Sanitize sheet name (Excel has limitations)
+                sheet_name = self._sanitize_sheet_name(name)
+                
+                # Write DataFrame to sheet
+                df.to_excel(writer, sheet_name=sheet_name, index=False)
+        
+        return output_file
+    
+    @staticmethod
+    def _sanitize_sheet_name(name: str) -> str:
+        """
+        Sanitize sheet name for Excel.
+        
+        Excel sheet names:
+        - Max 31 characters
+        - Cannot contain: \ / * ? : [ ]
+        
+        Args:
+            name: Original name
+            
+        Returns:
+            Sanitized name
+        """
+        # Remove invalid characters
+        invalid_chars = ['\\', '/', '*', '?', ':', '[', ']']
+        sanitized = name
+        for char in invalid_chars:
+            sanitized = sanitized.replace(char, '_')
+        
+        # Trim to 31 characters
+        if len(sanitized) > 31:
+            sanitized = sanitized[:31]
+        
+        return sanitized

@@ -33,6 +33,7 @@ class ReportItem(ft.Container):
         self.project = project
         self.state = state
         print(f'Report {report_class.__name__}.')
+        
         # Controls
         self.include_checkbox = ft.Checkbox(
             label="Generate with all",
@@ -260,17 +261,8 @@ class ReportItem(ft.Container):
                 self.current_report_id
             )
             
-            # Get HTML
-            context = report.get_context()
-            
-            # Render via jinja2
-            from jinja2 import Environment, FileSystemLoader
-            from pathlib import Path
-            
-            template_dir = Path(__file__).parent.parent.parent.parent.parent / 'api' / 'reporting' / 'templates'
-            env = Environment(loader=FileSystemLoader(str(template_dir)))
-            template = env.get_template('report.html.j2')
-            html = template.render(**context)
+            # Render HTML
+            html = report._render_html()
             
             # Show in pywebview
             ReportViewer.show_report(html, title=f"{self.report_class.name}")
@@ -285,34 +277,35 @@ class ReportItem(ft.Container):
         if not self.current_report_id:
             return
         
-        # Select folder using new async API
+        # Show loading dialog first
+        loading_dialog = self._show_loading("Exporting report...")
+        
         try:
+            # Use async FilePicker to get directory
             folder_path = await ft.FilePicker().get_directory_path(
                 dialog_title="Select Export Folder"
             )
             
             if folder_path:
-                await self._export_to_folder(folder_path)
+                # Load report
+                report = await self.report_class.load_from_db(
+                    self.project,
+                    self.current_report_id
+                )
+                
+                # Export
+                created_files = await report.export(Path(folder_path))
+                
+                self._close_loading(loading_dialog)
+                
+                # Show success with file list
+                files_list = "\n".join([f"- {path.name}" for path in created_files.values()])
+                self._show_success(f"Report exported:\n{files_list}")
+            else:
+                self._close_loading(loading_dialog)
+                
         except Exception as ex:
-            self._show_error(f"Failed to select folder: {ex}")
-            import traceback
-            traceback.print_exc()
-    
-    async def _export_to_folder(self, folder_path: str):
-        """Export to selected folder."""
-        try:
-            # Load report
-            report = await self.report_class.load_from_db(
-                self.project,
-                self.current_report_id
-            )
-            
-            # Export
-            await report.export(Path(folder_path))
-            
-            self._show_success(f"Report exported to {folder_path}")
-            
-        except Exception as ex:
+            self._close_loading(loading_dialog)
             self._show_error(f"Export failed: {ex}")
             import traceback
             traceback.print_exc()

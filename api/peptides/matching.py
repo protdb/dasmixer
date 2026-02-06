@@ -75,12 +75,7 @@ async def select_preferred_identifications(
     if criterion not in ("ppm", "intensity"):
         raise ValueError(f"Invalid criterion: {criterion}. Must be 'ppm' or 'intensity'")
     spectra_files = await project.get_spectra_files()
-    with open('processed_spectra_files.txt') as f:
-        processed_spectra_files = set(f.read().splitlines(keepends=False))
     for _, spectra_file in spectra_files.iterrows():
-        if str(spectra_file['id']) in processed_spectra_files:
-            print(f'skipping {spectra_file["id"]} as processed')
-            continue
         idents_not_merged = []
         for tool_id, tool_params in tool_settings.items():
             max_ppm = tool_params.get("max_ppm", 50000)
@@ -131,13 +126,7 @@ async def select_preferred_identifications(
                 asc = False
             best_id = spectra_idents.sort_values(crit, ascending=asc).iloc[0]['id']
             best_ids.append(str(best_id))
-        with open('best_ids.txt', 'a') as f:
-            f.write('\n'.join(best_ids))
-            f.write('\n')
-        with open('processed_spectra_files.txt', 'a') as f:
-            f.write(str(spectra_file['id'])+'\n')
-            # await project.set_preferred_identification(spectra_id, best_id)
-            counter += 1
+            await project.set_preferred_identification(spectra_id, best_id)
 
     return counter
 

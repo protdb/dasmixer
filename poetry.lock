@@ -162,6 +162,29 @@ doc = ["doc8", "sphinx (>=7.0.0)", "sphinx-autobuild", "sphinx-autodoc-typehints
 test = ["dateparser (==1.*)", "pre-commit", "pytest", "pytest-cov", "pytest-mock", "pytz (==2025.2)", "simplejson (==3.*)"]
 
 [[package]]
+name = "beautifulsoup4"
+version = "4.14.3"
+description = "Screen-scraping library"
+optional = false
+python-versions = ">=3.7.0"
+groups = ["main"]
+files = [
+    {file = "beautifulsoup4-4.14.3-py3-none-any.whl", hash = "sha256:0918bfe44902e6ad8d57732ba310582e98da931428d231a5ecb9e7c703a735bb"},
+    {file = "beautifulsoup4-4.14.3.tar.gz", hash = "sha256:6292b1c5186d356bba669ef9f7f051757099565ad9ada5dd630bd9de5fa7fb86"},
+]
+
+[package.dependencies]
+soupsieve = ">=1.6.1"
+typing-extensions = ">=4.0.0"
+
+[package.extras]
+cchardet = ["cchardet"]
+chardet = ["chardet"]
+charset-normalizer = ["charset-normalizer"]
+html5lib = ["html5lib"]
+lxml = ["lxml"]
+
+[[package]]
 name = "binaryornot"
 version = "0.4.4"
 description = "Ultra-lightweight pure Python package to check if a file is binary or text."
@@ -586,6 +609,22 @@ files = [
     {file = "h11-0.16.0-py3-none-any.whl", hash = "sha256:63cf8bbe7522de3bf65932fda1d9c2772064ffb3dae62d55932da54b31cb6c86"},
     {file = "h11-0.16.0.tar.gz", hash = "sha256:4e35b956cf45792e4caa5885e69fba00bdbc6ffafbfa020300e549b208ee5ff1"},
 ]
+
+[[package]]
+name = "html-for-docx"
+version = "1.1.3"
+description = "Convert HTML to Docx easily and fastly"
+optional = false
+python-versions = ">=3.7"
+groups = ["main"]
+files = [
+    {file = "html_for_docx-1.1.3-py3-none-any.whl", hash = "sha256:35990c5ca83a04798b0f084c00114095cac6a32978e9145c5a8f95454fa8bfed"},
+    {file = "html_for_docx-1.1.3.tar.gz", hash = "sha256:805d1bf7f04ef85105d613ac8a5b5060f38934efb39775fe704df4a6506068cd"},
+]
+
+[package.dependencies]
+beautifulsoup4 = ">=4.12.2"
+python-docx = ">=1.1.0"
 
 [[package]]
 name = "httpcore"
@@ -2596,6 +2635,18 @@ files = [
 ]
 
 [[package]]
+name = "soupsieve"
+version = "2.8.3"
+description = "A modern CSS selector implementation for Beautiful Soup."
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "soupsieve-2.8.3-py3-none-any.whl", hash = "sha256:ed64f2ba4eebeab06cc4962affce381647455978ffc1e36bb79a545b91f45a95"},
+    {file = "soupsieve-2.8.3.tar.gz", hash = "sha256:3267f1eeea4251fb42728b6dfb746edc9acaffc4a45b27e19450b676586e8349"},
+]
+
+[[package]]
 name = "starlette"
 version = "0.50.0"
 description = "The little ASGI library that shines."
@@ -3090,4 +3141,4 @@ test = ["pytest", "pytest-cov"]
 [metadata]
 lock-version = "2.1"
 python-versions = "<4.0, >=3.11"
-content-hash = "b86c46a6a73078366e8863d18a5f1fc1be61877d201311d28578b46016b794e5"
+content-hash = "b9d9c0212eeb080d8a5ca0b9b31f8771d54db7e0bfc7aa03aa90503d542bb87f"
