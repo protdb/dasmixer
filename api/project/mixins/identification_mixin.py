@@ -141,6 +141,7 @@ class IdentificationMixin:
         tool_id: int | None = None,
         sample_id: int | None = None,
         only_prefered: bool = False,
+        max_abs_ppm: float | None = None,
         offset: int = 0,
         limit: int | None = None
     ) -> pd.DataFrame:
@@ -173,6 +174,10 @@ class IdentificationMixin:
         
         if only_prefered:
             conditions.append("i.is_preferred = 1")
+
+        if max_abs_ppm is not None:
+            conditions.append("abs(i.ppm) <= ?")
+            params.append(max_abs_ppm)
         
         if conditions:
             query_parts.append("WHERE " + " AND ".join(conditions))
@@ -186,7 +191,64 @@ class IdentificationMixin:
         rows = await self._fetchall(query, tuple(params) if params else None)
         
         return pd.DataFrame(rows) if rows else pd.DataFrame()
-    
+
+    async def get_idents_for_preferred(
+            self,
+            spectra_file_id: int,
+            tool_id: int,
+            min_score: float,
+            max_abs_ppm: float,
+            intensity_coverage: float,
+            canonical_length: tuple[int, int]
+    ):
+        """
+        special method for identification processing
+        :param tool_id:
+        :param spectra_file_id:
+        :param min_score:
+        :param max_abs_ppm:
+        :param intensity_coverage:
+        :param canonical_length:
+        :return:
+        """
+        query = """
+            SELECT
+                i.id, i.spectre_id, i.tool_id, i.ppm, i.intensity_coverage, i.score,
+                s.spectre_file_id,
+                m.matched_ppm, m.matched_coverage_percent
+            FROM identification i
+            LEFT JOIN spectre s ON i.spectre_id = s.id
+            LEFT JOIN (
+                select
+                    identification_id,
+                    matched_coverage_percent,
+                    min(matched_coverage_percent) as matched_coverage_percent,
+                    min(abs(matched_ppm)) as matched_ppm
+                from peptide_match
+                GROUP by identification_id
+                ) m on i.id = m.identification_id
+            WHERE
+            s.spectre_file_id = ? and
+            i.tool_id = ? and
+            i.score >= ? and
+            abs(i.ppm) <= ? and
+            i.intensity_coverage >= ? and
+            ? <= length(i.canonical_sequence) <= ?
+        """
+
+        params = (
+            int(spectra_file_id),
+            int(tool_id),
+            float(min_score),
+            float(max_abs_ppm),
+            float(intensity_coverage),
+            float(canonical_length[0]),
+            float(canonical_length[1])
+        )
+
+        rows = await self._fetchall(query, params)
+        return pd.DataFrame(rows) if rows else pd.DataFrame()
+
     async def update_identification_coverage(
         self,
         identification_id: int,
@@ -205,6 +267,15 @@ class IdentificationMixin:
         )
         # Note: No auto-save here for batch operations efficiency
         # Caller should call save() after batch updates
+
+    async def update_identification_coverage_batch(
+            self,
+            parameters: list[tuple[float, int]]
+    ):
+        query = """
+        UPDATE identification SET intensity_coverage = ? WHERE id = ?
+        """
+        await self._executemany(query, parameters)
     
     async def set_preferred_identification(
         self,

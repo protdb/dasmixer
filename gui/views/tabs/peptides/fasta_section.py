@@ -260,7 +260,7 @@ class FastaSection(BaseSection):
                 self.project,
                 tool_settings,
                 only_prefered=self.match_preferred_only_cb.value,
-                batch_size=1000
+                batch_size=10000
             ):
                 await self.project.add_peptide_matches_batch(matches_df)
                 total_matches += count

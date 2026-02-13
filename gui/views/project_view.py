@@ -35,7 +35,7 @@ class ProjectView(ft.Container):
     def _build_content(self):
         """Build the view."""
         # Import tab views
-        from gui.views.tabs.samples_tab import SamplesTab
+        from gui.views.tabs.samples import SamplesTab
         from gui.views.tabs.peptides import PeptidesTab
         from gui.views.tabs.proteins import ProteinsTab
         from gui.views.tabs.reports import ReportsTab

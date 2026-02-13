@@ -1,8 +1,9 @@
 """Preferred identification matching section."""
+from pathlib import Path
 
 import flet as ft
 
-from api.peptides.matching import select_preferred_identifications
+from api.peptides.matching import select_preferred_identifications, calculate_preferred_identifications_for_file
 from .base_section import BaseSection
 from .dialogs.progress_dialog import ProgressDialog
 
@@ -71,21 +72,38 @@ class MatchingSection(BaseSection):
             # Run matching with progress
             dialog = ProgressDialog(self.page, "Running Matching")
             dialog.show()
-            dialog.update_progress(None, "Processing...")
-            
-            count = await select_preferred_identifications(
-                self.project,
-                criterion,
-                tool_settings
-            )
-            
-            dialog.complete(f"Processed {count} spectra")
+
+
+            spectre_files = await self.project.get_spectra_files()
+            progres = 0.0
+            processed_files = 0
+            progres_step = round(1 / len(spectre_files), 3)
+            for _, spectra_file in spectre_files.iterrows():
+                file_name = Path(spectra_file['path']).name
+                dialog.update_progress(
+                    progres,
+                    f"Processing {file_name} ({processed_files+1}/{len(spectre_files)})..."
+                )
+                idents = await calculate_preferred_identifications_for_file(
+                    self.project,
+                    spectra_file['id'],
+                    criterion,
+                    tool_settings,
+                )
+                dialog.update_progress(progres, f"Saving {file_name} ({processed_files+1}/{len(spectre_files)})...")
+                await self.project.set_preferred_identifications_for_file(
+                    spectra_file['id'],
+                    idents,
+                )
+                progres += progres_step
+                processed_files += 1
+            dialog.complete(f"Completed {processed_files+1}/{len(spectre_files)}!")
             
             import asyncio
-            await asyncio.sleep(1)
+            await asyncio.sleep(0.5)
             dialog.close()
             
-            self.show_success(f"Processed {count} spectra")
+            self.show_success(f"Processed {processed_files} spectra files!")
             
         except Exception as ex:
             import traceback

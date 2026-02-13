@@ -1,102 +1,111 @@
-"""Comparison groups management section."""
+"""Groups section - manage comparison groups."""
 
 import flet as ft
-
+from api.project.project import Project
 from .base_section import BaseSection
-from .dialogs.add_group_dialog import AddGroupDialog
+from .shared_state import SamplesTabState
+from .dialogs.group_dialog import GroupDialog
 
 
 class GroupsSection(BaseSection):
-    """Comparison groups (subsets) management."""
+    """Section for managing comparison groups."""
+    
+    def __init__(self, project: Project, state: SamplesTabState, parent_tab):
+        """Initialize groups section."""
+        self.groups_list = ft.Column(spacing=5)
+        super().__init__(project, state, parent_tab)
     
     def _build_content(self) -> ft.Control:
-        """Build groups section UI."""
-        self.groups_list = ft.Column(spacing=5)
-        
-        self.add_group_btn = ft.ElevatedButton(
-            content=ft.Text("Add Group"),
-            icon=ft.Icons.ADD,
-            on_click=lambda e: self.page.run_task(self.show_add_group_dialog, e)
-        )
-        
+        """Build section content."""
         return ft.Column([
             ft.Text("Comparison Groups", size=18, weight=ft.FontWeight.BOLD),
             self.groups_list,
             ft.Container(height=10),
-            ft.Row([self.add_group_btn], spacing=10)
+            ft.Row([
+                ft.ElevatedButton(
+                    content=ft.Text("Add Group"),
+                    icon=ft.Icons.ADD,
+                    on_click=lambda e: self.page.run_task(self._show_add_group_dialog, e)
+                )
+            ], spacing=10)
         ], spacing=10)
     
     async def load_data(self):
-        """Load groups."""
-        await self.refresh_groups()
-    
-    async def refresh_groups(self):
-        """Refresh groups list."""
-        print("Refreshing groups...")
-        try:
-            groups = await self.project.get_subsets()
-            self.state.groups_list = groups
+        """Load groups list."""
+        print("Loading groups...")
+        groups = await self.project.get_subsets()
+        
+        self.groups_list.controls.clear()
+        
+        for group in groups:
+            # Count samples in group
+            samples = await self.project.get_samples(subset_id=group.id)
             
-            self.groups_list.controls.clear()
-            
-            for group in groups:
-                # Count samples in group
-                samples = await self.project.get_samples(subset_id=group.id)
-                
-                self.groups_list.controls.append(
-                    ft.ListTile(
-                        leading=ft.Container(
-                            content=ft.Icon(
-                                ft.Icons.FOLDER,
-                                color=group.display_color or ft.Colors.PRIMARY
-                            ),
-                            width=40
+            self.groups_list.controls.append(
+                ft.ListTile(
+                    leading=ft.Container(
+                        content=ft.Icon(ft.Icons.FOLDER, color=group.display_color or ft.Colors.PRIMARY),
+                        width=40
+                    ),
+                    title=ft.Text(group.name, weight=ft.FontWeight.BOLD),
+                    subtitle=ft.Text(
+                        f"{len(samples)} samples" + (f" • {group.details}" if group.details else "")
+                    ),
+                    trailing=ft.Row([
+                        ft.IconButton(
+                            icon=ft.Icons.EDIT_OUTLINED,
+                            icon_color=ft.Colors.BLUE_400,
+                            tooltip="Edit group",
+                            on_click=lambda e, g=group: self.page.run_task(self._show_edit_group_dialog, e, g)
                         ),
-                        title=ft.Text(group.name, weight=ft.FontWeight.BOLD),
-                        subtitle=ft.Text(
-                            f"{len(samples)} samples" + 
-                            (f" • {group.details}" if group.details else "")
-                        ),
-                        trailing=ft.IconButton(
+                        ft.IconButton(
                             icon=ft.Icons.DELETE_OUTLINE,
                             icon_color=ft.Colors.RED_400,
                             tooltip="Delete group",
-                            on_click=lambda e, g=group: self.page.run_task(
-                                self.delete_group, e, g
-                            )
-                        ),
-                        data=group.id
-                    )
+                            on_click=lambda e, g=group: self.page.run_task(self._delete_group, e, g)
+                        )
+                    ], tight=True, spacing=0),
+                    data=group.id
                 )
-            
-            if not groups:
-                self.groups_list.controls.append(
-                    ft.Text(
-                        "No groups. Click 'Add Group' to create one.",
-                        italic=True
-                    )
-                )
-            
-            print(f"Groups loaded: {len(groups)}")
+            )
+        
+        if not groups:
+            self.groups_list.controls.append(
+                ft.Text("No groups. Click 'Add Group' to create one.", italic=True)
+            )
+        
+        print(f"Groups loaded: {len(groups)}")
+        self.state.groups_count = len(groups)
+        
+        if self.groups_list.page:
             self.groups_list.update()
-            self.state.needs_groups_refresh = False
-            
-        except Exception as ex:
-            print(f"Error refreshing groups: {ex}")
-            self.show_error(f"Error loading groups: {str(ex)}")
     
-    async def show_add_group_dialog(self, e):
-        """Show add group dialog."""
-        dialog = AddGroupDialog(self.page, self.project)
-        
-        async def on_success():
-            await self.refresh_groups()
-            # Mark samples dirty (need to update group dropdowns)
-            self.state.mark_samples_dirty()
-        
-        await dialog.show(on_success=on_success)
+    async def _show_add_group_dialog(self, e):
+        """Show dialog for adding new group."""
+        dialog = GroupDialog(
+            self.project,
+            self.page,
+            on_success_callback=self._on_group_saved
+        )
+        await dialog.show()
     
-    async def delete_group(self, e, group):
+    async def _show_edit_group_dialog(self, e, group):
+        """Show dialog for editing group."""
+        dialog = GroupDialog(
+            self.project,
+            self.page,
+            on_success_callback=self._on_group_saved,
+            group=group
+        )
+        await dialog.show()
+    
+    async def _on_group_saved(self):
+        """Callback after group is saved."""
+        await self.load_data()
+        # Notify other sections to refresh
+        self.state.needs_refresh_samples = True
+    
+    async def _delete_group(self, e, group):
         """Delete a comparison group with confirmation."""
         async def confirm_delete(e):
             try:
@@ -106,22 +115,23 @@ class GroupsSection(BaseSection):
                 confirm_dialog.open = False
                 self.page.update()
                 
-                # Refresh groups
-                await self.refresh_groups()
+                # Refresh
+                await self.load_data()
+                self.state.needs_refresh_samples = True
                 
-                # Mark samples dirty
-                self.state.mark_samples_dirty()
-                
+                # Show success
                 self.show_success(f"Deleted group: {group.name}")
                 
             except ValueError as ex:
+                # Handle case where group has samples
                 confirm_dialog.open = False
                 self.page.update()
-                self.show_warning(f"Cannot delete: {str(ex)}")
                 
+                self.show_warning(f"Cannot delete: {str(ex)}")
             except Exception as ex:
                 confirm_dialog.open = False
                 self.page.update()
+                
                 self.show_error(f"Error: {str(ex)}")
         
         confirm_dialog = ft.AlertDialog(
@@ -133,7 +143,7 @@ class GroupsSection(BaseSection):
             ),
             actions=[
                 ft.TextButton(
-                    content="Cancel",
+                    "Cancel",
                     on_click=lambda e: self._close_dialog(confirm_dialog)
                 ),
                 ft.ElevatedButton(
@@ -147,4 +157,9 @@ class GroupsSection(BaseSection):
         
         self.page.overlay.append(confirm_dialog)
         confirm_dialog.open = True
+        self.page.update()
+    
+    def _close_dialog(self, dialog):
+        """Close dialog helper."""
+        dialog.open = False
         self.page.update()

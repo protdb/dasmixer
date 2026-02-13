@@ -288,6 +288,44 @@ class ProteinMixin:
         if len(result) == 0:
             return 0
         return int(result.iloc[0]['count'])
+
+    async def get_protein_quantification_data(
+            self,
+            method: str,
+            subsets: list[str] | None = None,
+    ) -> pd.DataFrame:
+
+        query = """
+            select
+                i.sample_id,
+                s.name as sample,
+                sb.name as subset,
+                i.protein_id,
+                p.fasta_name,
+                i.peptide_count,
+                i.uq_evidence_count,
+                i.coverage,
+                i.intensity_sum,
+                q.algorithm,
+                q.rel_value,
+                q.abs_value
+            from
+                protein_quantification_result as q
+                left join protein_identification_result as i on q.protein_identification_id = i.id
+                left join protein as p on i.protein_id = p.id
+                left join sample as s on s.id = i.sample_id
+                left join subset as sb on sb.id = s.subset_id
+            WHERE q.algorithm = ?
+        """
+        params = (method,)
+        if subsets:
+            query += f" AND sb.name in {str(tuple(subsets))}"
+
+        df = await self.execute_query_df(query, params)
+        return df
+
+
+
     
     async def get_protein_results_joined(
         self,

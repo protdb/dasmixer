@@ -88,7 +88,7 @@ class PeptideMixin:
         rows = await self._fetchall(query, tuple(params) if params else None)
         
         return pd.DataFrame(rows) if rows else pd.DataFrame()
-    
+
     async def update_peptide_match_metrics(
         self,
         match_id: int,
@@ -179,7 +179,7 @@ class PeptideMixin:
                 s.id as spectre_id, s.seq_no, s.scans, s.charge, s.rt, s.pepmass, s.intensity,
                 id.tool, id.tool_id, id.identification_id, id.sequence, 
                 id.canonical_sequence, id.ppm, id.is_preferred,
-                mp.matched_sequence, mp.matched_ppm, mp.protein_id, 
+                mp.matched_sequence, mp.matched_ppm, mp.protein_id, mp.identity,
                 mp.unique_evidence, mp.gene
             FROM
                 spectre AS s
@@ -212,7 +212,8 @@ class PeptideMixin:
                     m.matched_ppm, 
                     m.protein_id, 
                     m.identification_id, 
-                    m.unique_evidence, 
+                    m.unique_evidence,
+                    m.identity,
                     p.gene
                  FROM peptide_match m, protein p 
                  WHERE p.id = m.protein_id) AS mp 

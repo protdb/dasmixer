@@ -1,46 +1,30 @@
-"""Shared state for Samples tab components."""
+"""Shared state for samples tab sections."""
 
 from dataclasses import dataclass, field
-from typing import Any
 
 
 @dataclass
 class SamplesTabState:
     """
-    Shared state container for Samples tab.
+    Shared state between samples tab sections.
     
-    Managed by SamplesTab and accessible by all sections.
+    Holds counts and flags that multiple sections need to access.
     """
     
-    # Groups data
-    groups_list: list = field(default_factory=list)
+    # Counts
+    groups_count: int = 0
+    tools_count: int = 0
+    samples_count: int = 0
+    spectra_files_count: int = 0
+    identification_files_count: int = 0
     
-    # Tools data
-    tools_list: list = field(default_factory=list)
+    # Flags for refresh coordination
+    needs_refresh_groups: bool = False
+    needs_refresh_tools: bool = False
+    needs_refresh_samples: bool = False
     
-    # Samples data
-    samples_list: list = field(default_factory=list)
-    
-    # UI update flags
-    needs_groups_refresh: bool = False
-    needs_tools_refresh: bool = False
-    needs_samples_refresh: bool = False
-    updating: bool = False  # Prevent refresh loops
-    
-    def mark_groups_dirty(self):
-        """Mark groups as needing refresh."""
-        self.needs_groups_refresh = True
-    
-    def mark_tools_dirty(self):
-        """Mark tools as needing refresh."""
-        self.needs_tools_refresh = True
-    
-    def mark_samples_dirty(self):
-        """Mark samples as needing refresh."""
-        self.needs_samples_refresh = True
-    
-    def mark_all_dirty(self):
-        """Mark all as needing refresh."""
-        self.needs_groups_refresh = True
-        self.needs_tools_refresh = True
-        self.needs_samples_refresh = True
+    def reset_refresh_flags(self):
+        """Reset all refresh flags."""
+        self.needs_refresh_groups = False
+        self.needs_refresh_tools = False
+        self.needs_refresh_samples = False

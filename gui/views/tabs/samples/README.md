@@ -1,68 +1,147 @@
-# Samples Tab - Modular Structure
+# Samples Tab - Structure and Components
+
+This document describes the organization of the Samples tab, which has been refactored into a modular structure.
 
 ## Overview
 
-Samples tab refactored into modular components following the same pattern as Peptides tab.
+The Samples tab manages:
+- **Comparison Groups (Subsets)**: Define groups for comparative analysis
+- **Identification Tools**: Configure tools used for peptide identification
+- **Samples**: Manage individual samples and their properties
+- **Data Import**: Import spectra and identification files
 
-## Structure
+## File Structure
 
 ```
-samples/
-├── __init__.py                # Exports SamplesTab
-├── samples_tab.py             # Main composition
-├── shared_state.py            # Shared state
-├── base_section.py            # Base class
-├── groups_section.py          # ✅ Groups management
-├── tools_section.py           # ✅ Tools management (with type/parser patch)
-├── import_section.py          # 🔄 Import button
-├── samples_list_section.py    # 🔄 Samples table
-├── import_logic.py            # 🔄 Import workflows (with tool.parser patch)
-└── dialogs/
-    ├── __init__.py            # ✅
-    ├── add_group_dialog.py    # 🔄 Add group
-    ├── add_tool_dialog.py     # ✅ Add tool (WITH TYPE/PARSER PATCH!)
-    └── import_dialogs.py      # 🔄 Import mode/pattern/config
+gui/views/tabs/samples/
+├── __init__.py                 # Package initialization, exports SamplesTab
+├── samples_tab.py              # Main tab container, coordinates all sections
+├── shared_state.py             # Shared state between sections (counts, flags)
+├── base_section.py             # Base class for all sections
+├── constants.py                # Constants (default colors for groups/tools)
+├── groups_section.py           # Groups management section
+├── tools_section.py            # Tools management section
+├── import_section.py           # Import spectra section
+├── samples_section.py          # Samples list section
+├── import_handlers.py          # Import processing logic
+└── dialogs/                    # Dialog components
+    ├── __init__.py
+    ├── group_dialog.py         # Create/edit group dialog
+    ├── tool_dialog.py          # Create/edit tool dialog
+    ├── sample_dialog.py        # Edit sample dialog
+    ├── import_mode_dialog.py   # Select import mode dialog
+    ├── import_pattern_dialog.py # Pattern-based import dialog
+    └── import_single_dialog.py # Single file import dialog
 ```
 
-## Key Changes - Stage 4.1 Patch Applied
+## Architecture
 
-### AddToolDialog ✅
+### Main Components
 
-**Changes applied:**
-1. Added `RadioGroup` for tool type selection (Library/De Novo)
-2. Renamed "Type" dropdown → "Parser"
-3. Pass both `type` and `parser` to `project.add_tool()`:
-   ```python
-   await project.add_tool(
-       name=name_field.value,
-       type=tool_type_group.value,    # "Library" or "De Novo"
-       parser=parser_dropdown.value,  # Parser name
-       display_color=color
-   )
-   ```
+#### `SamplesTab` (samples_tab.py)
+- Main container for the entire tab
+- Coordinates all sections
+- Handles import dialog chains
+- Manages refresh cycles
 
-### ToolsSection ✅
+#### Sections (inheriting from `BaseSection`)
+- **GroupsSection**: Displays and manages comparison groups
+- **ToolsSection**: Displays and manages identification tools  
+- **ImportSection**: Button to trigger spectra import
+- **SamplesSection**: Displays sample list with edit capability
 
-**Changes applied:**
-1. Display both type and parser in subtitle:
-   ```python
-   subtitle_text = f"{len(ident_files)} files • {tool.type} ({tool.parser})"
-   ```
+#### Dialogs
+All dialogs are self-contained components that:
+- Take project, page, and callbacks as constructor parameters
+- Handle their own UI and validation
+- Call callbacks on success
+- Show appropriate error/success messages
 
-### Import Logic 🔄
+#### Import Handlers
+`ImportHandlers` class encapsulates the complex import logic:
+- Progress dialog display
+- File parsing and validation
+- Batch processing
+- Database updates
+- Error handling
 
-**Needs patching:**
-- Line where parser is retrieved from tool:
-  ```python
-  # OLD: parser_class = registry.get_parser(tool.type, "identification")
-  # NEW: parser_class = registry.get_parser(tool.parser, "identification")
-  ```
+### Shared State
 
-## Status
+`SamplesTabState` dataclass holds:
+- Counts (groups, tools, samples, etc.)
+- Refresh flags for coordination between sections
 
-- ✅ Core structure created
-- ✅ Type/Parser patch applied in AddToolDialog
-- ✅ Type/Parser patch applied in ToolsSection display
-- 🔄 Need to finish import_logic with tool.parser patch
-- 🔄 Need to create remaining sections and dialogs
-- 🔄 Need to create main samples_tab.py composition
+### Constants
+
+`constants.py` defines:
+- **DEFAULT_COLORS**: List of 10 colors for groups/tools
+- **get_default_color(index)**: Function to get color by index (cycles through list)
+
+## Key Features
+
+### Edit Functionality
+- Groups: Add, edit (name, description, color), delete
+- Tools: Add, edit (name, type, parser, color), delete
+- Samples: Edit (name, group, additions JSON)
+
+### Default Colors
+When creating new groups or tools, a color is automatically selected from a predefined list:
+```python
+DEFAULT_COLORS = [
+    "#0000FF",  # Blue
+    "#FF0000",  # Red
+    "#008000",  # Green
+    "#FF00FF",  # Magenta
+    "#00FFFF",  # Cyan
+    "#FFD700",  # Gold
+    "#FF8000",  # Orange
+    "#8000FF",  # Purple
+    "#FF0080",  # Pink
+    "#00FF80"   # Spring Green
+]
+```
+The color is selected by index = (count of existing items) % 10.
+
+### Sample Editing
+Samples can now be edited via a dialog (no more inline dropdowns for groups):
+- **Name**: Text field
+- **Group**: Dropdown selector
+- **Additions**: JSON text field for LFQ parameters (e.g., `{"albumin": 45.5, "total_protein": 70.0}`)
+
+### Import Workflow
+1. User clicks "Import Spectra" or "Import Identifications" button
+2. ImportModeDialog shows: "Select individual files" or "Pattern matching from folder"
+3. Based on selection:
+   - **Single files**: ImportSingleDialog opens file picker, then shows config dialog
+   - **Pattern matching**: ImportPatternDialog allows folder selection and pattern configuration
+4. ImportHandlers processes files with progress indication
+5. On completion, all sections refresh
+
+## Migration Notes
+
+The old monolithic `samples_tab.py` has been refactored into this modular structure:
+- Better separation of concerns
+- Easier testing and maintenance
+- Reusable dialog components
+- Cleaner state management
+
+## Usage
+
+From other modules:
+```python
+from gui.views.tabs.samples import SamplesTab
+
+# Create tab
+samples_tab = SamplesTab(project)
+
+# Tab will automatically load data on mount
+```
+
+## Future Enhancements
+
+Possible improvements:
+- Bulk edit for samples
+- Drag-and-drop file import
+- Export/import of groups and tools configuration
+- Sample filtering and search
+- More detailed sample statistics
