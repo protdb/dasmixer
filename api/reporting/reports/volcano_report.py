@@ -59,17 +59,17 @@ class VolcanoReport(BaseReport):
                     size=20,
                     opacity=0.8
                 ),
-                customdata=np.column_stack((
-                    subset_data['protein_id'].values,
-                    subset_data['fc'].values  # Оригинальный FC (не log2) для hover
-                )),
-                hovertemplate=(
-                    '<b>%{customdata[0]}</b><br>' +
-                    'Fold Change: %{customdata[1]:.3f}<br>' +
-                    'Log2(FC): %{x:.3f}<br>' +
-                    'P-value: %{y:.4g}<br>' +
-                    '<extra></extra>'
-                )
+                # customdata=np.column_stack((
+                #     subset_data['protein_id'].values,
+                #     subset_data['fc'].values  # Оригинальный FC (не log2) для hover
+                # )),
+                # hovertemplate=(
+                #     '<b>%{customdata[0]}</b><br>' +
+                #     'Fold Change: %{customdata[1]:.3f}<br>' +
+                #     'Log2(FC): %{x:.3f}<br>' +
+                #     'P-value: %{y:.4g}<br>' +
+                #     '<extra></extra>'
+                # )
             ))
         
         # Добавляем горизонтальную линию для порога p-value
@@ -119,7 +119,7 @@ class VolcanoReport(BaseReport):
         fig.update_layout(
             title="Volcano Plot",
             showlegend=True,
-            hovermode='closest'
+            # hovermode='closest'
         )
         
         return fig
