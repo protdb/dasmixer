@@ -422,7 +422,7 @@ class BaseReport(ABC):
         
         return figures
     
-    def _render_html(self) -> str:
+    def _render_html(self, is_interactive=True) -> str:
         """
         Render report to HTML string.
         
@@ -438,6 +438,7 @@ class BaseReport(ABC):
         
         # Render
         context = self.get_context()
+        context['is_interactive'] = is_interactive
         html = template.render(**context)
         
         return html
@@ -509,13 +510,23 @@ class BaseReport(ABC):
         from html4docx import HtmlToDocx
         
         # Render HTML
-        html = self._render_html()
+        html = self._render_html(is_interactive=False)
         
         # Create Word document
         doc = Document()
         html_converter = HtmlToDocx()
         html_converter.add_html_to_document(html, doc)
-        
+
+        # Resize documents
+        text_width = doc.sections[0].page_width - doc.sections[0].left_margin - doc.sections[0].right_margin
+
+        for i, image in enumerate(doc.inline_shapes):
+            original_width, original_height = image.width, image.height
+
+            new_height = int(original_height * text_width / original_width)
+
+            image.width = text_width
+            image.height = new_height
         # Save
         output_file = output_path / f"{base_filename}.docx"
         doc.save(str(output_file))

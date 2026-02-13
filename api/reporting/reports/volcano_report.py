@@ -31,15 +31,97 @@ class VolcanoReport(BaseReport):
             method=lfq_type, subsets=subsets
         )
 
-    async def draw_plot(self, data: pd.DataFrame, p_threshold: float, fc_threshold: float) -> go.Figure:
+    async def draw_plot(self, data: pd.DataFrame, p_threshold: float, fc_threshold_log2: float) -> go.Figure:
         subsets = await self.project.get_subsets()
         subset_colors = {x.name: x.display_color for x in subsets}
         df = data.copy()
-        df.columns = ['protein_id', 'subset', 'p_value', 'FC']
+        df.columns = ['protein_id', 'subset', 'p_value', 'fc', 'fc_log2']
+        
         fig = go.Figure()
-        # TODO: draw volcano plot with lines on p_threshold and fc_treshold.
-        # Note that values in DF are log2 while fc_treshold is not
-        # DO NOT set plot theme, size and text size, it is BaseReport functionality
+        
+        # Отрисовываем точки для каждого subset
+        for subset in df['subset'].unique():
+            subset_data = df[df['subset'] == subset].copy()
+            print(subset)
+            print(subset_data)
+            
+            # Получаем цвет для текущего subset
+            color = subset_colors.get(subset, '#808080')
+            
+            # Добавляем scatter plot для этого subset
+            fig.add_trace(go.Scatter(
+                x=subset_data['fc_log2'].values,
+                y=subset_data['p_value'].values,
+                mode='markers',
+                name=subset,
+                marker=dict(
+                    color=color,
+                    size=20,
+                    opacity=0.8
+                ),
+                customdata=np.column_stack((
+                    subset_data['protein_id'].values,
+                    subset_data['fc'].values  # Оригинальный FC (не log2) для hover
+                )),
+                hovertemplate=(
+                    '<b>%{customdata[0]}</b><br>' +
+                    'Fold Change: %{customdata[1]:.3f}<br>' +
+                    'Log2(FC): %{x:.3f}<br>' +
+                    'P-value: %{y:.4g}<br>' +
+                    '<extra></extra>'
+                )
+            ))
+        
+        # Добавляем горизонтальную линию для порога p-value
+        fig.add_hline(
+            y=p_threshold,
+            line_dash="dash",
+            line_color="red",
+            annotation_text=f"p={p_threshold}",
+            annotation_position="right"
+        )
+        
+        # Добавляем вертикальные линии для порогов fold change
+        # Положительная линия (увеличение)
+        fig.add_vline(
+            x=fc_threshold_log2,
+            line_dash="dash",
+            line_color="blue",
+            annotation_text=f"FC={2**fc_threshold_log2:.2f}",
+            annotation_position="top"
+        )
+        
+        # Отрицательная линия (уменьшение)
+        fig.add_vline(
+            x=-fc_threshold_log2,
+            line_dash="dash",
+            line_color="blue",
+            annotation_text=f"FC={2**(-fc_threshold_log2):.2f}",
+            annotation_position="top"
+        )
+        
+        # Настройка осей
+        fig.update_xaxes(
+            title_text="Log2 Fold Change",
+            zeroline=True,
+            zerolinewidth=1,
+            zerolinecolor='gray'
+        )
+        
+        fig.update_yaxes(
+            title_text="P-value",
+            type="log",  # Логарифмическая шкала
+            zeroline=False,
+            autorange="reversed"  # Меньшие p-values выше
+        )
+        
+        # Настройка заголовка и легенды
+        fig.update_layout(
+            title="Volcano Plot",
+            showlegend=True,
+            hovermode='closest'
+        )
+        
         return fig
 
 
@@ -123,7 +205,8 @@ class VolcanoReport(BaseReport):
                     'protein_id': protein,
                     'subset': subsets[idx],
                     'pval': p_vals_corr[idx],
-                    'fc': np.log2(fc_values[idx])
+                    'fc': fc_values[idx],
+                    'fc_log2': np.log2(fc_values[idx])
                 })
             result.append(res)
         calculated = pd.json_normalize(result)
@@ -149,7 +232,7 @@ class VolcanoReport(BaseReport):
         fig = await self.draw_plot(
             figure_df,
             params['p_threshold'],
-            params['fc_threshold']
+            fc_threshold_log2  # Исправлено: передаём log2 значение
         )
         return [
             ('Volcano Plot', fig)

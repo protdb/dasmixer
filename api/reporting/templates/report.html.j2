@@ -170,14 +170,16 @@
         {% for figure in figures %}
         <div class="plot-container">
             <div class="plot-title">{{ figure.name }}</div>
-            <div id="plot-{{ loop.index }}"></div>
-            <script>
-                var plotData = {{ figure.json | safe }};
-                Plotly.newPlot('plot-{{ loop.index }}', plotData.data, plotData.layout);
-            </script>
-            <noscript>
+            <div id="plot-{{ loop.index }}">
+            {% if is_interactive %}
+                <script>
+                    var plotData = {{ figure.json | safe }};
+                    Plotly.newPlot('plot-{{ loop.index }}', plotData.data, plotData.layout);
+                </script>
+            {% else %}
                 <img src="data:image/png;base64,{{ figure.png_base64 }}" alt="{{ figure.name }}" style="width: 400px; height: 200px;" class="plot-image">
-            </noscript>
+            {% endif %}
+            </div>
         </div>
         {% endfor %}
         {% endif %}
