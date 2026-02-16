@@ -3,13 +3,15 @@
 import flet as ft
 
 from api.project.project import Project
+from gui.components.base_table_and_plot_view import BaseTableAndPlotView
 from .shared_state import PeptidesTabState
 from .fasta_section import FastaSection
 from .tool_settings_section import ToolSettingsSection
 from .ion_settings_section import IonSettingsSection
 from .actions_section import ActionsSection
 from .matching_section import MatchingSection
-from .search_section import SearchSection
+from .peptide_ion_table_view import PeptideIonTableView
+from .peptide_ion_plot_view import PeptideIonPlotView
 from .ion_calculations import IonCalculations
 
 
@@ -47,25 +49,38 @@ class PeptidesTab(ft.Container):
         Returns:
             dict mapping section name to section instance
         """
-        sections = {}
+        sections = {'fasta': FastaSection(self.project, self.state),
+                    'tool_settings': ToolSettingsSection(self.project, self.state),
+                    'ion_settings': IonSettingsSection(self.project, self.state),
+                    'matching': MatchingSection(self.project, self.state),
+                    'actions': ActionsSection(self.project, self.state, self)}
         
         # FASTA section - protein library loading
-        sections['fasta'] = FastaSection(self.project, self.state)
-        
+
         # Tool settings section
-        sections['tool_settings'] = ToolSettingsSection(self.project, self.state)
-        
+
         # Ion settings section
-        sections['ion_settings'] = IonSettingsSection(self.project, self.state)
-        
+
         # Matching section
-        sections['matching'] = MatchingSection(self.project, self.state)
-        
+
         # Actions section (needs reference to tab for accessing other sections)
-        sections['actions'] = ActionsSection(self.project, self.state, self)
+
+        print('old sections created...')
+
+        # Search section - REPLACED with BaseTableAndPlotView
+        table_view = PeptideIonTableView(self.project)
+
+        print('table view created...')
+
+        plot_view = PeptideIonPlotView(self.project, ion_settings_section=sections['ion_settings'])
         
-        # Search section
-        sections['search'] = SearchSection(self.project, self.state)
+        sections['search'] = BaseTableAndPlotView(
+            project=self.project,
+            table_view=table_view,
+            plot_view=plot_view,
+            title="Search and View Identifications"
+        )
+        print('Sections created...')
         
         return sections
     
@@ -92,7 +107,7 @@ class PeptidesTab(ft.Container):
             self.sections['matching'],
             ft.Container(height=10),
             
-            # Search and view
+            # Search and view - NOW BaseTableAndPlotView
             self.sections['search']
         ],
         spacing=10,

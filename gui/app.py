@@ -108,6 +108,7 @@ class DASMixerApp:
         )
         print('project view initialized')
         self.page.add(view)
+        print('page updated...')
         self.page.update()
         print('page updated')
         

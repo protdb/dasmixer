@@ -6,7 +6,9 @@ from api.project.project import Project
 from .shared_state import ProteinsTabState
 from .detection_section import DetectionSection
 from .lfq_section import LFQSection
-from .table_section import TableSection
+from .protein_identifications_table_view import ProteinIdentificationsTableView
+from .protein_statistics_table_view import ProteinStatisticsTableView
+from .protein_concentration_plot_view import ProteinConcentrationPlotView
 
 
 class ProteinsTab(ft.Container):
@@ -16,7 +18,7 @@ class ProteinsTab(ft.Container):
     Composed of multiple sections:
     - DetectionSection: protein identification calculation
     - LFQSection: label-free quantification
-    - TableSection: results display
+    - Table & Plot section: results display with mode switching
     
     Sections share state via ProteinsTabState object.
     """
@@ -46,19 +48,96 @@ class ProteinsTab(ft.Container):
         """
         sections = {}
         print("ProteinsTab create sections...")
+        
         # Detection section
         sections['detection'] = DetectionSection(self.project, self.state, self)
         print("detection...")
+        
         # LFQ section
         sections['lfq'] = LFQSection(self.project, self.state, self)
         print("lfq...")
-        # Table section
-        sections['table'] = TableSection(self.project, self.state, self)
-        print("table...")
+        
+        # Table and Plot section (replaces TableSection)
+        sections['table_and_plot'] = self._create_table_and_plot_section()
+        print("table_and_plot...")
+        
         return sections
     
+    def _create_table_and_plot_section(self) -> ft.Container:
+        """Create table and plot section with mode switching."""
+        # Create both table views
+        self.identifications_table = ProteinIdentificationsTableView(self.project)
+        self.statistics_table = ProteinStatisticsTableView(self.project)
+        
+        # Create plot view
+        self.protein_plot = ProteinConcentrationPlotView(self.project)
+        
+        # Connect plot callbacks
+        self.identifications_table.plot_callback = self.protein_plot.on_plot_requested
+        self.statistics_table.plot_callback = self.protein_plot.on_plot_requested
+        
+        # Mode selector
+        self.table_mode_selector = ft.SegmentedButton(
+            segments=[
+                ft.Segment(
+                    value="identifications",
+                    label=ft.Text("Identifications"),
+                    icon=ft.Icon(ft.Icons.LIST)
+                ),
+                ft.Segment(
+                    value="statistics",
+                    label=ft.Text("Statistics"),
+                    icon=ft.Icon(ft.Icons.ANALYTICS)
+                )
+            ],
+            selected={"identifications"},
+            on_change=self._on_table_mode_change
+        )
+        
+        # Container for active table
+        self.active_table_container = ft.Container(
+            content=self.identifications_table,
+            expand=True
+        )
+        
+        # Layout
+        return ft.Container(
+            content=ft.Column([
+                ft.Row([
+                    ft.Text("Protein Results", size=18, weight=ft.FontWeight.BOLD),
+                    ft.Container(expand=True),
+                    self.table_mode_selector
+                ]),
+                ft.Container(height=10),
+                
+                self.active_table_container,
+                
+                ft.Container(height=20),
+                ft.Divider(height=2, color=ft.Colors.GREY_400),
+                ft.Container(height=20),
+                
+                self.protein_plot
+            ], spacing=0, expand=True, scroll=ft.ScrollMode.AUTO),
+            expand=True,
+            padding=10
+        )
+    
+    def _on_table_mode_change(self, e):
+        """Handle table mode switching."""
+        selected_mode = list(e.control.selected)[0]
+        
+        if selected_mode == "identifications":
+            self.active_table_container.content = self.identifications_table
+        else:
+            self.active_table_container.content = self.statistics_table
+        
+        if self.page:
+            self.page.update()
+            
+            # Load data for new mode
+            self.page.run_task(self.active_table_container.content.load_data)
+    
     def _build_content(self) -> ft.Control:
-        print('building protein tab content')
         """Build tab layout."""
         return ft.Column([
             # Detection
@@ -69,8 +148,8 @@ class ProteinsTab(ft.Container):
             self.sections['lfq'],
             ft.Container(height=10),
             
-            # Table
-            self.sections['table']
+            # Table and Plot
+            self.sections['table_and_plot']
         ],
         spacing=10,
         scroll=ft.ScrollMode.AUTO,
@@ -94,7 +173,12 @@ class ProteinsTab(ft.Container):
             # Load data for each section that has load_data method
             for section_name, section in self.sections.items():
                 print(f"Loading data for {section_name}...")
-                if hasattr(section, 'load_data'):
+                if section_name == 'table_and_plot':
+                    # Special handling for table_and_plot
+                    print('!!!!!!!!!!!!await data load...')
+                    await self.identifications_table.load_data()
+                    await self.protein_plot.load_data()
+                elif hasattr(section, 'load_data'):
                     await section.load_data()
             
             # Update counts in shared state

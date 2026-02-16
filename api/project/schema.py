@@ -199,6 +199,18 @@ CREATE TABLE IF NOT EXISTS report_parameters (
 );
 
 CREATE INDEX IF NOT EXISTS idx_report_parameters_name ON report_parameters(report_name);
+
+-- Saved plots (Stage 6)
+CREATE TABLE IF NOT EXISTS saved_plots (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at TEXT NOT NULL,
+    plot_type TEXT NOT NULL,
+    settings TEXT,
+    plot BLOB
+);
+
+CREATE INDEX IF NOT EXISTS idx_saved_plots_type ON saved_plots(plot_type);
+CREATE INDEX IF NOT EXISTS idx_saved_plots_created ON saved_plots(created_at);
 """
 
 # Default project metadata

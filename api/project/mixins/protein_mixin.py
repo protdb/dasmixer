@@ -291,10 +291,21 @@ class ProteinMixin:
 
     async def get_protein_quantification_data(
             self,
-            method: str,
+            method: str = None,
             subsets: list[str] | None = None,
+            protein_id: str | None = None
     ) -> pd.DataFrame:
-
+        """
+        Get protein quantification data.
+        
+        Args:
+            method: LFQ algorithm ('emPAI', 'iBAQ', 'NSAF', 'Top3')
+            subsets: Optional list of subset names to filter
+            protein_id: Optional protein ID to filter
+        
+        Returns:
+            DataFrame with quantification data
+        """
         query = """
             select
                 i.sample_id,
@@ -315,17 +326,26 @@ class ProteinMixin:
                 left join protein as p on i.protein_id = p.id
                 left join sample as s on s.id = i.sample_id
                 left join subset as sb on sb.id = s.subset_id
-            WHERE q.algorithm = ?
+            WHERE 1=1
         """
-        params = (method,)
+        params = []
+        
+        if method:
+            query += " AND q.algorithm = ?"
+            params.append(method)
+        
+        if protein_id:
+            query += " AND i.protein_id = ?"
+            params.append(protein_id)
+        
         if subsets:
-            query += f" AND sb.name in {str(tuple(subsets))}"
-
-        df = await self.execute_query_df(query, params)
+            placeholders = ','.join('?' * len(subsets))
+            query += f" AND sb.name IN ({placeholders})"
+            params.extend(subsets)
+        
+        params_tuple = tuple(params) if params else None
+        df = await self.execute_query_df(query, params_tuple)
         return df
-
-
-
     
     async def get_protein_results_joined(
         self,
@@ -417,4 +437,84 @@ class ProteinMixin:
             df['weight'] = df['sequence'].apply(calc_weight)
             df = df.drop(columns=['sequence', 'id', 'sample_id'])
         
+        return df
+    
+    async def get_protein_statistics(
+        self,
+        protein_id: str = '',
+        gene: str = '',
+        fasta_name: str = '',
+        min_samples: int = 0,
+        min_subsets: int = 0,
+        limit: int = 100,
+        offset: int = 0
+    ) -> pd.DataFrame:
+        """
+        Get aggregated protein statistics.
+        
+        Args:
+            protein_id: Filter protein ID (LIKE)
+            gene: Filter gene name (LIKE)
+            fasta_name: Filter FASTA name (LIKE)
+            min_samples: Minimum number of samples
+            min_subsets: Minimum number of subsets
+            limit: Maximum rows to return
+            offset: Pagination offset
+        
+        Returns:
+            DataFrame with columns:
+                - protein_id: str
+                - gene: str
+                - fasta_name: str (truncated to 30 chars)
+                - samples: int (count of samples)
+                - subsets: int (count of subsets)
+                - PSMs: int (count of peptide matches)
+                - unique: int (count of unique evidence)
+        """
+        # Build WHERE conditions
+        where_parts = ["1=1"]
+        params = []
+        
+        if protein_id:
+            where_parts.append("p.id LIKE ?")
+            params.append(f"%{protein_id}%")
+        
+        if gene:
+            where_parts.append("p.gene LIKE ?")
+            params.append(f"%{gene}%")
+        
+        if fasta_name:
+            where_parts.append("p.fasta_name LIKE ?")
+            params.append(f"%{fasta_name}%")
+        
+        where_clause = " AND ".join(where_parts)
+        
+        # Main query with aggregation
+        query = f"""
+        WITH protein_stats AS (
+            SELECT
+                p.id as protein_id,
+                p.gene,
+                SUBSTR(p.fasta_name, 1, 30) as fasta_name,
+                COUNT(DISTINCT s.id) as samples,
+                COUNT(DISTINCT sub.id) as subsets,
+                COUNT(pm.id) as PSMs,
+                SUM(CASE WHEN pm.unique_evidence = 1 THEN 1 ELSE 0 END) as unique
+            FROM protein p
+            LEFT JOIN protein_identification_result pir ON p.id = pir.protein_id
+            LEFT JOIN sample s ON pir.sample_id = s.id
+            LEFT JOIN subset sub ON s.subset_id = sub.id
+            LEFT JOIN peptide_match pm ON p.id = pm.protein_id
+            WHERE {where_clause}
+            GROUP BY p.id, p.gene, p.fasta_name
+        )
+        SELECT * FROM protein_stats
+        WHERE samples >= ? AND subsets >= ?
+        ORDER BY protein_id
+        LIMIT ? OFFSET ?
+        """
+        
+        params.extend([min_samples, min_subsets, limit, offset])
+        
+        df = await self.execute_query_df(query, tuple(params))
         return df

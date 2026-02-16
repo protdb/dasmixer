@@ -13,6 +13,7 @@ class ProjectView(ft.Container):
     - Peptides: View identifications, ion matches
     - Proteins: Protein identifications
     - Reports: Generate and view reports
+    - Plots: Manage saved plots
     """
     
     def __init__(self, project: Project, on_close):
@@ -39,12 +40,13 @@ class ProjectView(ft.Container):
         from gui.views.tabs.peptides import PeptidesTab
         from gui.views.tabs.proteins import ProteinsTab
         from gui.views.tabs.reports import ReportsTab
+        from gui.views.tabs.plots import PlotsTab
         
         # Create tabs using new Flet API
         print("building tabs...")
         tabs = ft.Tabs(
             selected_index=0,
-            length=4,  # Number of tabs
+            length=3,  # Number of tabs (added Plots)
             expand=True,
             content=ft.Column(
                 expand=True,
@@ -53,8 +55,9 @@ class ProjectView(ft.Container):
                         tabs=[
                             ft.Tab(label="Samples", icon=ft.Icons.SCIENCE),
                             ft.Tab(label="Peptides", icon=ft.Icons.BIOTECH),
-                            ft.Tab(label="Proteins", icon=ft.Icons.BUBBLE_CHART),
+                            # ft.Tab(label="Proteins", icon=ft.Icons.BUBBLE_CHART),
                             ft.Tab(label="Reports", icon=ft.Icons.ASSESSMENT),
+                            # ft.Tab(label="Plots", icon=ft.Icons.SHOW_CHART),
                         ]
                     ),
                     ft.TabBarView(
@@ -62,8 +65,9 @@ class ProjectView(ft.Container):
                         controls=[
                             SamplesTab(self.project),
                             PeptidesTab(self.project),
-                            ProteinsTab(self.project),
+                            # ProteinsTab(self.project),
                             ReportsTab(self.project),
+                            # PlotsTab(self.project),
                         ],
                     ),
                 ],
