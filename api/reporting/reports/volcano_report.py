@@ -1,9 +1,7 @@
 import numpy as np
 import pandas as pd
-import plotly.express as px
 from flet import Icons
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 from scipy.stats import false_discovery_control, mannwhitneyu, ttest_ind
 from ..base import BaseReport
 from smart_round import format_dataframe
@@ -37,44 +35,60 @@ class VolcanoReport(BaseReport):
         df = data.copy()
         df.columns = ['protein_id', 'subset', 'p_value', 'fc', 'fc_log2']
         
+        # Фильтруем невалидные данные
+        df = df[df['p_value'] > 0].copy()  # Убираем нулевые и отрицательные p-values
+        df = df[~df['p_value'].isna()].copy()  # Убираем NaN
+        df = df[~df['fc_log2'].isna()].copy()  # Убираем NaN в fc_log2
+        df = df[np.isfinite(df['fc_log2'])].copy()  # Убираем Inf в fc_log2
+        
+        # Вычисляем -log10(p-value)
+        df['neg_log10_pval'] = -np.log10(df['p_value'])
+        
+        # Убираем Inf значения (могут появиться если p-value очень маленькие)
+        df = df[np.isfinite(df['neg_log10_pval'])].copy()
+        
         fig = go.Figure()
         
         # Отрисовываем точки для каждого subset
         for subset in df['subset'].unique():
             subset_data = df[df['subset'] == subset].copy()
-            print(subset)
-            print(subset_data)
             
             # Получаем цвет для текущего subset
             color = subset_colors.get(subset, '#808080')
             
+            # Конвертируем в списки Python для лучшей совместимости
+            x_data = subset_data['fc_log2'].tolist()
+            y_data = subset_data['neg_log10_pval'].tolist()
+            protein_ids = subset_data['protein_id'].tolist()
+            fc_data = subset_data['fc'].tolist()
+            pval_data = subset_data['p_value'].tolist()
+            
             # Добавляем scatter plot для этого subset
             fig.add_trace(go.Scatter(
-                x=subset_data['fc_log2'].values,
-                y=subset_data['p_value'].values,
+                x=x_data,
+                y=y_data,
                 mode='markers',
                 name=subset,
                 marker=dict(
                     color=color,
                     size=20,
-                    opacity=0.8
+                    opacity=0.6
                 ),
-                # customdata=np.column_stack((
-                #     subset_data['protein_id'].values,
-                #     subset_data['fc'].values  # Оригинальный FC (не log2) для hover
-                # )),
-                # hovertemplate=(
-                #     '<b>%{customdata[0]}</b><br>' +
-                #     'Fold Change: %{customdata[1]:.3f}<br>' +
-                #     'Log2(FC): %{x:.3f}<br>' +
-                #     'P-value: %{y:.4g}<br>' +
-                #     '<extra></extra>'
-                # )
+                customdata=list(zip(protein_ids, fc_data, pval_data)),
+                hovertemplate=(
+                    '<b>%{customdata[0]}</b><br>' +
+                    'Fold Change: %{customdata[1]:.3f}<br>' +
+                    'Log2(FC): %{x:.3f}<br>' +
+                    'P-value: %{customdata[2]:.4g}<br>' +
+                    '-log10(p): %{y:.3f}<br>' +
+                    '<extra></extra>'
+                )
             ))
         
         # Добавляем горизонтальную линию для порога p-value
+        neg_log10_p_threshold = -np.log10(p_threshold)
         fig.add_hline(
-            y=p_threshold,
+            y=neg_log10_p_threshold,
             line_dash="dash",
             line_color="red",
             annotation_text=f"p={p_threshold}",
@@ -109,17 +123,15 @@ class VolcanoReport(BaseReport):
         )
         
         fig.update_yaxes(
-            title_text="P-value",
-            type="log",  # Логарифмическая шкала
-            zeroline=False,
-            autorange="reversed"  # Меньшие p-values выше
+            title_text="-Log10(P-value)",
+            zeroline=False
         )
         
         # Настройка заголовка и легенды
         fig.update_layout(
             title="Volcano Plot",
             showlegend=True,
-            # hovermode='closest'
+            hovermode='closest'
         )
         
         return fig
