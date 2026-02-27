@@ -499,7 +499,7 @@ class ProteinMixin:
                 COUNT(DISTINCT s.id) as samples,
                 COUNT(DISTINCT sub.id) as subsets,
                 COUNT(pm.id) as PSMs,
-                SUM(CASE WHEN pm.unique_evidence = 1 THEN 1 ELSE 0 END) as unique
+                SUM(CASE WHEN pm.unique_evidence = 1 THEN 1 ELSE 0 END) as unique_evidence
             FROM protein p
             LEFT JOIN protein_identification_result pir ON p.id = pir.protein_id
             LEFT JOIN sample s ON pir.sample_id = s.id

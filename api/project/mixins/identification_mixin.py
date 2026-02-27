@@ -329,3 +329,10 @@ class IdentificationMixin:
             f"UPDATE identification SET is_preferred = 1 WHERE id in ({', '.join([str(x) for x in preferred_ids])})",
         )
         await self.save()
+
+    async def get_identifications_with_spectra_batch(
+            self,
+            tool_id: int,
+            offset: int = 0,
+            limit: int = 1000
+    ) -> :

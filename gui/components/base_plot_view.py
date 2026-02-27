@@ -5,6 +5,7 @@ import plotly.graph_objects as go
 from typing import Optional, Callable
 from pathlib import Path
 import base64
+import json
 
 from api.project.project import Project
 from gui.components.plotly_viewer import PlotlyViewer
@@ -211,7 +212,12 @@ class BasePlotView(ft.Container):
         """Save settings to project settings."""
         for key, value in self.plot_settings.items():
             setting_key = f"plot_view_{self.plot_type_name}_{key}"
-            await self.project.set_setting(setting_key, str(value))
+            # Serialize lists/dicts as JSON
+            if isinstance(value, (list, dict)):
+                value_str = json.dumps(value)
+            else:
+                value_str = str(value)
+            await self.project.set_setting(setting_key, value_str)
     
     async def _load_settings_from_project(self):
         """Load settings from project settings."""
@@ -221,12 +227,27 @@ class BasePlotView(ft.Container):
             if value is not None:
                 # Try to parse value to appropriate type
                 default_value = self.plot_settings[key]
+                
                 if isinstance(default_value, bool):
                     self.plot_settings[key] = value.lower() in ('true', '1', 'yes')
                 elif isinstance(default_value, int):
                     self.plot_settings[key] = int(value)
                 elif isinstance(default_value, float):
                     self.plot_settings[key] = float(value)
+                elif isinstance(default_value, list):
+                    # Parse JSON list
+                    try:
+                        self.plot_settings[key] = json.loads(value)
+                    except json.JSONDecodeError:
+                        # Fallback to default if parsing fails
+                        self.plot_settings[key] = default_value
+                elif isinstance(default_value, dict):
+                    # Parse JSON dict
+                    try:
+                        self.plot_settings[key] = json.loads(value)
+                    except json.JSONDecodeError:
+                        # Fallback to default if parsing fails
+                        self.plot_settings[key] = default_value
                 else:
                     self.plot_settings[key] = value
     
@@ -388,8 +409,8 @@ class BasePlotView(ft.Container):
                 ft.Text("Select format and location", size=12, color=ft.Colors.GREY_600)
             ], tight=True, spacing=10),
             actions=[
-                ft.TextButton("Cancel", on_click=lambda e: self._close_dialog(dialog)),
-                ft.ElevatedButton("Export", on_click=lambda e: self.page.run_task(on_export_confirm, e))
+                ft.TextButton(content=ft.Text("Cancel"), on_click=lambda e: self._close_dialog(dialog)),
+                ft.ElevatedButton(content=ft.Text("Export"), on_click=lambda e: self.page.run_task(on_export_confirm, e))
             ]
         )
         

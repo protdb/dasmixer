@@ -4,6 +4,7 @@ import flet as ft
 from pathlib import Path
 from api.config import config
 from api.project.project import Project
+import traceback
 
 
 def run_gui(project_path: str | None = None):
@@ -100,20 +101,33 @@ class DASMixerApp:
     
     def show_project_view(self):
         """Show project workspace."""
-        from gui.views.project_view import ProjectView
-        self.page.clean()
-        view = ProjectView(
-            project=self.current_project,
-            on_close=lambda _: self.page.run_task(self.close_project)
-        )
-        print('project view initialized')
-        self.page.add(view)
-        print('page updated...')
-        self.page.update()
-        print('page updated')
-        
-        # Update menu
-        self.setup_menu()
+        try:
+            from gui.views.project_view import ProjectView
+            print('Cleaning page...')
+            self.page.clean()
+            print('Creating ProjectView...')
+            view = ProjectView(
+                project=self.current_project,
+                on_close=lambda _: self.page.run_task(self.close_project)
+            )
+            print('project view initialized')
+            print('Adding view to page...')
+            self.page.add(view)
+            print('View added, updating page...')
+            self.page.update()
+            print('Page updated successfully')
+            
+            # Update menu
+            self.setup_menu()
+        except Exception as ex:
+            print(f'ERROR in show_project_view: {ex}')
+            traceback.print_exc()
+            self.page.snack_bar = ft.SnackBar(
+                content=ft.Text(f"Error showing project view: {ex}"),
+                bgcolor=ft.Colors.RED_400
+            )
+            self.page.snack_bar.open = True
+            self.page.update()
     
     async def new_project(self, e=None):
         """Create new project."""
@@ -233,6 +247,8 @@ class DASMixerApp:
             self.page.update()
             
         except Exception as ex:
+            print(f'ERROR in open_project: {ex}')
+            traceback.print_exc()
             self.page.snack_bar = ft.SnackBar(
                 content=ft.Text(f"Error opening project: {ex}"),
                 bgcolor=ft.Colors.RED_400

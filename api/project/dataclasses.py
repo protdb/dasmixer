@@ -159,3 +159,6 @@ class Protein:
             uniprot_data=None,  # Will be loaded separately if needed
             protein_atlas_data=None  # Not stored in main table
         )
+
+@dataclass
+class IdentificationWithSpectre:

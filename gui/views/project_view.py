@@ -41,37 +41,37 @@ class ProjectView(ft.Container):
         from gui.views.tabs.proteins import ProteinsTab
         from gui.views.tabs.reports import ReportsTab
         from gui.views.tabs.plots import PlotsTab
-        
+
+
         # Create tabs using new Flet API
         print("building tabs...")
+
+        tabs_list = [
+            (ft.Tab(label=ft.Text("Samples"), icon=ft.Icons.SCIENCE), SamplesTab(self.project)),
+            (ft.Tab(label=ft.Text("Peptides"), icon=ft.Icons.BIOTECH), PeptidesTab(self.project)),
+            (ft.Tab(label=ft.Text("Proteins"), icon=ft.Icons.BUBBLE_CHART), ProteinsTab(self.project)),
+            (ft.Tab(label=ft.Text("Reports"), icon=ft.Icons.ASSESSMENT), ReportsTab(self.project)),
+            # (ft.Tab(label=ft.Text("Plots"), icon=ft.Icons.SHOW_CHART), PlotsTab(self.project)),
+        ]
+
         tabs = ft.Tabs(
             selected_index=0,
-            length=3,  # Number of tabs (added Plots)
+            length=len(tabs_list),  # Number of tabs
             expand=True,
             content=ft.Column(
                 expand=True,
                 controls=[
                     ft.TabBar(
-                        tabs=[
-                            ft.Tab(label="Samples", icon=ft.Icons.SCIENCE),
-                            ft.Tab(label="Peptides", icon=ft.Icons.BIOTECH),
-                            # ft.Tab(label="Proteins", icon=ft.Icons.BUBBLE_CHART),
-                            ft.Tab(label="Reports", icon=ft.Icons.ASSESSMENT),
-                            # ft.Tab(label="Plots", icon=ft.Icons.SHOW_CHART),
-                        ]
+                        tabs=[x[0] for x in tabs_list],
                     ),
                     ft.TabBarView(
                         expand=True,
-                        controls=[
-                            SamplesTab(self.project),
-                            PeptidesTab(self.project),
-                            # ProteinsTab(self.project),
-                            ReportsTab(self.project),
-                            # PlotsTab(self.project),
-                        ],
+                        controls=[x[1] for x in tabs_list],
                     ),
                 ],
             ),
         )
+
+
         
         return tabs

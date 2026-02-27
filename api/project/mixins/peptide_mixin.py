@@ -125,7 +125,7 @@ class PeptideMixin:
     
     # Complex joined peptide queries
     
-    async def get_joined_peptide_data(
+    def _build_peptide_filter_conditions(
         self,
         is_preferred: bool | None = None,
         sequence_identified: bool | None = None,
@@ -141,87 +141,13 @@ class PeptideMixin:
         scans: int | None = None,
         tool: str | None = None,
         tool_id: int | None = None
-    ) -> pd.DataFrame:
+    ) -> tuple[list[str], list]:
         """
-        Get joined peptide data with optional filtering.
-        
-        Joins spectre, identification, and peptide_match tables with
-        sample/subset/tool information. Applies filters via SQL WHERE clauses.
-        
-        Args:
-            is_preferred: Filter by is_preferred = true
-            sequence_identified: Filter by sequence IS NOT NULL
-            protein_identified: Filter by protein_id IS NOT NULL
-            sample: Filter by sample name (exact match)
-            subset: Filter by subset name (exact match)
-            sample_id: Filter by sample ID
-            subset_id: Filter by subset ID
-            sequence: Filter by sequence (LIKE %value%)
-            canonical_sequence: Filter by canonical_sequence (LIKE %value%)
-            matched_sequence: Filter by matched_sequence (LIKE %value%)
-            seq_no: Filter by spectrum sequence number (exact)
-            scans: Filter by scans value (exact)
-            tool: Filter by tool name (exact match)
-            tool_id: Filter by tool ID
+        Build WHERE conditions and parameters for peptide queries.
         
         Returns:
-            DataFrame with columns:
-                - sample, subset, sample_id, subset_id
-                - seq_no, scans, charge, rt, pepmass, intensity
-                - tool, tool_id, identification_id
-                - sequence, canonical_sequence, ppm, is_preferred
-                - matched_sequence, matched_ppm, protein_id, unique_evidence, gene
+            Tuple of (conditions list, parameters list)
         """
-        # Base query
-        query = """
-            SELECT
-                sb.sample, sb.subset, sb.sample_id, sb.subset_id,
-                s.id as spectre_id, s.seq_no, s.scans, s.charge, s.rt, s.pepmass, s.intensity,
-                id.tool, id.tool_id, id.identification_id, id.sequence, 
-                id.canonical_sequence, id.ppm, id.is_preferred,
-                mp.matched_sequence, mp.matched_ppm, mp.protein_id, mp.identity,
-                mp.unique_evidence, mp.gene
-            FROM
-                spectre AS s
-            LEFT JOIN
-                (SELECT 
-                    sm.id AS sample_id, 
-                    f.id AS spectre_file_id, 
-                    sm.name AS sample, 
-                    sb.name AS subset, 
-                    sb.id AS subset_id 
-                 FROM sample sm, subset sb, spectre_file f 
-                 WHERE sm.subset_id = sb.id AND f.sample_id = sm.id) AS sb
-                ON sb.spectre_file_id = s.spectre_file_id
-            LEFT JOIN
-                (SELECT 
-                    i.spectre_id, 
-                    t.name AS tool, 
-                    t.id AS tool_id, 
-                    i.id AS identification_id, 
-                    i.sequence, 
-                    i.canonical_sequence, 
-                    i.ppm, 
-                    i.is_preferred 
-                 FROM identification i, tool t 
-                 WHERE t.id = i.tool_id) AS id 
-                ON id.spectre_id = s.id
-            LEFT JOIN
-                (SELECT 
-                    m.matched_sequence, 
-                    m.matched_ppm, 
-                    m.protein_id, 
-                    m.identification_id, 
-                    m.unique_evidence,
-                    m.identity,
-                    p.gene
-                 FROM peptide_match m, protein p 
-                 WHERE p.id = m.protein_id) AS mp 
-                ON mp.identification_id = id.identification_id
-            WHERE 1=1
-        """
-        
-        # Build filter conditions and parameters
         conditions = []
         params = []
         
@@ -285,9 +211,229 @@ class PeptideMixin:
             conditions.append("id.tool_id = ?")
             params.append(tool_id)
         
+        return conditions, params
+    
+    async def count_joined_peptide_data(
+        self,
+        is_preferred: bool | None = None,
+        sequence_identified: bool | None = None,
+        protein_identified: bool | None = None,
+        sample: str | None = None,
+        subset: str | None = None,
+        sample_id: int | None = None,
+        subset_id: int | None = None,
+        sequence: str | None = None,
+        canonical_sequence: str | None = None,
+        matched_sequence: str | None = None,
+        seq_no: int | None = None,
+        scans: int | None = None,
+        tool: str | None = None,
+        tool_id: int | None = None
+    ) -> int:
+        """
+        Count joined peptide data with optional filtering.
+        
+        Same filter parameters as get_joined_peptide_data.
+        
+        Returns:
+            Total count of rows matching filters
+        """
+        # Base query - COUNT instead of SELECT columns
+        query = """
+            SELECT COUNT(*) as count
+            FROM
+                spectre AS s
+            LEFT JOIN
+                (SELECT 
+                    sm.id AS sample_id, 
+                    f.id AS spectre_file_id, 
+                    sm.name AS sample, 
+                    sb.name AS subset, 
+                    sb.id AS subset_id 
+                 FROM sample sm, subset sb, spectre_file f 
+                 WHERE sm.subset_id = sb.id AND f.sample_id = sm.id) AS sb
+                ON sb.spectre_file_id = s.spectre_file_id
+            LEFT JOIN
+                (SELECT 
+                    i.spectre_id, 
+                    t.name AS tool, 
+                    t.id AS tool_id, 
+                    i.id AS identification_id, 
+                    i.sequence, 
+                    i.canonical_sequence, 
+                    i.ppm, 
+                    i.is_preferred 
+                 FROM identification i, tool t 
+                 WHERE t.id = i.tool_id) AS id 
+                ON id.spectre_id = s.id
+            LEFT JOIN
+                (SELECT 
+                    m.matched_sequence, 
+                    m.matched_ppm, 
+                    m.protein_id, 
+                    m.identification_id, 
+                    m.unique_evidence,
+                    m.identity,
+                    p.gene
+                 FROM peptide_match m, protein p 
+                 WHERE p.id = m.protein_id) AS mp 
+                ON mp.identification_id = id.identification_id
+            WHERE 1=1
+        """
+        
+        # Build filter conditions
+        conditions, params = self._build_peptide_filter_conditions(
+            is_preferred=is_preferred,
+            sequence_identified=sequence_identified,
+            protein_identified=protein_identified,
+            sample=sample,
+            subset=subset,
+            sample_id=sample_id,
+            subset_id=subset_id,
+            sequence=sequence,
+            canonical_sequence=canonical_sequence,
+            matched_sequence=matched_sequence,
+            seq_no=seq_no,
+            scans=scans,
+            tool=tool,
+            tool_id=tool_id
+        )
+        
         # Add conditions to query
         if conditions:
             query += " AND " + " AND ".join(conditions)
+        
+        # Execute query
+        row = await self._fetchone(query, tuple(params) if params else None)
+        return row['count'] if row else 0
+    
+    async def get_joined_peptide_data(
+        self,
+        is_preferred: bool | None = None,
+        sequence_identified: bool | None = None,
+        protein_identified: bool | None = None,
+        sample: str | None = None,
+        subset: str | None = None,
+        sample_id: int | None = None,
+        subset_id: int | None = None,
+        sequence: str | None = None,
+        canonical_sequence: str | None = None,
+        matched_sequence: str | None = None,
+        seq_no: int | None = None,
+        scans: int | None = None,
+        tool: str | None = None,
+        tool_id: int | None = None,
+        limit: int | None = None,
+        offset: int = 0
+    ) -> pd.DataFrame:
+        """
+        Get joined peptide data with optional filtering and pagination.
+        
+        Joins spectre, identification, and peptide_match tables with
+        sample/subset/tool information. Applies filters via SQL WHERE clauses.
+        
+        Args:
+            is_preferred: Filter by is_preferred = true
+            sequence_identified: Filter by sequence IS NOT NULL
+            protein_identified: Filter by protein_id IS NOT NULL
+            sample: Filter by sample name (exact match)
+            subset: Filter by subset name (exact match)
+            sample_id: Filter by sample ID
+            subset_id: Filter by subset ID
+            sequence: Filter by sequence (LIKE %value%)
+            canonical_sequence: Filter by canonical_sequence (LIKE %value%)
+            matched_sequence: Filter by matched_sequence (LIKE %value%)
+            seq_no: Filter by spectrum sequence number (exact)
+            scans: Filter by scans value (exact)
+            tool: Filter by tool name (exact match)
+            tool_id: Filter by tool ID
+            limit: Maximum rows to return (None = all rows)
+            offset: Number of rows to skip (for pagination)
+        
+        Returns:
+            DataFrame with columns:
+                - sample, subset, sample_id, subset_id
+                - seq_no, scans, charge, rt, pepmass, intensity
+                - tool, tool_id, identification_id
+                - sequence, canonical_sequence, ppm, is_preferred
+                - matched_sequence, matched_ppm, protein_id, unique_evidence, gene
+        """
+        # Base query
+        query = """
+            SELECT
+                sb.sample, sb.subset, sb.sample_id, sb.subset_id,
+                s.id as spectre_id, s.seq_no, s.scans, s.charge, s.rt, s.pepmass, s.intensity,
+                id.tool, id.tool_id, id.identification_id, id.sequence, 
+                id.canonical_sequence, id.ppm, id.is_preferred,
+                mp.matched_sequence, mp.matched_ppm, mp.protein_id, mp.identity,
+                mp.unique_evidence, mp.gene
+            FROM
+                spectre AS s
+            LEFT JOIN
+                (SELECT 
+                    sm.id AS sample_id, 
+                    f.id AS spectre_file_id, 
+                    sm.name AS sample, 
+                    sb.name AS subset, 
+                    sb.id AS subset_id 
+                 FROM sample sm, subset sb, spectre_file f 
+                 WHERE sm.subset_id = sb.id AND f.sample_id = sm.id) AS sb
+                ON sb.spectre_file_id = s.spectre_file_id
+            LEFT JOIN
+                (SELECT 
+                    i.spectre_id, 
+                    t.name AS tool, 
+                    t.id AS tool_id, 
+                    i.id AS identification_id, 
+                    i.sequence, 
+                    i.canonical_sequence, 
+                    i.ppm, 
+                    i.is_preferred 
+                 FROM identification i, tool t 
+                 WHERE t.id = i.tool_id) AS id 
+                ON id.spectre_id = s.id
+            LEFT JOIN
+                (SELECT 
+                    m.matched_sequence, 
+                    m.matched_ppm, 
+                    m.protein_id, 
+                    m.identification_id, 
+                    m.unique_evidence,
+                    m.identity,
+                    p.gene
+                 FROM peptide_match m, protein p 
+                 WHERE p.id = m.protein_id) AS mp 
+                ON mp.identification_id = id.identification_id
+            WHERE 1=1
+        """
+        
+        # Build filter conditions
+        conditions, params = self._build_peptide_filter_conditions(
+            is_preferred=is_preferred,
+            sequence_identified=sequence_identified,
+            protein_identified=protein_identified,
+            sample=sample,
+            subset=subset,
+            sample_id=sample_id,
+            subset_id=subset_id,
+            sequence=sequence,
+            canonical_sequence=canonical_sequence,
+            matched_sequence=matched_sequence,
+            seq_no=seq_no,
+            scans=scans,
+            tool=tool,
+            tool_id=tool_id
+        )
+        
+        # Add conditions to query
+        if conditions:
+            query += " AND " + " AND ".join(conditions)
+        
+        # Add LIMIT/OFFSET if specified
+        if limit is not None:
+            query += " LIMIT ? OFFSET ?"
+            params.append(limit)
+            params.append(offset)
         
         # Execute query
         return await self.execute_query_df(query, tuple(params) if params else None)

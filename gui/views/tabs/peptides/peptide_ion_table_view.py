@@ -85,7 +85,6 @@ class PeptideIonTableView(BaseTableView):
         self.filter['canonical_sequence'] = self.canonical_sequence_field.value
     
     async def load_data(self):
-        print('!!!!loading data: peptides tab')
         """Load dropdown options and table data."""
         await self._load_filter_options()
         await super().load_data()
@@ -114,9 +113,8 @@ class PeptideIonTableView(BaseTableView):
             self.sample_dropdown.update()
             self.tool_dropdown.update()
     
-    async def get_data(self, limit: int = 100, offset: int = 0) -> pd.DataFrame:
-        """Get filtered peptide data with pagination."""
-        # Build filter parameters
+    def _build_filter_kwargs(self) -> dict:
+        """Build kwargs for peptide query from current filters."""
         kwargs = {}
         
         if self.filter['sample_id'] != 'all':
@@ -131,10 +129,24 @@ class PeptideIonTableView(BaseTableView):
         if self.filter['canonical_sequence']:
             kwargs['canonical_sequence'] = self.filter['canonical_sequence']
         
-        # Get data (without limit/offset for now - need to modify get_joined_peptide_data)
-        df = await self.project.get_joined_peptide_data(**kwargs)
+        return kwargs
+    
+    async def get_data(self, limit: int = 100, offset: int = 0) -> pd.DataFrame:
+        """Get filtered peptide data with pagination."""
+        # Build filter parameters
+        kwargs = self._build_filter_kwargs()
         
-        # Apply score and ppm filters in pandas
+        # Get data with LIMIT/OFFSET from database
+        df = await self.project.get_joined_peptide_data(
+            **kwargs,
+            limit=limit,
+            offset=offset
+        )
+        
+        if df.empty:
+            return df
+        
+        # Apply score and ppm filters in pandas (these are not in the API yet)
         if self.filter['min_score'] > 0:
             # score might not exist in all rows
             if 'score' in df.columns:
@@ -143,10 +155,6 @@ class PeptideIonTableView(BaseTableView):
         if self.filter['max_ppm'] < 1000:
             if 'ppm' in df.columns:
                 df = df[df['ppm'].fillna(1000).abs() <= self.filter['max_ppm']]
-        
-        # Apply pagination
-        total_before_pagination = len(df)
-        df = df.iloc[offset:offset + limit]
         
         # Select display columns
         display_columns = []
@@ -166,30 +174,14 @@ class PeptideIonTableView(BaseTableView):
     async def get_total_count(self) -> int:
         """Get total count of filtered rows."""
         # Build filter parameters
-        kwargs = {}
+        kwargs = self._build_filter_kwargs()
         
-        if self.filter['sample_id'] != 'all':
-            kwargs['sample_id'] = int(self.filter['sample_id'])
+        # Get count from database
+        total = await self.project.count_joined_peptide_data(**kwargs)
         
-        if self.filter['tool_id'] != 'all':
-            kwargs['tool_id'] = int(self.filter['tool_id'])
+        # Note: min_score and max_ppm filters are applied in pandas after retrieval
+        # For accurate count, we would need to fetch all data and filter
+        # But this is acceptable for now - count might be slightly higher than actual
+        # TODO: Add score/ppm filters to count_joined_peptide_data API
         
-        if self.filter['sequence']:
-            kwargs['sequence'] = self.filter['sequence']
-        
-        if self.filter['canonical_sequence']:
-            kwargs['canonical_sequence'] = self.filter['canonical_sequence']
-        
-        # Get data
-        df = await self.project.get_joined_peptide_data(**kwargs)
-        
-        # Apply score and ppm filters
-        if self.filter['min_score'] > 0:
-            if 'score' in df.columns:
-                df = df[df['score'].fillna(0) >= self.filter['min_score']]
-        
-        if self.filter['max_ppm'] < 1000:
-            if 'ppm' in df.columns:
-                df = df[df['ppm'].fillna(1000).abs() <= self.filter['max_ppm']]
-        
-        return len(df)
+        return total

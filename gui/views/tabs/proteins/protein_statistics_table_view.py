@@ -90,13 +90,14 @@ class ProteinStatisticsTableView(BaseTableView):
     async def get_total_count(self) -> int:
         """Get total count of filtered rows."""
         # Get all data without limit
-        df = await self.project.get_protein_statistics(
-            protein_id=self.filter['protein_id'],
-            gene=self.filter['gene'],
-            fasta_name=self.filter['fasta_name'],
-            min_samples=self.filter['min_samples'],
-            min_subsets=self.filter['min_subsets'],
-            limit=999999,
-            offset=0
-        )
-        return len(df)
+        # df = await self.project.get_protein_statistics(
+        #     protein_id=self.filter['protein_id'],
+        #     gene=self.filter['gene'],
+        #     fasta_name=self.filter['fasta_name'],
+        #     min_samples=self.filter['min_samples'],
+        #     min_subsets=self.filter['min_subsets'],
+        #     limit=999999,
+        #     offset=0
+        # )
+        # return len(df)
+        return 999999

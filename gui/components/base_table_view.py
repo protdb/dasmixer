@@ -46,9 +46,14 @@ class BaseTableView(ft.Container):
         self.page_size = 50
         self.total_rows = 0
         
+        # Data state
+        self.has_data = False
+        self.is_loading = False
+        
         # UI references
         self.filters_panel: Optional[ft.ExpansionPanel] = None
         self.data_panel: Optional[ft.ExpansionPanel] = None
+        self.data_container: Optional[ft.Container] = None
         self.data_table: Optional[ft.DataTable] = None
         self.pagination_text: Optional[ft.Text] = None
         self.page_size_dropdown: Optional[ft.Dropdown] = None
@@ -111,7 +116,6 @@ class BaseTableView(ft.Container):
     def _build_ui(self) -> ft.Control:
         """Build the complete UI."""
         # Filters panel
-        print('building ui...')
         filter_content = ft.Column([
             self._build_filter_view(),
             ft.Container(height=10),
@@ -121,7 +125,7 @@ class BaseTableView(ft.Container):
                 on_click=self._on_apply_filters
             )
         ], spacing=5)
-        print('building filters panel...')
+        
         self.filters_panel = ft.ExpansionPanel(
             header=ft.ListTile(
                 title=ft.Text("Filters", weight=ft.FontWeight.BOLD)
@@ -129,22 +133,21 @@ class BaseTableView(ft.Container):
             content=ft.Container(content=filter_content, padding=10),
             can_tap_header=True
         )
-        print('building data panel...')
-        # Data table
-        self.data_table = ft.DataTable(
-            columns=[],
-            rows=[],
-            border=ft.border.all(1, ft.Colors.GREY_400),
-            border_radius=5,
-            vertical_lines=ft.BorderSide(1, ft.Colors.GREY_300),
-            horizontal_lines=ft.BorderSide(1, ft.Colors.GREY_300),
-            heading_row_color=ft.Colors.GREY_200,
-            heading_row_height=40,
-            data_row_min_height=35,
-            data_row_max_height=100,
-            column_spacing=20
+        
+        # Data container - will hold either placeholder or table
+        self.data_container = ft.Container(
+            content=ft.Column([
+                ft.Icon(ft.Icons.INFO_OUTLINE, size=48, color=ft.Colors.GREY_400),
+                ft.Text(
+                    "Click 'Apply Filters' to load data",
+                    size=14,
+                    color=ft.Colors.GREY_600
+                )
+            ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10),
+            alignment=ft.Alignment.CENTER,
+            height=300
         )
-        print('building pagination...')
+        
         # Pagination controls
         self.pagination_text = ft.Text("No data", size=12, color=ft.Colors.GREY_600)
         
@@ -185,12 +188,7 @@ class BaseTableView(ft.Container):
         
         # Data panel
         data_content = ft.Column([
-            ft.Container(
-                content=self.data_table,
-                border=ft.border.all(1, ft.Colors.GREY_300),
-                border_radius=5,
-                padding=5
-            ),
+            self.data_container,
             ft.Container(height=10),
             pagination_row
         ], spacing=5)
@@ -265,10 +263,19 @@ class BaseTableView(ft.Container):
     
     async def _load_table_data(self):
         """Load data and update table."""
-        print('!!!!Loading table data...')
         try:
+            # Show loading
+            self.is_loading = True
+            self._show_loading()
+            
             # Get total count
             self.total_rows = await self.get_total_count()
+            
+            if self.total_rows == 0:
+                # No data found
+                self.has_data = False
+                self._show_no_data()
+                return
             
             # Calculate offset
             offset = self.current_page * self.page_size
@@ -277,6 +284,7 @@ class BaseTableView(ft.Container):
             df = await self.get_data(limit=self.page_size, offset=offset)
             
             # Update table
+            self.has_data = True
             self._update_table_from_dataframe(df)
             
             # Update pagination
@@ -286,6 +294,9 @@ class BaseTableView(ft.Container):
                 self.page.update()
             
         except Exception as ex:
+            self.has_data = False
+            self._show_error(str(ex))
+            
             if self.page:
                 self.page.snack_bar = ft.SnackBar(
                     content=ft.Text(f"Error loading data: {ex}"),
@@ -293,12 +304,59 @@ class BaseTableView(ft.Container):
                 )
                 self.page.snack_bar.open = True
                 self.page.update()
+        finally:
+            self.is_loading = False
+    
+    def _show_loading(self):
+        """Show loading indicator."""
+        self.data_container.content = ft.Column([
+            ft.ProgressRing(),
+            ft.Text("Loading data...", size=14, color=ft.Colors.GREY_600)
+        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10)
+        self.data_container.alignment = ft.Alignment.CENTER
+        self.data_container.height = 300
+        
+        if self.page:
+            self.data_container.update()
+    
+    def _show_no_data(self):
+        """Show no data message."""
+        self.data_container.content = ft.Column([
+            ft.Icon(ft.Icons.SEARCH_OFF, size=48, color=ft.Colors.GREY_400),
+            ft.Text("Nothing to show", size=16, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600),
+            ft.Text("Try adjusting your filters", size=12, color=ft.Colors.GREY_500)
+        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10)
+        self.data_container.alignment = ft.Alignment.CENTER
+        self.data_container.height = 300
+        
+        # Update pagination
+        self.pagination_text.value = "No data"
+        self.prev_button.disabled = True
+        self.next_button.disabled = True
+        
+        if self.page:
+            self.data_container.update()
+            self.pagination_text.update()
+            self.prev_button.update()
+            self.next_button.update()
+    
+    def _show_error(self, error_message: str):
+        """Show error message."""
+        self.data_container.content = ft.Column([
+            ft.Icon(ft.Icons.ERROR_OUTLINE, size=48, color=ft.Colors.RED_400),
+            ft.Text("Error loading data", size=16, weight=ft.FontWeight.BOLD, color=ft.Colors.RED_600),
+            ft.Text(error_message, size=12, color=ft.Colors.GREY_600)
+        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10)
+        self.data_container.alignment = ft.Alignment.CENTER
+        self.data_container.height = 300
+        
+        if self.page:
+            self.data_container.update()
     
     def _update_table_from_dataframe(self, df: pd.DataFrame):
         """Update DataTable from DataFrame."""
         if df.empty:
-            self.data_table.columns = []
-            self.data_table.rows = []
+            self._show_no_data()
             return
         
         # Build columns
@@ -309,8 +367,6 @@ class BaseTableView(ft.Container):
         # Add plot button column if needed
         if self.plot_id_field and self.plot_callback:
             columns.append(ft.DataColumn(ft.Text("Plot", weight=ft.FontWeight.BOLD)))
-        
-        self.data_table.columns = columns
         
         # Build rows
         rows = []
@@ -340,15 +396,38 @@ class BaseTableView(ft.Container):
                 plot_button = ft.IconButton(
                     icon=ft.Icons.SHOW_CHART,
                     tooltip="Show plot",
-                    # on_click=lambda e, pid=plot_id_value: self.page.run_task(
-                    #     self.plot_callback, pid
-                    # )
+                    on_click=lambda e, pid=plot_id_value: self.page.run_task(
+                        self.plot_callback, pid
+                    ) if self.page else None
                 )
                 cells.append(ft.DataCell(plot_button))
             
             rows.append(ft.DataRow(cells=cells))
         
-        self.data_table.rows = rows
+        # Create or update table
+        self.data_table = ft.DataTable(
+            columns=columns,
+            rows=rows,
+            border=ft.border.all(1, ft.Colors.GREY_400),
+            border_radius=5,
+            vertical_lines=ft.BorderSide(1, ft.Colors.GREY_300),
+            horizontal_lines=ft.BorderSide(1, ft.Colors.GREY_300),
+            heading_row_color=ft.Colors.GREY_200,
+            heading_row_height=40,
+            data_row_min_height=35,
+            data_row_max_height=100,
+            column_spacing=20
+        )
+        
+        # Update data container with table
+        self.data_container.content = ft.Column([
+            self.data_table
+        ], scroll=ft.ScrollMode.AUTO)
+        self.data_container.alignment = None
+        self.data_container.height = None
+        
+        if self.page:
+            self.data_container.update()
     
     def _update_pagination_controls(self):
         """Update pagination text and buttons."""
@@ -371,6 +450,11 @@ class BaseTableView(ft.Container):
         # Update buttons
         self.prev_button.disabled = (self.current_page == 0)
         self.next_button.disabled = (self.current_page >= total_pages - 1)
+        
+        if self.page:
+            self.pagination_text.update()
+            self.prev_button.update()
+            self.next_button.update()
     
     async def _on_page_size_change(self, e):
         """Handle page size change."""
@@ -394,4 +478,5 @@ class BaseTableView(ft.Container):
     async def load_data(self):
         """Load data (filters and table data)."""
         await self._load_filters_from_project()
-        await self._load_table_data()
+        # Don't auto-load table data - wait for user to click Apply Filters
+        # This prevents empty table error on initialization

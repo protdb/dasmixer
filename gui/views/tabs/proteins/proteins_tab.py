@@ -90,7 +90,7 @@ class ProteinsTab(ft.Container):
                     icon=ft.Icon(ft.Icons.ANALYTICS)
                 )
             ],
-            selected={"identifications"},
+            selected=["identifications"],  # FIXED: was set, now list
             on_change=self._on_table_mode_change
         )
         
