@@ -19,21 +19,46 @@ class PeptideIonTableView(BaseTableView):
     def get_default_filters(self) -> dict:
         """Get default filters."""
         return {
+            'identification_id': None,
             'sample_id': 'all',
             'tool_id': 'all',
             'min_score': 0.0,
-            'max_ppm': 1000.0,
+            'max_ppm': "",
             'sequence': '',
-            'canonical_sequence': ''
+            'canonical_sequence': '',
+            'is_preferred': 'None',
+            'seq_no': None,
+            'scans': None,
         }
     
     def _build_filter_view(self) -> ft.Control:
         """Build filters UI."""
+        self.identification_id_field = ft.TextField(
+            label="Identification ID",
+            value="",
+            keyboard_type=ft.KeyboardType.NUMBER,
+            width=150
+        )
+
         self.sample_dropdown = ft.Dropdown(
             label="Sample",
             options=[ft.DropdownOption(key="all", text="All Samples")],
             value="all",
             width=200
+        )
+
+        self.seq_no_field = ft.TextField(
+            label="Spectre sequence number",
+            value="",
+            keyboard_type=ft.KeyboardType.NUMBER,
+            width=150
+        )
+
+        self.scans_field = ft.TextField(
+            label="Spectre scans",
+            value="",
+            keyboard_type=ft.KeyboardType.NUMBER,
+            width=150
         )
         
         self.tool_dropdown = ft.Dropdown(
@@ -52,7 +77,7 @@ class PeptideIonTableView(BaseTableView):
         
         self.max_ppm_field = ft.TextField(
             label="Max PPM",
-            value="1000",
+            value="",
             width=150,
             keyboard_type=ft.KeyboardType.NUMBER
         )
@@ -68,11 +93,36 @@ class PeptideIonTableView(BaseTableView):
             value="",
             width=200
         )
+
+        self.is_preferred_field = ft.Dropdown(
+            label="Is Preferred",
+            value='None',
+            options=[
+                ft.DropdownOption(key="None", text="All"),
+                ft.DropdownOption(key="True", text="Yes"),
+                ft.DropdownOption(key="False", text="No"),
+            ],
+            width=150,
+        )
         
         return ft.Column([
-            ft.Row([self.sample_dropdown, self.tool_dropdown], spacing=10),
-            ft.Row([self.min_score_field, self.max_ppm_field], spacing=10),
-            ft.Row([self.sequence_field, self.canonical_sequence_field], spacing=10)
+            ft.Row([
+                self.identification_id_field,
+                self.sample_dropdown,
+                self.seq_no_field,
+                self.scans_field,
+                self.is_preferred_field,
+            ], spacing=10),
+            ft.Row([
+                self.tool_dropdown,
+                self.min_score_field,
+                self.max_ppm_field,
+                self.sequence_field,
+                self.canonical_sequence_field
+            ], spacing=10),
+            # ft.Row([self.sample_dropdown, self.tool_dropdown, self.min_score_field, self.max_ppm_field], spacing=10),
+            # ft.Row([, ], spacing=10),
+            # ft.Row([self.sequence_field, self.canonical_sequence_field, self.is_preferred_field], spacing=10)
         ], spacing=10)
     
     async def _update_filters_from_ui(self):
@@ -83,6 +133,10 @@ class PeptideIonTableView(BaseTableView):
         self.filter['max_ppm'] = float(self.max_ppm_field.value or 1000)
         self.filter['sequence'] = self.sequence_field.value
         self.filter['canonical_sequence'] = self.canonical_sequence_field.value
+        self.filter['is_preferred'] = self.is_preferred_field.value
+        self.filter['identification_id'] = self.identification_id_field.value
+        self.filter['scans'] = self.scans_field.value
+        self.filter['seq_no'] = self.seq_no_field.value
     
     async def load_data(self):
         """Load dropdown options and table data."""
@@ -128,6 +182,18 @@ class PeptideIonTableView(BaseTableView):
         
         if self.filter['canonical_sequence']:
             kwargs['canonical_sequence'] = self.filter['canonical_sequence']
+
+        if self.filter['is_preferred'] != 'None':
+            kwargs['is_preferred'] = self.filter['is_preferred'] == 'True'
+
+        if self.filter['identification_id'] != '':
+            kwargs['identification_id'] = int(self.filter['identification_id'])
+
+        if self.filter['scans']:
+            kwargs['scans'] = int(self.filter['scans'])
+
+        if self.filter['seq_no']:
+            kwargs['seq_no'] = int(self.filter['seq_no'])
         
         return kwargs
     
@@ -158,7 +224,22 @@ class PeptideIonTableView(BaseTableView):
         
         # Select display columns
         display_columns = []
-        for col in ['seq_no', 'sample', 'tool', 'sequence', 'canonical_sequence', 'ppm', 'is_preferred', 'spectre_id']:
+        for col in [
+            'identification_id',
+            'spectre_id',
+            'sample',
+            'seq_no',
+            'tool',
+            'sequence',
+            'ppm',
+            'intensity_coverage',
+            'ions_matched',
+            'ion_match_type',
+            'top_peaks_covered',
+            'is_preferred',
+            'protein_id',
+            'gene',
+        ]:
             if col in df.columns:
                 display_columns.append(col)
         

@@ -100,6 +100,7 @@ class SpectraMixin:
                 - intensity_array: np.ndarray
                 - charge_array: np.ndarray | None
                 - charge_array_common_value: int | None
+                - peaks_count: int | None
                 - all_params: dict | None
         """
         rows_to_insert = []
@@ -117,6 +118,11 @@ class SpectraMixin:
             intensity = row.get('intensity')
             if intensity is None and 'intensity_array' in row and row['intensity_array'] is not None:
                 intensity = float(np.sum(row['intensity_array']))
+
+            # peaks_count — from parser; fallback to mz_array length if absent
+            peaks_count = row.get('peaks_count', None)
+            if peaks_count is None and 'mz_array' in row and row['mz_array'] is not None:
+                peaks_count = len(row['mz_array'])
             
             rows_to_insert.append((
                 spectra_file_id,
@@ -129,6 +135,7 @@ class SpectraMixin:
                 intensity,
                 mz_compressed,
                 intensity_compressed,
+                int(peaks_count) if peaks_count is not None else None,
                 charge_compressed,
                 int(row['charge_array_common_value']) if row.get('charge_array_common_value') is not None else None,
                 all_params_json
@@ -138,8 +145,9 @@ class SpectraMixin:
             await self._executemany(
                 """INSERT INTO spectre 
                    (spectre_file_id, seq_no, title, scans, charge, rt, pepmass, intensity,
-                    mz_array, intensity_array, charge_array, charge_array_common_value, all_params)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    mz_array, intensity_array, peaks_count, charge_array,
+                    charge_array_common_value, all_params)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 rows_to_insert
             )
             await self.save()
@@ -159,7 +167,8 @@ class SpectraMixin:
         """
         query_parts = ["""
             SELECT s.id, s.spectre_file_id, s.seq_no, s.title, s.scans,
-                   s.charge, s.rt, s.pepmass, s.intensity, s.charge_array_common_value,
+                   s.charge, s.rt, s.pepmass, s.intensity, s.peaks_count,
+                   s.charge_array_common_value,
                    sf.sample_id, sam.name as sample_name
             FROM spectre s
             JOIN spectre_file sf ON s.spectre_file_id = sf.id

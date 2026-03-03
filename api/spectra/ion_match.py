@@ -1,5 +1,5 @@
 """Ion matching functionality for peptide identification validation."""
-
+from copy import copy
 from dataclasses import dataclass
 from typing import Literal
 
@@ -9,6 +9,8 @@ from peptacular.fragmentation import Fragmenter, Fragment
 from peptacular.score import (
     get_fragment_matches,
     FragmentMatch,
+    get_match_coverage
+
 )
 
 def _get_matched_intensity_percentage(
@@ -80,6 +82,10 @@ class MatchResult:
     fragments: list[Fragment]
     fragment_matches: list[FragmentMatch]
     intensity_percent: float
+    top10_intensity_matches: int
+    total_peaks: int
+    max_ion_matches: int
+    top_matched_ion_type: str
 
 
 def match_predictions(
@@ -117,6 +123,20 @@ def match_predictions(
     """
     if params.ions is None:
         params.ions = ['b', 'y']
+
+    total_peaks = len(mz)
+
+    if total_peaks == 0:
+        return MatchResult(
+            parameters=params,
+            fragments=[],
+            fragment_matches=[],
+            intensity_percent=0,
+            top10_intensity_matches=0,
+            total_peaks=total_peaks,
+            max_ion_matches=0,
+            top_matched_ion_type='',
+        )
     
     # Generate theoretical fragments
     frags = Fragmenter(sequence).fragment(
@@ -135,18 +155,43 @@ def match_predictions(
         tolerance_value=params.tolerance,
         mode=params.mode,
     )
-    
+
+    ion_matches = {k: max(v) for k, v in get_match_coverage(matches).items()}
+    max_matches = max(ion_matches.values()) if ion_matches else 0
+    try:
+        max_matches_type = [k for k, v in ion_matches.items() if v == max_matches][0]
+    except IndexError:
+        max_matches_type = None
+
+    top_ints = list(intensity)
+    top_ints.sort(reverse=True)
+    try:
+        top10_int = top_ints[9]
+    except IndexError:
+        print(sequence)
+        print(mz)
+        print(intensity)
+        top10_int = top_ints[-1]
+    top10_intensity_matches = len([x for x in matches if x.intensity >= top10_int])
+
+
     # Calculate intensity coverage
     coverage = _get_matched_intensity_percentage(
         fragment_matches=matches,
         intensities=intensity
     )
+
+
     
     return MatchResult(
         parameters=params,
         fragments=frags,
         fragment_matches=matches,
-        intensity_percent=coverage,
+        intensity_percent=coverage*100,
+        top10_intensity_matches=top10_intensity_matches,
+        total_peaks=total_peaks,
+        max_ion_matches=max_matches,
+        top_matched_ion_type=max_matches_type,
     )
 
 

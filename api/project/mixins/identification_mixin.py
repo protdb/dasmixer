@@ -1,9 +1,12 @@
 """Mixin for identification file and identification operations."""
 
 import json
+from typing import Any
+
 import pandas as pd
 
 from utils.logger import logger
+from api.project.dataclasses import IdentificationWithSpectrum
 
 
 class IdentificationMixin:
@@ -199,17 +202,25 @@ class IdentificationMixin:
             min_score: float,
             max_abs_ppm: float,
             intensity_coverage: float,
+            spectre_peaks_count: int,
+            ions_matched: int,
+            top_peaks_covered: int,
             canonical_length: tuple[int, int]
     ):
         """
-        special method for identification processing
-        :param tool_id:
-        :param spectra_file_id:
-        :param min_score:
-        :param max_abs_ppm:
-        :param intensity_coverage:
-        :param canonical_length:
-        :return:
+        Special method for identification processing — returns candidates for
+        preferred identification selection with pre-applied quality filters.
+
+        Args:
+            spectra_file_id: spectre_file.id to filter by
+            tool_id: tool.id to filter by
+            min_score: minimum identification score
+            max_abs_ppm: maximum absolute PPM error
+            intensity_coverage: minimum intensity coverage (%)
+            spectre_peaks_count: minimum number of peaks in spectrum
+            ions_matched: minimum matched ions count
+            top_peaks_covered: minimum top-10 peaks covered count
+            canonical_length: (min_len, max_len) tuple for canonical sequence length
         """
         query = """
             SELECT
@@ -219,21 +230,24 @@ class IdentificationMixin:
             FROM identification i
             LEFT JOIN spectre s ON i.spectre_id = s.id
             LEFT JOIN (
-                select
+                SELECT
                     identification_id,
-                    matched_coverage_percent,
-                    min(matched_coverage_percent) as matched_coverage_percent,
-                    min(abs(matched_ppm)) as matched_ppm
-                from peptide_match
-                GROUP by identification_id
-                ) m on i.id = m.identification_id
+                    min(abs(matched_ppm)) AS matched_ppm,
+                    min(matched_coverage_percent) AS matched_coverage_percent
+                FROM peptide_match
+                GROUP BY identification_id
+            ) m ON i.id = m.identification_id
             WHERE
-            s.spectre_file_id = ? and
-            i.tool_id = ? and
-            i.score >= ? and
-            abs(i.ppm) <= ? and
-            i.intensity_coverage >= ? and
-            ? <= length(i.canonical_sequence) <= ?
+                s.spectre_file_id = ? AND
+                i.tool_id = ? AND
+                i.score >= ? AND
+                abs(i.ppm) <= ? AND
+                i.intensity_coverage >= ? AND
+                length(i.canonical_sequence) >= ? AND
+                length(i.canonical_sequence) <= ? AND
+                s.peaks_count >= ? AND
+                i.ions_matched >= ? AND
+                i.top_peaks_covered >= ?
         """
 
         params = (
@@ -242,8 +256,11 @@ class IdentificationMixin:
             float(min_score),
             float(max_abs_ppm),
             float(intensity_coverage),
-            float(canonical_length[0]),
-            float(canonical_length[1])
+            int(canonical_length[0]),
+            int(canonical_length[1]),
+            int(spectre_peaks_count),
+            int(ions_matched),
+            int(top_peaks_covered),
         )
 
         rows = await self._fetchall(query, params)
@@ -272,9 +289,7 @@ class IdentificationMixin:
             self,
             parameters: list[tuple[float, int]]
     ):
-        query = """
-        UPDATE identification SET intensity_coverage = ? WHERE id = ?
-        """
+        query = "UPDATE identification SET intensity_coverage = ? WHERE id = ?"
         await self._executemany(query, parameters)
     
     async def set_preferred_identification(
@@ -323,10 +338,10 @@ class IdentificationMixin:
         ids = list(ids_df["id"])
         
         await self._execute(
-            f"UPDATE identification SET is_preferred = 0 WHERE id in ({', '.join([str(x) for x in ids])})",
+            f"UPDATE identification SET is_preferred = 0 WHERE id IN ({', '.join([str(x) for x in ids])})",
         )
         await self._execute(
-            f"UPDATE identification SET is_preferred = 1 WHERE id in ({', '.join([str(x) for x in preferred_ids])})",
+            f"UPDATE identification SET is_preferred = 1 WHERE id IN ({', '.join([str(x) for x in preferred_ids])})",
         )
         await self.save()
 
@@ -334,5 +349,80 @@ class IdentificationMixin:
             self,
             tool_id: int,
             offset: int = 0,
-            limit: int = 1000
-    ) -> :
+            limit: int = 1000,
+            only_missing: bool = False,
+    ) -> list[IdentificationWithSpectrum]:
+        """
+        Fetch a batch of identifications with associated spectrum arrays.
+
+        Used by the ion-coverage calculation pipeline.  Returns plain
+        IdentificationWithSpectrum objects; arrays are decompressed from
+        BLOB storage automatically via IdentificationWithSpectrum.from_dict().
+
+        Args:
+            tool_id: Filter by tool ID.
+            offset: Pagination offset (number of rows to skip).
+            limit: Batch size (number of rows to return).
+            only_missing: If True, only return rows where intensity_coverage IS NULL
+                          (i.e. not yet calculated).
+
+        Returns:
+            List of IdentificationWithSpectrum instances.
+        """
+        missing_filter = "AND i.intensity_coverage IS NULL" if only_missing else ""
+        query = f"""
+            SELECT
+                i.id,
+                i.spectre_id,
+                s.pepmass,
+                s.mz_array,
+                s.intensity_array,
+                s.peaks_count,
+                s.charge,
+                i.tool_id,
+                i.sequence,
+                i.canonical_sequence
+            FROM identification i
+            JOIN spectre s ON s.id = i.spectre_id
+            WHERE i.tool_id = ?
+            {missing_filter}
+            LIMIT ? OFFSET ?
+        """
+        params = (int(tool_id), int(limit), int(offset))
+        rows = await self._fetchall(query, params)
+        return [IdentificationWithSpectrum.from_dict(dict(row)) for row in rows]
+
+    async def put_identification_data_batch(self, data_rows: list[dict[str, Any]]) -> None:
+        """
+        Batch-update ion-coverage fields for a list of identifications.
+
+        Each dict in data_rows must contain at least 'id'; all other keys are
+        optional — missing ones are written as NULL.
+
+        Keys recognised:
+            id, ppm, theor_mass, intensity_coverage,
+            ions_matched, ion_match_type, top_peaks_covered
+        """
+        query = """
+            UPDATE identification
+            SET
+                ppm = ?,
+                theor_mass = ?,
+                intensity_coverage = ?,
+                ions_matched = ?,
+                ion_match_type = ?,
+                top_peaks_covered = ?
+            WHERE id = ?
+        """
+        params = []
+        for data_row in data_rows:
+            params.append((
+                data_row.get('ppm'),
+                data_row.get('theor_mass'),
+                data_row.get('intensity_coverage'),
+                data_row.get('ions_matched'),
+                data_row.get('ion_match_type'),
+                data_row.get('top_peaks_covered'),
+                data_row['id'],
+            ))
+        await self._executemany(query, params)

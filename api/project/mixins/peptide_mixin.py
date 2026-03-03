@@ -140,7 +140,8 @@ class PeptideMixin:
         seq_no: int | None = None,
         scans: int | None = None,
         tool: str | None = None,
-        tool_id: int | None = None
+        tool_id: int | None = None,
+        identification_id: int | None = None,
     ) -> tuple[list[str], list]:
         """
         Build WHERE conditions and parameters for peptide queries.
@@ -210,6 +211,10 @@ class PeptideMixin:
         if tool_id is not None:
             conditions.append("id.tool_id = ?")
             params.append(tool_id)
+
+        if identification_id is not None:
+            conditions.append("id.identification_id = ?")
+            params.append(identification_id)
         
         return conditions, params
     
@@ -225,6 +230,7 @@ class PeptideMixin:
         sequence: str | None = None,
         canonical_sequence: str | None = None,
         matched_sequence: str | None = None,
+        identification_id: int | None = None,
         seq_no: int | None = None,
         scans: int | None = None,
         tool: str | None = None,
@@ -323,6 +329,7 @@ class PeptideMixin:
         scans: int | None = None,
         tool: str | None = None,
         tool_id: int | None = None,
+        identification_id: int | None = None,
         limit: int | None = None,
         offset: int = 0
     ) -> pd.DataFrame:
@@ -360,11 +367,13 @@ class PeptideMixin:
         """
         # Base query
         query = """
-            SELECT
+             SELECT
                 sb.sample, sb.subset, sb.sample_id, sb.subset_id,
                 s.id as spectre_id, s.seq_no, s.scans, s.charge, s.rt, s.pepmass, s.intensity,
                 id.tool, id.tool_id, id.identification_id, id.sequence, 
                 id.canonical_sequence, id.ppm, id.is_preferred,
+				id.ions_matched, id.ion_match_type, id.top_peaks_covered,
+				id.intensity_coverage,
                 mp.matched_sequence, mp.matched_ppm, mp.protein_id, mp.identity,
                 mp.unique_evidence, mp.gene
             FROM
@@ -388,7 +397,11 @@ class PeptideMixin:
                     i.sequence, 
                     i.canonical_sequence, 
                     i.ppm, 
-                    i.is_preferred 
+                    i.is_preferred, 
+					i.intensity_coverage,
+					i.ions_matched,
+					i.ion_match_type,
+					i.top_peaks_covered
                  FROM identification i, tool t 
                  WHERE t.id = i.tool_id) AS id 
                 ON id.spectre_id = s.id
@@ -422,7 +435,8 @@ class PeptideMixin:
             seq_no=seq_no,
             scans=scans,
             tool=tool,
-            tool_id=tool_id
+            tool_id=tool_id,
+            identification_id=identification_id
         )
         
         # Add conditions to query

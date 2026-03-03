@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import plotly.express as px
 from flet import Icons
@@ -19,6 +20,7 @@ class ToolMatchReport(BaseReport):
             'tool2': (str, 'Denovo'),
             'min_psm': (int, 1),
         }
+
 
     def _get_proteins_data(self, data: pd.DataFrame, tools: list[str], min_peptides: int, min_uq: int) -> tuple[pd.DataFrame, pd.DataFrame]:
         tool1, tool2 = tools
@@ -49,7 +51,6 @@ class ToolMatchReport(BaseReport):
 
         return proteins_combined, protein_count
 
-
     def _get_peptides_data(self, data: pd.DataFrame, min_psm: int, tools: list[str]) -> tuple[pd.DataFrame, pd.DataFrame]:
         tool1, tool2 = tools
         all_peptides = data[
@@ -77,6 +78,14 @@ class ToolMatchReport(BaseReport):
             "(is_preferred_t1==1 or is_preferred_t2==1) and seq_occur_t1 >= @min_psm or seq_occur_t2 >= @min_psm"
         ).copy()
         merged['sequences_match'] = merged['matched_sequence_t1'] == merged['matched_sequence_t2']
+
+        def nan_to_none(val) -> bool:
+            if type(val) is float:
+                return not np.isnan(val)
+            return bool(val)
+
+        merged['is_preferred_t1'] = merged['is_preferred_t1'].apply(nan_to_none)
+        merged['is_preferred_t2'] = merged['is_preferred_t2'].apply(nan_to_none)
 
         def get_peptide_tool(row):
             if row['sequences_match']:

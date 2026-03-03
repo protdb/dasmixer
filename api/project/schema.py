@@ -68,6 +68,7 @@ CREATE TABLE IF NOT EXISTS spectre (
     intensity REAL,
     mz_array BLOB,
     intensity_array BLOB,
+    peaks_count INTEGER,
     charge_array BLOB,
     charge_array_common_value INTEGER,
     all_params TEXT,  -- JSON as TEXT
@@ -105,6 +106,9 @@ CREATE TABLE IF NOT EXISTS identification (
     score REAL,
     positional_scores TEXT,  -- JSON as TEXT
     intensity_coverage REAL,  -- Percentage of spectrum intensity matched by theoretical ions
+    ions_matched INTEGER,
+    ion_match_type TEXT,
+    top_peaks_covered INTEGER,
     FOREIGN KEY (spectre_id) REFERENCES spectre(id) ON DELETE CASCADE,
     FOREIGN KEY (tool_id) REFERENCES tool(id) ON DELETE CASCADE,
     FOREIGN KEY (ident_file_id) REFERENCES identification_file(id) ON DELETE CASCADE

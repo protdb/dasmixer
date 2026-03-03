@@ -1,52 +1,115 @@
 import re
 
 from pyteomics import mass
+from pyteomics.auxiliary import PyteomicsError
+
+# Canonical amino acid alphabet
+CANONICAL_AA = 'ARNDCQEGHILKMFPSTWYV'
+
+# Average mass per residue (used as fallback for non-canonical residues)
+_AVG_MASS = mass.calculate_mass(CANONICAL_AA) / len(CANONICAL_AA)
+
+# Regex for old-style modification notation: (+42.01) or (-17.03) etc.
+_MOD_PATTERN_ROUND = re.compile(r'\(([+-]?\d*\.?\d*)\)')
 
 
-def calculate_ppm(sequence, pepmass, charge):
+def calculate_theor_mass(sequence: str) -> float:
     """
-    Рассчитывает PPM difference между экспериментальной и теоретической массой пептида
+    Calculate theoretical monoisotopic neutral mass of a peptide.
 
-    Parameters:
-    -----------
-    sequence : str
-        Последовательность пептида с модификациями, например:
-        "(+42.01)ALDLERPR" - модификация на N-конце
-        "EAM(+15.99)DTSSK" - окисление метионина
-        "PEPTIDEC(+57.02)R" - карбамидометилирование цистеина
-    pepmass : float
-        Экспериментальное значение m/z из PEPMASS в MGF-файле
-    charge : int
-        Заряд иона
+    Supports two modification notations:
+    - ProForma / peptacular: square brackets, e.g. "PEP[+15.99]TIDE"
+    - Legacy round-bracket notation: e.g. "EAM(+15.99)DTSSK"
+
+    For sequences without modifications (m,no '[' and no '('), and for the
+    canonical-only part after stripping non-canonical residues, uses
+    pyteomics mass.calculate_mass.  On PyteomicsError (caused by unknown
+    residues such as 'X', 'B', 'U', etc.) falls back to:
+        mass(canonical residues) + avg_residue_mass * count(non-canonical)
+
+    Args:
+        sequence: Peptide sequence string, optionally with modifications.
 
     Returns:
-    --------
-    float : PPM difference
+        Theoretical neutral monoisotopic mass (float, in Da).
     """
+    # --- ProForma / square-bracket notation ---
+    if '[' in sequence:
+        try:
+            return mass.calculate_mass(proforma=sequence, ion_type='M', charge=0)
+        except PyteomicsError:
+            # Strip modifications and fall back to canonical-residue calculation
+            clean = re.sub(r'\[.*?\]', '', sequence)
+            return _canonical_fallback(clean)
 
-    # Парсинг последовательности и извлечение модификаций
-    # Паттерн для поиска модификаций: (±число) или аминокислота(±число)
-    mod_pattern = r'\(([+-]?\d*\.?\d*)\)'
+    # --- Legacy round-bracket notation ---
+    if '(' in sequence:
+        modifications = _MOD_PATTERN_ROUND.findall(sequence)
+        mod_masses = [float(m) for m in modifications]
+        clean = _MOD_PATTERN_ROUND.sub('', sequence)
+        base_mass = _canonical_fallback(clean)
+        return base_mass + sum(mod_masses)
 
-    # Извлекаем все модификации из строки
-    modifications = re.findall(mod_pattern, sequence)
-    mod_masses = [float(m) for m in modifications]
+    # --- Plain sequence (no modifications) ---
+    return _canonical_fallback(sequence)
 
-    # Удаляем модификации из последовательности, оставляя только аминокислоты
-    clean_sequence = re.sub(mod_pattern, '', sequence)
 
-    # Рассчитываем базовую массу пептида
-    theoretical_mz = mass.calculate_mass(
-        sequence=clean_sequence,
-        ion_type='M',
-        charge=charge
-    )
+def _canonical_fallback(clean_sequence: str) -> float:
+    """
+    Calculate neutral mass for a plain (modification-free) sequence.
 
-    # Добавляем массы модификаций
-    total_mod_mass = sum(mod_masses)
-    theoretical_mz += total_mod_mass / charge
+    Tries pyteomics first; on failure splits into canonical / non-canonical
+    residues and uses average mass for the non-canonical ones.
 
-    # Рассчитываем PPM
+    Args:
+        clean_sequence: Sequence string without any modification tokens.
+
+    Returns:
+        Neutral monoisotopic mass (float).
+    """
+    try:
+        return mass.calculate_mass(sequence=clean_sequence, ion_type='M', charge=0)
+    except PyteomicsError:
+        canonical_part = ''
+        non_canonical_count = 0
+        for letter in clean_sequence:
+            if letter.upper() in CANONICAL_AA:
+                canonical_part += letter
+            else:
+                non_canonical_count += 1
+        canon_mass = mass.calculate_mass(sequence=canonical_part, ion_type='M', charge=0) if canonical_part else 0.0
+        return canon_mass + non_canonical_count * _AVG_MASS
+
+
+def calculate_ppm(sequence: str, pepmass: float, charge: int) -> float:
+    """
+    Calculate PPM difference between experimental and theoretical peptide mass.
+
+    Uses calculate_theor_mass() internally, so supports both ProForma
+    ([+15.99]) and legacy ((+15.99)) modification notations as well as
+    non-canonical residues.
+
+    Parameters
+    ----------
+    sequence : str
+        Peptide sequence with optional modifications, e.g.:
+        "(+42.01)ALDLERPR"   - N-terminal modification (legacy notation)
+        "EAM(+15.99)DTSSK"  - methionine oxidation (legacy notation)
+        "PEP[+15.99]TIDE"    - oxidation in ProForma notation
+    pepmass : float
+        Experimental m/z from the PEPMASS field in the MGF file.
+    charge : int
+        Precursor charge state.
+
+    Returns
+    -------
+    float
+        PPM difference: (experimental - theoretical) / theoretical * 1e6.
+    """
+    proton = 1.007276
+
+    neutral_mass = calculate_theor_mass(sequence)
+    theoretical_mz = (neutral_mass + charge * proton) / charge
+
     ppm = ((pepmass - theoretical_mz) / theoretical_mz) * 1e6
-
     return ppm

@@ -5,6 +5,10 @@ import json
 import pickle
 import gzip
 from typing import Any, Literal
+import numpy as np
+from numpy import ndarray
+
+from api.project.array_utils import decompress_array
 
 # Import for type hints only
 try:
@@ -160,5 +164,73 @@ class Protein:
             protein_atlas_data=None  # Not stored in main table
         )
 
+
 @dataclass
-class IdentificationWithSpectre:
+class IdentificationWithSpectrum:
+    """
+    Combined identification + spectrum data used for batch ion-coverage calculation.
+
+    Fields charge and peaks_count are loaded alongside spectrum arrays so that
+    the coverage worker can use them without additional DB round-trips.
+    """
+    id: int
+    spectre_id: int
+    pepmass: float
+    mz_array: ndarray
+    intensity_array: ndarray
+    tool_id: int
+    sequence: str
+    canonical_sequence: str
+    charge: int | None = None
+    peaks_count: int | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> 'IdentificationWithSpectrum':
+        id_ = data.get('id')
+        spectre_id = data.get('spectre_id')
+        pepmass = data.get('pepmass')
+        try:
+            mz_array = decompress_array(data.get('mz_array'))
+        except (ValueError, TypeError):
+            mz_array = None
+        try:
+            intensity_array = decompress_array(data.get('intensity_array'))
+        except (ValueError, TypeError):
+            intensity_array = None
+        tool_id = data.get('tool_id')
+        sequence = data.get('sequence')
+        canonical_sequence = data.get('canonical_sequence')
+        charge = data.get('charge')
+        peaks_count = data.get('peaks_count')
+        return cls(
+            id=id_,
+            spectre_id=spectre_id,
+            pepmass=pepmass,
+            mz_array=mz_array,
+            intensity_array=intensity_array,
+            tool_id=tool_id,
+            sequence=sequence,
+            canonical_sequence=canonical_sequence,
+            charge=int(charge) if charge is not None else None,
+            peaks_count=int(peaks_count) if peaks_count is not None else None,
+        )
+
+    def to_worker_dict(self) -> dict[str, Any]:
+        """
+        Serialize to a plain dict suitable for multiprocessing (no numpy, no blobs).
+
+        mz_array and intensity_array are converted to Python lists so they can
+        be pickled across process boundaries without issues.
+        """
+        return {
+            'id': self.id,
+            'spectre_id': self.spectre_id,
+            'pepmass': self.pepmass,
+            'mz_array': self.mz_array.tolist() if self.mz_array is not None else [],
+            'intensity_array': self.intensity_array.tolist() if self.intensity_array is not None else [],
+            'tool_id': self.tool_id,
+            'sequence': self.sequence,
+            'canonical_sequence': self.canonical_sequence,
+            'charge': self.charge,
+            'peaks_count': self.peaks_count,
+        }

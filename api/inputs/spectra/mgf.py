@@ -66,7 +66,7 @@ class MGFParser(SpectralDataParser):
         Parse MGF file in batches.
         
         Yields:
-            DataFrame batches with spectrum data
+            DataFrame batches with spectrum data, including peaks_count column.
         """
         eof = False
         while not eof:
@@ -78,6 +78,12 @@ class MGFParser(SpectralDataParser):
                     eof = True
                     break
                 
+                mz_array = record.get('m/z array', None)
+                intensity_arr = record.get('intensity array', None)
+
+                # peaks_count — length of mz_array (source of truth for number of peaks)
+                peaks_count = len(mz_array) if mz_array is not None else 0
+
                 # Process charge array
                 charge_array = record.get('charge array', np.array([]))
                 charge_array = np.ma.filled(
@@ -134,10 +140,11 @@ class MGFParser(SpectralDataParser):
                     'rt': params.get('rtinseconds', None),
                     'pepmass': pepmass,
                     'intensity': intensity,
-                    'mz_array': record.get('m/z array', None),
-                    'intensity_array': record.get('intensity array', None),
+                    'mz_array': mz_array,
+                    'intensity_array': intensity_arr,
                     'charge_array': charge_array_data,
                     'charge_array_common_value': common_value,
+                    'peaks_count': peaks_count,
                     'all_params': params,
                 })
                 
