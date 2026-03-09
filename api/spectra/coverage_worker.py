@@ -48,24 +48,39 @@ def process_identification_batch(
         ident_id = item['id']
         sequence = item.get('sequence', '')
         pepmass = item.get('pepmass')
-        charge = item.get('charge') or (fragment_charges[0] if fragment_charges else 1)
+        charge = item.get('charge', 1)
+
         mz_array = item.get('mz_array', [])
         intensity_array = item.get('intensity_array', [])
-
         try:
             # PPM and theoretical mass
             theor_mass = calculate_theor_mass(sequence)
-            ppm = calculate_ppm(sequence, pepmass, charge) if pepmass is not None else None
+            if pepmass is None:
+                ppm = None
+            else:
+                ppm_charges = [charge] if charge is not None else [1,2,3,4] # TODO: Get from UI settings
+                ppms = [
+                    calculate_ppm(sequence, pepmass, crg) for crg in ppm_charges
+                ]
+                min_abs_ppm = min([abs(x) for x in ppms])
+                ppm = min_abs_ppm if min_abs_ppm in ppms else min_abs_ppm * -1
 
             # Ion matching
             match_result = match_predictions(
                 params=params,
                 mz=mz_array,
                 intensity=intensity_array,
-                charges=charge,
+                charges=fragment_charges,
                 sequence=sequence,
             )
-
+            # if sequence == 'LEASEEEAFFADDDVPVLTVTVHDFFPGK':
+            #     print(ident_id, sequence, item['spectre_id'])
+            #     print('!!!!!!!FRAGMENTS!!!!!!!!!!')
+            #     for frag in match_result.fragments:
+            #         print(frag)
+            #     print('!!!!!!!MATCHES!!!!!!!!!!!!')
+            #     for match in match_result.fragment_matches:
+            #         print(match)
             results.append({
                 'id': ident_id,
                 'ppm': ppm,
@@ -77,7 +92,6 @@ def process_identification_batch(
             })
 
         except Exception as exc:
-            raise
             # Log and return nulls so one bad record doesn't abort the batch
             print(f"[coverage_worker] Error on id={ident_id}: {exc}")
             results.append({

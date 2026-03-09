@@ -124,9 +124,9 @@ class PeptideMixin:
         # Note: No auto-save for batch efficiency
     
     # Complex joined peptide queries
-    
+
+    @staticmethod
     def _build_peptide_filter_conditions(
-        self,
         is_preferred: bool | None = None,
         sequence_identified: bool | None = None,
         protein_identified: bool | None = None,
@@ -142,6 +142,8 @@ class PeptideMixin:
         tool: str | None = None,
         tool_id: int | None = None,
         identification_id: int | None = None,
+        max_ppm: float | None = None,
+        min_score: float | None = None
     ) -> tuple[list[str], list]:
         """
         Build WHERE conditions and parameters for peptide queries.
@@ -215,6 +217,14 @@ class PeptideMixin:
         if identification_id is not None:
             conditions.append("id.identification_id = ?")
             params.append(identification_id)
+
+        if max_ppm is not None:
+            conditions.append("abs(id.ppm) <= ?")
+            params.append(max_ppm)
+
+        if min_score is not None:
+            conditions.append("id.score >= ?")
+            params.append(min_score)
         
         return conditions, params
     
@@ -231,6 +241,8 @@ class PeptideMixin:
         canonical_sequence: str | None = None,
         matched_sequence: str | None = None,
         identification_id: int | None = None,
+        max_ppm: float | None = None,
+        min_score: float | None = None,
         seq_no: int | None = None,
         scans: int | None = None,
         tool: str | None = None,
@@ -267,7 +279,8 @@ class PeptideMixin:
                     i.id AS identification_id, 
                     i.sequence, 
                     i.canonical_sequence, 
-                    i.ppm, 
+                    i.ppm,
+                    i.score,
                     i.is_preferred 
                  FROM identification i, tool t 
                  WHERE t.id = i.tool_id) AS id 
@@ -302,7 +315,10 @@ class PeptideMixin:
             seq_no=seq_no,
             scans=scans,
             tool=tool,
-            tool_id=tool_id
+            tool_id=tool_id,
+            identification_id=identification_id,
+            min_score=min_score,
+            max_ppm=max_ppm
         )
         
         # Add conditions to query
@@ -371,7 +387,7 @@ class PeptideMixin:
                 sb.sample, sb.subset, sb.sample_id, sb.subset_id,
                 s.id as spectre_id, s.seq_no, s.scans, s.charge, s.rt, s.pepmass, s.intensity,
                 id.tool, id.tool_id, id.identification_id, id.sequence, 
-                id.canonical_sequence, id.ppm, id.is_preferred,
+                id.canonical_sequence, id.ppm, id.score, id.is_preferred,
 				id.ions_matched, id.ion_match_type, id.top_peaks_covered,
 				id.intensity_coverage,
                 mp.matched_sequence, mp.matched_ppm, mp.protein_id, mp.identity,
@@ -397,6 +413,7 @@ class PeptideMixin:
                     i.sequence, 
                     i.canonical_sequence, 
                     i.ppm, 
+                    i.score,
                     i.is_preferred, 
 					i.intensity_coverage,
 					i.ions_matched,

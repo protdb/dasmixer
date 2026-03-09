@@ -147,5 +147,6 @@ class IonSettingsSection(BaseSection):
             tolerance=self.state.ion_ppm_threshold,
             mode='largest',
             water_loss=self.state.water_loss,
-            ammonia_loss=self.state.nh3_loss
+            ammonia_loss=self.state.nh3_loss,
+            charges=self.state.fragment_charges
         )

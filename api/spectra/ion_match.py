@@ -64,6 +64,7 @@ class IonMatchParameters:
     mode: Literal['all', 'closest', 'largest'] = 'largest'
     water_loss: bool = True
     ammonia_loss: bool = True
+    charges: int | list[int] | None = None
 
 
 @dataclass
@@ -124,6 +125,9 @@ def match_predictions(
     if params.ions is None:
         params.ions = ['b', 'y']
 
+    if params.charges is None:
+        params.charges = charges
+
     total_peaks = len(mz)
 
     if total_peaks == 0:
@@ -137,11 +141,11 @@ def match_predictions(
             max_ion_matches=0,
             top_matched_ion_type='',
         )
-    
+
     # Generate theoretical fragments
     frags = Fragmenter(sequence).fragment(
         params.ions,
-        charges,
+        params.charges,
         water_loss=params.water_loss,
         ammonia_loss=params.ammonia_loss,
     )
@@ -168,9 +172,6 @@ def match_predictions(
     try:
         top10_int = top_ints[9]
     except IndexError:
-        print(sequence)
-        print(mz)
-        print(intensity)
         top10_int = top_ints[-1]
     top10_intensity_matches = len([x for x in matches if x.intensity >= top10_int])
 

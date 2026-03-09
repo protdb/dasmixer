@@ -3,6 +3,9 @@ import re
 from pyteomics import mass
 from pyteomics.auxiliary import PyteomicsError
 
+# proton mass
+PROTON_MASS = 1.007276
+
 # Canonical amino acid alphabet
 CANONICAL_AA = 'ARNDCQEGHILKMFPSTWYV'
 
@@ -107,9 +110,40 @@ def calculate_ppm(sequence: str, pepmass: float, charge: int) -> float:
         PPM difference: (experimental - theoretical) / theoretical * 1e6.
     """
     proton = 1.007276
-
     neutral_mass = calculate_theor_mass(sequence)
     theoretical_mz = (neutral_mass + charge * proton) / charge
 
     ppm = ((pepmass - theoretical_mz) / theoretical_mz) * 1e6
     return ppm
+
+
+def calculate_ppm_and_charge(
+        sequence: str,
+        pepmass: int | float,
+        neutral_mass: float | None = None,
+        min_charge: int=1,
+        max_charge: int=4
+) -> tuple[float, int, float]:
+    """
+    Calculate PPM difference between experimental and theoretical peptide mass for unknown (or ignored) charge
+    :param sequence: peptide sequence in ProForma notation
+    :param pepmass: precursor mass (in Da)
+    :param neutral_mass: neutral mass (in Da), calculated if not given
+    :param min_charge: minimum charge value to calculate (default: 1)
+    :param max_charge: maximum charge value to calculate (default: 4)
+    :return: minimum ppm error, charge value, neutral mass
+    """
+    if neutral_mass is None:
+        neutral_mass = calculate_theor_mass(sequence)
+
+    charges = list(range(min_charge, max_charge + 1))
+    ppms = []
+    abs_ppms = []
+
+    for charge in charges:
+        theoretical_mz = (neutral_mass + charge * PROTON_MASS) / charge
+        ppm = ((pepmass - theoretical_mz) / theoretical_mz) * 1e6
+        ppms.append(ppm)
+        abs_ppms.append(abs(ppm))
+    idx = abs_ppms.index(min(abs_ppms))
+    return ppms[idx], charges[idx], neutral_mass

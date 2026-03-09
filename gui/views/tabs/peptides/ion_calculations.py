@@ -13,7 +13,7 @@ from .shared_state import PeptidesTabState
 from .dialogs.progress_dialog import ProgressDialog
 
 # Number of worker processes: leave one CPU free for the UI/async loop
-_WORKER_COUNT = max(1, min(4, (os.cpu_count() or 2) - 1))
+_WORKER_COUNT = 8
 _BATCH_SIZE = 1000
 
 
@@ -197,7 +197,6 @@ class IonCalculations:
                             params_dict,
                             fragment_charges,
                         )
-
                         # Write all results to DB in one batch
                         await self.project.put_identification_data_batch(results)
 
@@ -268,7 +267,7 @@ class IonCalculations:
 
                 ident = ident_df.iloc[0]
                 spectrum = await self.project.get_spectrum_full(ident['spectre_id'])
-                charge = spectrum.get('charge') or self.state.fragment_charges[0]
+                charge = self.state.fragment_charges[0]
 
                 matched_ppm = calculate_ppm(
                     sequence=match['matched_sequence'],
@@ -322,4 +321,5 @@ class IonCalculations:
             mode='largest',
             water_loss=self.state.water_loss,
             ammonia_loss=self.state.nh3_loss,
+            charges=self.state.fragment_charges
         )

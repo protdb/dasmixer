@@ -109,6 +109,7 @@ CREATE TABLE IF NOT EXISTS identification (
     ions_matched INTEGER,
     ion_match_type TEXT,
     top_peaks_covered INTEGER,
+    override_charge INTEGER,
     FOREIGN KEY (spectre_id) REFERENCES spectre(id) ON DELETE CASCADE,
     FOREIGN KEY (tool_id) REFERENCES tool(id) ON DELETE CASCADE,
     FOREIGN KEY (ident_file_id) REFERENCES identification_file(id) ON DELETE CASCADE

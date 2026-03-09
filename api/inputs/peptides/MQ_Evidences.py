@@ -21,6 +21,7 @@ ptm_replacements = [
     ('_', ''),  # Remove underscores
     ('(Pyridylethyl)', '[Pyridylethyl]'),
     ('(Oxidation (M))', '[Oxidation]'),
+    ('(ox)', '[Oxidation]'),
     ('(Acetyl (Protein N-term))', '[-89.029920]-')
 ]
 
