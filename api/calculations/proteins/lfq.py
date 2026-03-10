@@ -1,6 +1,6 @@
 import pandas as pd
 from typing import Literal
-from ..project import Project
+from api.project import Project
 from .sempai import Protein, ProteomicSample, DigestionParams
 
 async def calculate_lfq(

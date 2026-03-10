@@ -22,6 +22,11 @@ class PeptidesTabState:
     nh3_loss: bool = False
     ion_ppm_threshold: float = 20.0
     fragment_charges: list[int] = field(default_factory=lambda: [1, 2])
+
+    # Precursor charge settings for PPM calculation
+    ignore_spectre_charges: bool = True
+    min_precursor_charge: int = 1
+    max_precursor_charge: int = 4
     
     # FASTA/Protein data
     protein_count: int = 0

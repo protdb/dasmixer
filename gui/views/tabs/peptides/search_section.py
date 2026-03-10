@@ -3,8 +3,8 @@
 import flet as ft
 import pandas as pd
 
-from api.spectra.plot_flow import make_full_spectrum_plot
-from api.spectra.ion_match import IonMatchParameters
+from api.calculations.spectra.plot_flow import make_full_spectrum_plot
+from api.calculations.spectra.ion_match import IonMatchParameters
 from gui.components.plotly_viewer import PlotlyViewer
 from .base_section import BaseSection
 

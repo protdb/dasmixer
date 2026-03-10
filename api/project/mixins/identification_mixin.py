@@ -400,14 +400,15 @@ class IdentificationMixin:
         optional — missing ones are written as NULL.
 
         Keys recognised:
-            id, ppm, theor_mass, intensity_coverage,
-            ions_matched, ion_match_type, top_peaks_covered
+            id, ppm, theor_mass, override_charge,
+            intensity_coverage, ions_matched, ion_match_type, top_peaks_covered
         """
         query = """
             UPDATE identification
             SET
                 ppm = ?,
                 theor_mass = ?,
+                override_charge = ?,
                 intensity_coverage = ?,
                 ions_matched = ?,
                 ion_match_type = ?,
@@ -419,6 +420,7 @@ class IdentificationMixin:
             params.append((
                 data_row.get('ppm'),
                 data_row.get('theor_mass'),
+                data_row.get('override_charge'),
                 data_row.get('intensity_coverage'),
                 data_row.get('ions_matched'),
                 data_row.get('ion_match_type'),

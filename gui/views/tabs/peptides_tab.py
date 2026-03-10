@@ -2,15 +2,14 @@
 
 import flet as ft
 import pandas as pd
-import numpy as np
 import base64
 from pathlib import Path
 
 from api.project.project import Project
 from api.inputs.proteins.fasta import FastaParser
-from api.peptides.matching import select_preferred_identifications, map_proteins
-from api.spectra.plot_matches import plot_ion_match
-from api.spectra.ion_match import IonMatchParameters, match_predictions
+from api.calculations.peptides.matching import select_preferred_identifications, map_proteins
+from api.calculations.spectra.plot_matches import plot_ion_match
+from api.calculations.spectra.ion_match import IonMatchParameters, match_predictions
 from utils.ppm import calculate_ppm
 import plotly.io as pio
 

@@ -547,15 +547,15 @@ import plotly.graph_objects as go
 
 from gui.components.base_plot_view import BasePlotView
 from api.project.project import Project
-from api.spectra.plot_flow import make_full_spectrum_plot
-from api.spectra.ion_match import IonMatchParameters
+from api.calculations.spectra.plot_flow import make_full_spectrum_plot
+from api.calculations.spectra.ion_match import IonMatchParameters
 
 
 class PeptideIonPlotView(BasePlotView):
     """График покрытия b/y ионами."""
-    
+
     plot_type_name = "peptide_ion_coverage"
-    
+
     def __init__(self, project: Project, ion_settings_section):
         """
         Args:
@@ -563,24 +563,24 @@ class PeptideIonPlotView(BasePlotView):
         """
         self.ion_settings_section = ion_settings_section
         super().__init__(project, title="Ion Match Plot")
-    
+
     def get_default_settings(self) -> dict:
         return {
             'show_title': True,
             'show_legend': True
         }
-    
+
     def _build_plot_settings_view(self) -> ft.Control:
         self.show_title_checkbox = ft.Checkbox(
             label="Show title",
             value=self.plot_settings.get('show_title', True)
         )
-        
+
         self.show_legend_checkbox = ft.Checkbox(
             label="Show legend",
             value=self.plot_settings.get('show_legend', True)
         )
-        
+
         return ft.Column([
             ft.Text("Plot Display Options:", weight=ft.FontWeight.BOLD),
             self.show_title_checkbox,
@@ -593,34 +593,34 @@ class PeptideIonPlotView(BasePlotView):
                 color=ft.Colors.GREY_600
             )
         ], spacing=5)
-    
+
     async def _update_settings_from_ui(self):
         self.plot_settings['show_title'] = self.show_title_checkbox.value
         self.plot_settings['show_legend'] = self.show_legend_checkbox.value
-    
+
     async def generate_plot(self, entity_id: str) -> go.Figure:
         """
         Args:
             entity_id: spectrum_id (строка)
         """
         spectrum_id = int(entity_id)
-        
+
         # Получить данные спектра
         plot_data = await self.project.get_spectrum_plot_data(spectrum_id)
-        
+
         # Получить параметры из IonSettingsSection
         params = self.ion_settings_section.get_ion_match_parameters()
-        
+
         # Построить график
         fig = make_full_spectrum_plot(params=params, **plot_data)
-        
+
         # Применить настройки
         if not self.plot_settings.get('show_title', True):
             fig.update_layout(title=None)
-        
+
         if not self.plot_settings.get('show_legend', True):
             fig.update_layout(showlegend=False)
-        
+
         return fig
 ```
 

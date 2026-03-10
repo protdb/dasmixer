@@ -43,6 +43,6 @@ class ProteinsTab(ft.Container):
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             spacing=10
             ),
-            alignment=ft.alignment.center,
+            alignment=ft.Alignment.CENTER,
             expand=True
         )

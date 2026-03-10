@@ -419,7 +419,8 @@ class ProteinMixin:
             params = (sample, )
         
         query += " ORDER BY s.name, pir.protein_id"
-        query += f" LIMIT {limit} OFFSET {offset}"
+        if limit != -1:
+            query += f" LIMIT {limit} OFFSET {offset}"
         
         df = await self.execute_query_df(query, params)
         
@@ -514,7 +515,10 @@ class ProteinMixin:
         LIMIT ? OFFSET ?
         """
         
-        params.extend([min_samples, min_subsets, limit, offset])
-        
+        if limit == -1:
+            params.extend([min_samples, min_subsets, 999999999, 0])
+        else:
+            params.extend([min_samples, min_subsets, limit, offset])
+
         df = await self.execute_query_df(query, tuple(params))
         return df

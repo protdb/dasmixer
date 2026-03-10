@@ -89,6 +89,73 @@ class PeptideMixin:
         
         return pd.DataFrame(rows) if rows else pd.DataFrame()
 
+    async def get_peptide_matches_with_spectra(self) -> list[dict]:
+        """
+        Fetch all peptide_match records joined with spectrum arrays and
+        identification.override_charge.  Used by the protein metrics
+        calculation pipeline.
+
+        Returns:
+            List of plain dicts (pickle-safe) with keys:
+                id, matched_sequence, pepmass, override_charge,
+                mz_array (list[float]), intensity_array (list[float])
+        """
+        from api.project.array_utils import decompress_array
+
+        query = """
+            SELECT
+                pm.id,
+                pm.matched_sequence,
+                s.pepmass,
+                s.mz_array,
+                s.intensity_array,
+                i.override_charge
+            FROM peptide_match pm
+            JOIN identification i ON pm.identification_id = i.id
+            JOIN spectre s ON i.spectre_id = s.id
+            ORDER BY pm.id
+        """
+        rows = await self._fetchall(query)
+        result = []
+        for row in rows:
+            mz = decompress_array(row['mz_array']).tolist() if row['mz_array'] else []
+            intensity = decompress_array(row['intensity_array']).tolist() if row['intensity_array'] else []
+            result.append({
+                'id': row['id'],
+                'matched_sequence': row['matched_sequence'],
+                'pepmass': row['pepmass'],
+                'override_charge': row['override_charge'],
+                'mz_array': mz,
+                'intensity_array': intensity,
+            })
+        return result
+
+    async def put_peptide_match_data_batch(self, data_rows: list[dict]) -> None:
+        """
+        Batch-update PPM and coverage metrics for peptide_match records.
+
+        Keys recognised per dict:
+            id, matched_ppm, matched_theor_mass, matched_coverage_percent
+        """
+        query = """
+            UPDATE peptide_match
+            SET
+                matched_ppm = ?,
+                matched_theor_mass = ?,
+                matched_coverage_percent = ?
+            WHERE id = ?
+        """
+        params = [
+            (
+                row.get('matched_ppm'),
+                row.get('matched_theor_mass'),
+                row.get('matched_coverage_percent'),
+                row['id'],
+            )
+            for row in data_rows
+        ]
+        await self._executemany(query, params)
+
     async def update_peptide_match_metrics(
         self,
         match_id: int,
@@ -460,11 +527,11 @@ class PeptideMixin:
         if conditions:
             query += " AND " + " AND ".join(conditions)
         
-        # Add LIMIT/OFFSET if specified
-        if limit is not None:
+        # Add LIMIT/OFFSET if specified; limit=-1 means no pagination
+        if limit is not None and limit != -1:
             query += " LIMIT ? OFFSET ?"
             params.append(limit)
             params.append(offset)
-        
+
         # Execute query
         return await self.execute_query_df(query, tuple(params) if params else None)

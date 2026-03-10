@@ -15,7 +15,7 @@ from .protein import Protein
 from .sample import ProteomicSample
 
 # Parameters and configuration
-from .utils import DigestionParams
+from .utils import DigestionParams, SUPPORTED_ENZYMES
 
 # Parameter prediction functionality
 from .prediction import (
@@ -61,6 +61,7 @@ __all__ = [
     
     # Parameters
     "DigestionParams",
+    "SUPPORTED_ENZYMES",
     
     # Parameter prediction
     "predict_parameters",

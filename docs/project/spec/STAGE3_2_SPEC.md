@@ -521,8 +521,9 @@ def show_webview(fig: go.Figure, title: str):
 ```
 
 **Использование:**
+
 ```python
-from api.spectra.plot_matches import generate_spectrum_plot
+from api.calculations.spectra.plot_matches import generate_spectrum_plot
 from gui.components.plotly_viewer import PlotlyViewer
 
 # Create figure

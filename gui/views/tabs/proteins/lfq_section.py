@@ -5,8 +5,8 @@ import asyncio
 
 from .base_section import BaseSection
 from gui.views.tabs.peptides.dialogs.progress_dialog import ProgressDialog
-from api.proteins.sempai.utils import SUPPORTED_ENZYMES
-from api.proteins.lfq import calculate_lfq
+from api.calculations.proteins.sempai import SUPPORTED_ENZYMES
+from api.calculations.proteins.lfq import calculate_lfq
 
 
 class LFQSection(BaseSection):

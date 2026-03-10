@@ -5,15 +5,14 @@ import flet as ft
 import asyncio
 from concurrent.futures import ProcessPoolExecutor
 
-from api.spectra.ion_match import IonMatchParameters, match_predictions
-from api.spectra.coverage_worker import process_identification_batch
-from utils.ppm import calculate_ppm
+from api.calculations.spectra.ion_match import IonMatchParameters
+from api.calculations.spectra.coverage_worker import process_identification_batch, process_peptide_match_batch
 from api.project.project import Project
 from .shared_state import PeptidesTabState
 from .dialogs.progress_dialog import ProgressDialog
 
 # Number of worker processes: leave one CPU free for the UI/async loop
-_WORKER_COUNT = 8
+_WORKER_COUNT = max(1, (os.cpu_count() or 2) - 1)
 _BATCH_SIZE = 1000
 
 
@@ -21,8 +20,7 @@ class IonCalculations:
     """
     Ion coverage and PPM calculations backend service.
 
-    This is NOT a UI component — it's a pure calculation service.
-    Singleton instance accessible via PeptidesTab.ion_calculations.
+    NOT a UI component — pure calculation service.
     """
 
     def __init__(self, project: Project, state: PeptidesTabState):
@@ -99,9 +97,7 @@ class IonCalculations:
                 ft.Text("Calculate for:"),
                 ft.Text(
                     "Using current ion settings",
-                    size=11,
-                    italic=True,
-                    color=ft.Colors.GREY_600,
+                    size=11, italic=True, color=ft.Colors.GREY_600,
                 ),
             ], tight=True, width=400),
             actions=[
@@ -132,15 +128,7 @@ class IonCalculations:
 
     async def run_coverage_calc(self, recalc_all: bool):
         """
-        Calculate ion coverage + PPM + theor_mass for identifications.
-
-        Reads identifications from the DB in batches of 1 000, dispatches
-        each batch to a ProcessPoolExecutor, then writes results back in bulk
-        via put_identification_data_batch().
-
-        Args:
-            recalc_all: If True — recalculate every identification.
-                        If False — only rows where intensity_coverage IS NULL.
+        Calculate ion coverage + PPM + theor_mass + override_charge for identifications.
         """
         page = ft.context.page
 
@@ -159,6 +147,9 @@ class IonCalculations:
             'ammonia_loss': params.ammonia_loss,
         }
         fragment_charges = list(self.state.fragment_charges)
+        ignore_spectre_charges = self.state.ignore_spectre_charges
+        min_charge = self.state.min_precursor_charge
+        max_charge = self.state.max_precursor_charge
 
         tool_ids = list(self.state.tool_settings_controls.keys())
         if not tool_ids:
@@ -186,38 +177,36 @@ class IonCalculations:
                         if not batch_objects:
                             break
 
-                        # Serialise for multiprocessing (plain lists, no numpy)
                         worker_batch = [obj.to_worker_dict() for obj in batch_objects]
 
-                        # Run CPU-bound work in process pool without blocking
                         results = await loop.run_in_executor(
                             executor,
                             process_identification_batch,
                             worker_batch,
                             params_dict,
                             fragment_charges,
+                            ignore_spectre_charges,
+                            min_charge,
+                            max_charge,
                         )
-                        # Write all results to DB in one batch
+
                         await self.project.put_identification_data_batch(results)
 
                         total_processed += len(results)
                         offset += _BATCH_SIZE
 
                         dialog.update_progress(
-                            None,  # indeterminate — we don't know total upfront
+                            None,
                             "Calculating...",
                             f"Processed {total_processed} identifications...",
                         )
 
             await self.project.save()
-
             dialog.complete(f"Done: {total_processed} identifications")
             await asyncio.sleep(1)
             dialog.close()
 
-            self.show_success(
-                f"Ion coverage calculated for {total_processed} identifications"
-            )
+            self.show_success(f"Ion coverage calculated for {total_processed} identifications")
 
         except Exception as exc:
             import traceback
@@ -229,11 +218,15 @@ class IonCalculations:
             self.show_error(f"Error: {exc}")
 
     # ------------------------------------------------------------------
-    # Protein match metrics
+    # Protein match metrics (batch, via coverage_worker)
     # ------------------------------------------------------------------
 
     async def calculate_protein_metrics_internal(self):
-        """Calculate PPM and ion coverage for protein peptide matches."""
+        """
+        Calculate PPM and ion coverage for protein peptide matches.
+
+        Uses process_peptide_match_batch from coverage_worker (multiprocessing).
+        """
         page = ft.context.page
 
         if hasattr(page, 'peptides_tab'):
@@ -241,80 +234,77 @@ class IonCalculations:
             if ion_section and hasattr(ion_section, 'save_settings'):
                 await ion_section.save_settings()
 
-        matches_df = await self.project.get_peptide_matches()
+        params = self._get_ion_match_params()
+        params_dict = {
+            'ions': params.ions,
+            'tolerance': params.tolerance,
+            'mode': params.mode,
+            'water_loss': params.water_loss,
+            'ammonia_loss': params.ammonia_loss,
+        }
+        fragment_charges = list(self.state.fragment_charges)
 
-        if len(matches_df) == 0:
+        # Fetch all peptide matches with spectrum data
+        # We join peptide_match with identification to get spectre_id and override_charge,
+        # then join spectre for mz/intensity arrays.
+        matches_with_spectra = await self.project.get_peptide_matches_with_spectra()
+
+        if not matches_with_spectra:
             self.show_warning("No matches found. Run protein mapping first.")
             return
 
-        params = self._get_ion_match_params()
-
-        dialog = ProgressDialog(page, "Calculating Protein Metrics")
+        dialog = ProgressDialog(page, "Calculating Protein Match Metrics")
         dialog.show()
 
-        total = len(matches_df)
-        processed = 0
+        total = len(matches_with_spectra)
+        total_processed = 0
 
-        for idx, match in matches_df.iterrows():
-            try:
-                ident_query = (
-                    f"SELECT * FROM identification WHERE id = {int(match['identification_id'])}"
-                )
-                ident_df = await self.project.execute_query_df(ident_query)
+        try:
+            loop = asyncio.get_event_loop()
 
-                if len(ident_df) == 0:
-                    continue
+            with ProcessPoolExecutor(max_workers=_WORKER_COUNT) as executor:
+                # Process in batches
+                for batch_start in range(0, total, _BATCH_SIZE):
+                    batch = matches_with_spectra[batch_start: batch_start + _BATCH_SIZE]
 
-                ident = ident_df.iloc[0]
-                spectrum = await self.project.get_spectrum_full(ident['spectre_id'])
-                charge = self.state.fragment_charges[0]
-
-                matched_ppm = calculate_ppm(
-                    sequence=match['matched_sequence'],
-                    pepmass=spectrum['pepmass'],
-                    charge=charge,
-                )
-
-                result = match_predictions(
-                    params=params,
-                    mz=spectrum['mz_array'].tolist(),
-                    intensity=spectrum['intensity_array'].tolist(),
-                    charges=charge,
-                    sequence=match['matched_sequence'],
-                )
-
-                await self.project.update_peptide_match_metrics(
-                    match['id'],
-                    matched_ppm=matched_ppm,
-                    matched_coverage_percent=result.intensity_percent,
-                )
-
-                processed += 1
-
-                if processed % 10 == 0 or processed == total:
-                    dialog.update_progress(
-                        processed / total,
-                        "Calculating...",
-                        f"{processed}/{total}...",
+                    results = await loop.run_in_executor(
+                        executor,
+                        process_peptide_match_batch,
+                        batch,
+                        params_dict,
+                        fragment_charges,
                     )
 
-            except Exception as exc:
-                print(f"Error on match {match['id']}: {exc}")
+                    await self.project.put_peptide_match_data_batch(results)
 
-        await self.project.save()
+                    total_processed += len(results)
+                    dialog.update_progress(
+                        total_processed / total,
+                        "Calculating...",
+                        f"{total_processed}/{total}...",
+                    )
 
-        dialog.complete(f"Processed {processed}")
-        await asyncio.sleep(1)
-        dialog.close()
+            await self.project.save()
+            dialog.complete(f"Processed {total_processed}")
+            await asyncio.sleep(1)
+            dialog.close()
 
-        self.show_success(f"Calculated metrics for {processed} matches")
+            self.show_success(f"Calculated metrics for {total_processed} matches")
+
+        except Exception as exc:
+            import traceback
+            print(f"Error in calculate_protein_metrics_internal: {traceback.format_exc()}")
+            try:
+                dialog.close()
+            except Exception:
+                pass
+            self.show_error(f"Error: {exc}")
 
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
 
     def _get_ion_match_params(self) -> IonMatchParameters:
-        """Build IonMatchParameters from shared state."""
         return IonMatchParameters(
             ions=self.state.ion_types,
             tolerance=self.state.ion_ppm_threshold,

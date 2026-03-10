@@ -5,7 +5,7 @@ import asyncio
 
 from .base_section import BaseSection
 from gui.views.tabs.peptides.dialogs.progress_dialog import ProgressDialog
-from api.proteins.map_identifications import find_protein_identifications
+from api.calculations.proteins.map_identifications import find_protein_identifications
 
 
 class DetectionSection(BaseSection):

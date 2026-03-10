@@ -4,16 +4,15 @@ Utility functions for semPAI library.
 
 import pickle
 import re
-from dataclasses import dataclass, field
-from typing import List, Dict, Any, Tuple, Optional
+from dataclasses import dataclass
+from typing import List, Dict, Any, Optional
 import logging
 
-import numpy as np
 from pyteomics import parser, mass
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 from .exceptions import ValidationError
-from api.proteins.map_identifications import get_coverage
+
 logger = logging.getLogger(__name__)
 
 # Supported enzymes from pyteomics

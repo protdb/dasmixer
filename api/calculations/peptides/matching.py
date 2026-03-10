@@ -7,7 +7,7 @@ import npysearch as npy
 from api.project.project import Project
 from utils.logger import logger
 from utils.lic import get_leucine_combinations
-from utils.ppm import calculate_ppm, calculate_theor_mass
+from utils.ppm import calculate_ppm, calculate_theor_mass, calculate_ppm_and_charge
 
 
 async def select_preferred_identifications(
@@ -156,7 +156,7 @@ async def map_proteins(
             blast['id'] = blast['QueryId'].apply(lambda x: int(x.split('_')[0]))
             blast = pd.merge(
                 blast[['id', 'TargetId', 'TargetMatchSeq', 'Identity']],
-                batch_data[['id', 'pepmass', 'ppm', 'charge']],
+                batch_data[['id', 'pepmass', 'ppm', 'charge', 'override_charge']],
                 on='id',
                 how='left'
             )
@@ -167,18 +167,31 @@ async def map_proteins(
             all_res = []
             for _, row in blast.iterrows():
                 identity = row['Identity']
-                match_ppm = calculate_ppm(row['TargetMatchSeq'], row['pepmass'], row['charge'])
+                pepmass = row['pepmass']
+                matched_seq = row['TargetMatchSeq']
+
+                # Use override_charge if available, fall back to spectrum charge,
+                # otherwise scan charge range with calculate_ppm_and_charge
+                eff_charge = row.get('override_charge') or row.get('charge')
+                if eff_charge is not None and not pd.isna(eff_charge):
+                    match_ppm = calculate_ppm(matched_seq, pepmass, int(eff_charge))
+                    match_theor_mass = calculate_theor_mass(matched_seq)
+                else:
+                    match_ppm, _, match_theor_mass = calculate_ppm_and_charge(
+                        matched_seq, pepmass
+                    )
+
                 if identity < 1.0:
                     if abs(match_ppm) >= abs(max_ppm):
                         continue
                 all_res.append({
                     'protein_id': row['TargetId'],
                     'identification_id': int(row['id']),
-                    'matched_sequence': row['TargetMatchSeq'],
+                    'matched_sequence': matched_seq,
                     'identity': row['Identity'],
                     'unique_evidence': row['id'] in uq_evidences,
                     'matched_ppm': match_ppm,
-                    'matched_theor_mass': calculate_theor_mass(row['TargetMatchSeq'])
+                    'matched_theor_mass': match_theor_mass,
                 })
 
             yield pd.json_normalize(all_res), len(all_res), tool_id

@@ -419,8 +419,9 @@ def _on_enzyme_changed(self, e):
 ```
 
 **Импорт SUPPORTED_ENZYMES:**
+
 ```python
-from api.proteins.sempai.utils import SUPPORTED_ENZYMES
+from api.calculations.proteins.sempai import SUPPORTED_ENZYMES
 ```
 
 ---

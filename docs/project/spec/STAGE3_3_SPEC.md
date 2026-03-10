@@ -618,7 +618,7 @@ async def select_preferred_identifications(
 5. Показать progress dialog
 6. Вызвать функцию пересчёта:
    ```python
-   from api.peptides.matching import select_preferred_identifications
+   from api.calculations.peptides.matching import select_preferred_identifications
    
    count = await select_preferred_identifications(
        self.project,
@@ -939,7 +939,7 @@ self.plot_container = ft.Container(
 
 3. Построить график:
    ```python
-   from api.spectra.plot_matches import plot_ion_match
+   from api.calculations.spectra.plot_matches import plot_ion_match
    
    fig = plot_ion_match(
        mz_array=spectrum['mz_array'],

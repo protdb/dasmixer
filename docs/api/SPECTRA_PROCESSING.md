@@ -56,8 +56,9 @@ class IonMatchParameters:
   - Generates additional fragments with ammonia loss
 
 **Example:**
+
 ```python
-from api.spectra.ion_match import IonMatchParameters
+from api.calculations.spectra.ion_match import IonMatchParameters
 
 # Standard b/y matching with 0.05 Th tolerance
 params = IonMatchParameters(
@@ -142,8 +143,9 @@ def match_predictions(
 **Returns:** `MatchResult` object
 
 **Example:**
+
 ```python
-from api.spectra.ion_match import IonMatchParameters, match_predictions
+from api.calculations.spectra.ion_match import IonMatchParameters, match_predictions
 
 # Set up parameters
 params = IonMatchParameters(ions=['b', 'y'], tolerance=0.05)
@@ -211,8 +213,9 @@ def get_matches_dataframe(
 Rows without matches have `None` for match columns.
 
 **Example:**
+
 ```python
-from api.spectra.ion_match import match_predictions, get_matches_dataframe
+from api.calculations.spectra.ion_match import match_predictions, get_matches_dataframe
 
 result = match_predictions(params, mz, intensity, 2, "PEPTIDE")
 df = get_matches_dataframe(result, mz, intensity)
@@ -310,9 +313,10 @@ def generate_spectrum_plot(
 - Publication-quality output
 
 **Example - Single spectrum:**
+
 ```python
-from api.spectra.ion_match import match_predictions, get_matches_dataframe
-from api.spectra.plot_matches import generate_spectrum_plot
+from api.calculations.spectra.ion_match import match_predictions, get_matches_dataframe
+from api.calculations.spectra.plot_matches import generate_spectrum_plot
 
 # Match ions
 params = IonMatchParameters(ions=['b', 'y'])
@@ -362,14 +366,15 @@ fig.show()
 ```python
 import asyncio
 from api import Project
-from api.spectra.ion_match import IonMatchParameters, match_predictions, get_matches_dataframe
-from api.spectra.plot_matches import generate_spectrum_plot
+from api.calculations.spectra.ion_match import IonMatchParameters, match_predictions, get_matches_dataframe
+from api.calculations.spectra.plot_matches import generate_spectrum_plot
+
 
 async def validate_identification(
-    project: Project,
-    spectrum_id: int,
-    sequence: str,
-    charge: int
+        project: Project,
+        spectrum_id: int,
+        sequence: str,
+        charge: int
 ):
     """
     Validate peptide identification by matching ions.
@@ -385,7 +390,7 @@ async def validate_identification(
     """
     # Get full spectrum data
     spectrum = await project.get_spectrum_full(spectrum_id)
-    
+
     # Set up matching parameters
     params = IonMatchParameters(
         ions=['b', 'y'],
@@ -394,7 +399,7 @@ async def validate_identification(
         water_loss=True,
         ammonia_loss=True
     )
-    
+
     # Match ions
     result = match_predictions(
         params=params,
@@ -403,18 +408,18 @@ async def validate_identification(
         charges=charge,
         sequence=sequence
     )
-    
+
     # Create DataFrame for plotting
     df = get_matches_dataframe(
         result,
         spectrum['mz_array'].tolist(),
         spectrum['intensity_array'].tolist()
     )
-    
+
     # Generate plot
     title = f"{sequence} | Charge: +{charge} | Coverage: {result.intensity_percent:.1f}%"
     fig = generate_spectrum_plot(title, df)
-    
+
     # Return results
     return {
         'spectrum_id': spectrum_id,
@@ -426,6 +431,7 @@ async def validate_identification(
         'figure': fig
     }
 
+
 # Usage
 async def main():
     async with Project("my_project.dasmix") as project:
@@ -435,15 +441,16 @@ async def main():
             sequence="PEPTIDEK",
             charge=2
         )
-        
+
         print(f"Coverage: {result['coverage_percent']:.1f}%")
         print(f"Matched: {result['matched_ions']}/{result['total_ions']} ions")
-        
+
         # Show plot
         result['figure'].show()
-        
+
         # Or save
         result['figure'].write_image("validation.png")
+
 
 asyncio.run(main())
 ```

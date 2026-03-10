@@ -264,7 +264,7 @@ Peptides Tab → Ion Matching Settings
 ### Использование match_predictions()
 
 ```python
-from api.spectra.ion_match import IonMatchParameters, match_predictions
+from api.calculations.spectra.ion_match import IonMatchParameters, match_predictions
 
 # Подготовка параметров
 params = IonMatchParameters(

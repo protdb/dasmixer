@@ -3,7 +3,7 @@ from pathlib import Path
 
 import flet as ft
 
-from api.peptides.matching import select_preferred_identifications, calculate_preferred_identifications_for_file
+from api.calculations.peptides.matching import calculate_preferred_identifications_for_file
 from .base_section import BaseSection
 from .dialogs.progress_dialog import ProgressDialog
 
@@ -112,7 +112,7 @@ class MatchingSection(BaseSection):
     
     def _get_ion_match_params(self):
         """Get IonMatchParameters from shared state."""
-        from api.spectra.ion_match import IonMatchParameters
+        from api.calculations.spectra.ion_match import IonMatchParameters
         
         return IonMatchParameters(
             ions=self.state.ion_types,
