@@ -15,6 +15,8 @@ _AVG_MASS = mass.calculate_mass(CANONICAL_AA) / len(CANONICAL_AA)
 # Regex for old-style modification notation: (+42.01) or (-17.03) etc.
 _MOD_PATTERN_ROUND = re.compile(r'\(([+-]?\d*\.?\d*)\)')
 
+def get_uncharged_mass(pepmass: float, charge: int) -> float:
+    return (pepmass - PROTON_MASS) * charge
 
 def calculate_theor_mass(sequence: str) -> float:
     """
@@ -147,3 +149,11 @@ def calculate_ppm_and_charge(
         abs_ppms.append(abs(ppm))
     idx = abs_ppms.index(min(abs_ppms))
     return ppms[idx], charges[idx], neutral_mass
+
+def get_ppm_for_masses(
+        pepmass: float,
+        seq_mass: float,
+        charge: int,
+):
+    theoretical_mz = (seq_mass + charge * PROTON_MASS) / charge
+    return ((pepmass - theoretical_mz) / theoretical_mz) * 1e6

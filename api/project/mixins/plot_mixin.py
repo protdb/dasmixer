@@ -41,50 +41,87 @@ class PlotMixin:
 
         if get_matched:
             query = """
-                SELECT
-                    i.sequence, i.canonical_sequence, i.ppm, i.is_preferred,
-                    t.name AS tool_name,
-                    pm.matched_sequence
-                FROM identification i
-                JOIN tool t ON i.tool_id = t.id
-                LEFT JOIN (
-                    SELECT identification_id, matched_sequence
-                    FROM peptide_match
-                    GROUP BY identification_id
-                ) pm ON pm.identification_id = i.id
-                WHERE i.spectre_id = ?
-                ORDER BY i.is_preferred DESC, i.score DESC
+            select 
+            i.spectre_id,
+            t.name as tool,
+            i.sequence,
+            i.is_preferred,
+            i.canonical_sequence,
+            i.score,
+            i.ppm,
+            i.tool_id,
+            m.matched_sequence,
+            m.matched_ppm,
+            m.protein_id,
+            m.identity
+            from identification i left join peptide_match m on i.id == m.identification_id left join tool as t on t.id = i.tool_id
+            where i.spectre_id = ?
+            order by i.tool_id ASC
             """
         else:
             query = """
-                SELECT
-                    i.sequence, i.canonical_sequence, i.ppm, i.is_preferred,
-                    t.name AS tool_name,
-                    NULL AS matched_sequence
-                FROM identification i
-                JOIN tool t ON i.tool_id = t.id
-                WHERE i.spectre_id = ?
-                ORDER BY i.is_preferred DESC, i.score DESC
+            select 
+            i.spectre_id,
+            t.name as tool,
+            i.sequence,
+            i.is_preferred,
+            i.canonical_sequence,
+            i.score,
+            i.ppm,
+            i.tool_id,
+            null as matched_sequence,
+            null as matched_ppm,
+            null as protein_id,
+             null as identity
+            from identification i left join tool as t on t.id = i.tool_id
+            where i.spectre_id = ?
+            order by i.is_preferred DESC, t.name DESC
             """
 
         ident_rows = await self._fetchall(query, (spectrum_id,))
 
-        sequences = []
-        headers = []
-        matched_sequences = []
+        plots = []
+        tool_seqs = set()
 
         for row in ident_rows:
-            seq = row['sequence']
-            matched_seq = row['matched_sequence']
-            ppm_str = f"{row['ppm']:.2f}" if row['ppm'] is not None else "N/A"
-            pref_marker = "★ " if row['is_preferred'] else ""
-            matched_marker = " (matched)" if matched_seq else ""
+            tool_seq = f'{row["tool"]}:{row["sequence"]}'
+            if tool_seq not in tool_seqs:
+                plots.append({
+                    'tool': row['tool'],
+                    'sequence': row['sequence'],
+                    'protein_id': row['protein_id'],
+                    'is_preferred': row['is_preferred'],
+                    'ppm': row['ppm'],
+                    'score': row['score'],
+                    'matched': False,
+                    'identity': None
+                })
+                tool_seqs.add(tool_seq)
+            if row.get('protein_id', None) is not None:
+                if row['matched_sequence'] != row['canonical_sequence']:
+                    if tool_seq not in tool_seqs:
+                        tool_seqs.add(tool_seq)
+                        plots.append({
+                            'tool': row['tool'],
+                            'sequence': row['matched_sequence'],
+                            'protein_id': row['protein_id'],
+                            'is_preferred': row['is_preferred'],
+                            'ppm': row['matched_ppm'],
+                            'score': row['score'],
+                            'matched': True,
+                            'identity': row['identity']
+                        })
+        headers = []
+        sequences = []
 
-            header = f"{pref_marker}{row['tool_name']} | {seq}{matched_marker} | PPM: {ppm_str}"
-
-            sequences.append(seq)
+        for plot in plots:
+            pref_marker = "★ " if plot['is_preferred'] else ""
+            ppm_str = f"{plot['ppm']:.2f}" if plot['ppm'] is not None else "N/A"
+            matched = f" (match: {plot['identity']})" if plot['matched'] else ""
+            protein = f" | {plot['protein_id']}" if plot['protein_id'] is not None else ""
+            header = f"{pref_marker}{plot['tool']} | {plot['sequence']}{matched}{protein} | PPM: {ppm_str} | Score: {plot['score']}"
             headers.append(header)
-            matched_sequences.append(matched_seq)
+            sequences.append(plot['sequence'])
 
         # Determine charges
         if spectrum.get('charge_array') is not None:
@@ -102,7 +139,6 @@ class PlotMixin:
             'charges': charges,
             'sequences': sequences,
             'headers': headers,
-            'matched_sequences': matched_sequences,
             'spectrum_info': {
                 'seq_no': spectrum['seq_no'],
                 'scans': spectrum.get('scans'),

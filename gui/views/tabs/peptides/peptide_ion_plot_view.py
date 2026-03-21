@@ -21,7 +21,7 @@ class PeptideIonPlotView(BasePlotView):
     def get_default_settings(self) -> dict:
         return {
             'show_title': True,
-            'show_legend': True,
+            'show_legend': False,
             'show_protein_sequences': False,
         }
 
@@ -67,57 +67,38 @@ class PeptideIonPlotView(BasePlotView):
             get_matched=show_protein_sequences
         )
 
+        print(plot_data)
+
         params = self.ion_settings_section.get_ion_match_parameters()
 
         sequences = plot_data['sequences']
         headers = plot_data['headers']
-        matched_sequences = plot_data.get('matched_sequences', [None] * len(sequences))
 
-        # Build the list of (sequence, header) pairs to plot
-        plot_pairs: list[tuple[str, str]] = []
-        for seq, hdr, matched_seq in zip(sequences, headers, matched_sequences):
-            plot_pairs.append((seq, hdr))
-            if show_protein_sequences and matched_seq and matched_seq != seq:
-                matched_hdr = hdr.rstrip() + " [protein match]"
-                plot_pairs.append((matched_seq, matched_hdr))
-
-        if not plot_pairs:
-            fig = go.Figure()
-            fig.add_annotation(text="No identifications for this spectrum",
-                               showarrow=False, font=dict(size=14))
-            return fig
-
-        n_plots = len(plot_pairs)
-
-        fig = make_subplots(
-            rows=n_plots,
-            cols=1,
-            subplot_titles=[hdr for _, hdr in plot_pairs],
-            vertical_spacing=0.08
+        fig = make_full_spectrum_plot(
+            params=params,
+            mz=plot_data['mz'],
+            intensity=plot_data['intensity'],
+            charges=plot_data['charges'],
+            sequences=sequences,
+            headers=headers,
+            spectrum_info=plot_data['spectrum_info']
         )
 
-        for row_idx, (seq, hdr) in enumerate(plot_pairs, start=1):
-            sub_fig = make_full_spectrum_plot(
-                params=params,
-                mz=plot_data['mz'],
-                intensity=plot_data['intensity'],
-                charges=plot_data['charges'],
-                sequences=[seq],
-                headers=[hdr],
-                spectrum_info=plot_data['spectrum_info']
-            )
-            for trace in sub_fig.data:
-                trace.showlegend = (row_idx == 1)
-                fig.add_trace(trace, row=row_idx, col=1)
-
         fig.update_layout(
-            height=500 * n_plots,
+            height=500 * len(headers),
+            width=1100,
             template='plotly_white',
             showlegend=False #self.plot_settings.get('show_legend', True)
 
         )
 
-        if not self.plot_settings.get('show_title', True):
-            fig.update_layout(title=None)
+        if self.plot_settings.get('show_title', True):
+            fig.update_layout(
+                title=f"Fragments (scans={plot_data['spectrum_info']['scans']}, pepmass={plot_data['spectrum_info']['pepmass']}, rt={plot_data['spectrum_info']['rt']})",
+            )
+        else:
+            fig.update_layout(
+                title=None
+            )
 
         return fig

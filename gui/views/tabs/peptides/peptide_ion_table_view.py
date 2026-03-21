@@ -39,6 +39,13 @@ class PeptideIonTableView(BaseTableView):
         'identification_id': 'identification_id',
     }
 
+    default_columns = {
+        'identification_id', 'spectre_id', 'sample', 'seq_no', 'scans',
+        'tool', 'sequence', 'ppm', 'intensity_coverage', 'ions_matched',
+        'ion_match_type', 'top_peaks_covered', 'is_preferred',
+        'protein_id', 'gene',
+    }
+
     def __init__(self, project: Project, plot_callback=None):
         super().__init__(project, title="Peptide Identifications", plot_callback=plot_callback)
 
@@ -224,16 +231,7 @@ class PeptideIonTableView(BaseTableView):
         if max_ppm and float(max_ppm) < 1000 and 'ppm' in df.columns:
             df = df[df['ppm'].fillna(1000).abs() <= float(max_ppm)]
 
-        # Select display columns
-        display_columns = [
-            c for c in [
-                'identification_id', 'spectre_id', 'sample', 'seq_no', 'scans',
-                'tool', 'sequence', 'ppm', 'intensity_coverage', 'ions_matched',
-                'ion_match_type', 'top_peaks_covered', 'is_preferred',
-                'protein_id', 'gene',
-            ] if c in df.columns
-        ]
-        df = df[display_columns].copy()
+        df = df.copy()
 
         # Format is_preferred
         if 'is_preferred' in df.columns:

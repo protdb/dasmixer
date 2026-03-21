@@ -35,6 +35,10 @@ class BaseTableView(ft.Container):
     plot_id_field: str | None = None
     header_name_mapping: dict[str, str] = {}
     column_filter_mapping: dict[str, str] = {}
+    # Columns shown by default. Empty set = show all columns.
+    # When non-empty, only these columns are visible on first load;
+    # the rest are available via the gear dialog.
+    default_columns: set[str] = set()
 
     def __init__(
         self,
@@ -373,13 +377,25 @@ class BaseTableView(ft.Container):
         new_cols = list(df.columns)
 
         if not self._all_columns:
+            # First load — initialise visible columns.
+            # If default_columns is set, use it as the initial visible set
+            # (intersected with what the df actually returned).
+            # Otherwise show everything.
             self._all_columns = new_cols
-            self._visible_columns = set(new_cols)
+            if self.default_columns:
+                self._visible_columns = {c for c in new_cols if c in self.default_columns}
+                # Safety: if nothing matches, fall back to all columns
+                if not self._visible_columns:
+                    self._visible_columns = set(new_cols)
+            else:
+                self._visible_columns = set(new_cols)
         else:
-            for c in new_cols:
-                if c not in self._all_columns:
-                    self._visible_columns.add(c)
+            # Subsequent loads:
+            # - columns explicitly hidden by the user stay hidden if they reappear.
+            # - new columns (not seen before) are shown by default.
+            old_hidden = set(self._all_columns) - self._visible_columns
             self._all_columns = new_cols
+            self._visible_columns = {c for c in new_cols if c not in old_hidden}
 
         self._render_table(df)
 
@@ -395,7 +411,8 @@ class BaseTableView(ft.Container):
             label = self.header_name_mapping.get(col, col)
             columns.append(ft.DataColumn(ft.Text(label, weight=ft.FontWeight.BOLD)))
 
-        if self.plot_id_field and self.plot_callback:
+        has_plot_col = bool(self.plot_id_field and self.plot_callback)
+        if has_plot_col:
             columns.append(ft.DataColumn(ft.Text("Plot", weight=ft.FontWeight.BOLD)))
 
         rows = []
@@ -436,21 +453,27 @@ class BaseTableView(ft.Container):
                     ))
                 else:
                     cell_text = ft.Text(
-                        display_value, tooltip=tooltip_text if tooltip_text else None)
-
+                        display_value,
+                        tooltip=ft.Tooltip(message=tooltip_text) if tooltip_text else None
+                    )
                     cells.append(ft.DataCell(cell_text))
 
-            if self.plot_id_field and self.plot_callback and plot_id_value:
-                cells.append(ft.DataCell(ft.IconButton(
-                    icon=ft.Icons.SHOW_CHART,
-                    tooltip="Show plot",
-                    on_click=lambda e, pid=plot_id_value: (
-                        self.page.run_task(self.plot_callback, pid) if self.page else None
-                    )
-                )))
+            if has_plot_col:
+                if plot_id_value:
+                    cells.append(ft.DataCell(ft.IconButton(
+                        icon=ft.Icons.SHOW_CHART,
+                        tooltip="Show plot",
+                        on_click=lambda e, pid=plot_id_value: (
+                            self.page.run_task(self.plot_callback, pid) if self.page else None
+                        )
+                    )))
+                else:
+                    cells.append(ft.DataCell(ft.Text("")))
 
             rows.append(ft.DataRow(cells=cells))
 
+        # Always create a fresh DataTable — do NOT try to patch an existing one
+        # when column count changes, as Flet validates cells==columns before patching.
         self.data_table = ft.DataTable(
             columns=columns,
             rows=rows,
@@ -465,14 +488,20 @@ class BaseTableView(ft.Container):
             column_spacing=20
         )
 
+        # Replace entire content — full re-render, no incremental patch.
+        # Caller is responsible for calling page.update() after this.
         self.data_container.content = ft.Column([self.data_table], scroll=ft.ScrollMode.AUTO)
         self.data_container.alignment = None
         self.data_container.height = None
-
-        if self.page:
-            self.data_container.update()
+        # Do NOT call self.data_container.update() here — that triggers an incremental
+        # patch that validates cell/column counts against the *old* control tree.
 
     def _apply_column_visibility(self):
+        """Re-render table from cached df with current _visible_columns.
+
+        Must be called after page.update() has already flushed the dialog close,
+        so the old DataTable is detached before we replace it.
+        """
         if self._last_df is not None and not self._last_df.empty:
             self._render_table(self._last_df)
             if self.page:
@@ -494,13 +523,16 @@ class BaseTableView(ft.Container):
             for col in self._all_columns
         }
 
-        def on_apply(e):
+        async def on_apply(e):
             self._visible_columns = {c for c, cb in checkboxes.items() if cb.value}
             if not self._visible_columns:
                 self._visible_columns = set(self._all_columns[:1])
+            # Close dialog and flush UI first — the old DataTable must be detached
+            # before we replace it, otherwise Flet's patch validator fires.
             dialog.open = False
             if self.page:
                 self.page.update()
+            # Now re-render with new column set
             self._apply_column_visibility()
 
         def on_cancel(e):
@@ -517,7 +549,10 @@ class BaseTableView(ft.Container):
             ),
             actions=[
                 ft.TextButton("Cancel", on_click=on_cancel),
-                ft.ElevatedButton("Apply", on_click=on_apply)
+                ft.ElevatedButton(
+                    "Apply",
+                    on_click=lambda e: self.page.run_task(on_apply, e) if self.page else None
+                )
             ]
         )
 
