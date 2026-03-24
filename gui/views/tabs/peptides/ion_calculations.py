@@ -1,12 +1,15 @@
 """Ion coverage calculations - backend service (no UI)."""
 
+import math
 import os
 import flet as ft
 import asyncio
 from concurrent.futures import ProcessPoolExecutor
+from typing import Literal, cast
 
 from api.calculations.spectra.ion_match import IonMatchParameters
-from api.calculations.spectra.coverage_worker import process_identification_batch, process_peptide_match_batch
+from api.calculations.spectra.coverage_worker import process_peptide_match_batch
+from api.calculations.spectra.identification_processor import process_identificatons_batch
 from api.project.project import Project
 from .shared_state import PeptidesTabState
 from .dialogs.progress_dialog import ProgressDialog
@@ -123,12 +126,17 @@ class IonCalculations:
         page.update()
 
     # ------------------------------------------------------------------
-    # Main coverage calculation (batched + multiprocessing)
+    # Main coverage calculation (batched + true multiprocessing)
     # ------------------------------------------------------------------
 
     async def run_coverage_calc(self, recalc_all: bool):
         """
-        Calculate ion coverage + PPM + theor_mass + override_charge for identifications.
+        Calculate ion coverage + PPM + theor_mass + override_charge +
+        source_sequence + isotope_offset for identifications.
+
+        Strategy: each batch fetched from DB is split into _WORKER_COUNT
+        sub-batches processed concurrently via ProcessPoolExecutor so that
+        all CPU cores are utilized for every DB batch.
         """
         page = ft.context.page
 
@@ -147,25 +155,60 @@ class IonCalculations:
             'ammonia_loss': params.ammonia_loss,
         }
         fragment_charges = list(self.state.fragment_charges)
-        ignore_spectre_charges = self.state.ignore_spectre_charges
+        target_ppm = self.state.ion_ppm_threshold
         min_charge = self.state.min_precursor_charge
         max_charge = self.state.max_precursor_charge
+        force_isotope_offset = self.state.force_isotope_offset
+        max_isotope_offset = self.state.max_isotope_offset
+        seq_criteria = self.state.seq_criteria
+        # seq_criteria = cast(
+        #     Literal['peaks', 'top_peaks', 'coverage'],
+        #     self.state.seq_criteria,
+        # )
 
         tool_ids = list(self.state.tool_settings_controls.keys())
         if not tool_ids:
             self.show_warning("No tools configured")
             return
 
+        # Per-tool PTM and max_ptm settings
+        tool_settings_map = {}
+        for tid, controls in self.state.tool_settings_controls.items():
+            ptm_selected: list[str] = controls.get('ptm_selected', [])
+            # Empty selection → no PTM correction (pass empty list)
+            # All selected → pass None (use full PTMS list)
+            from utils.seqfixer_utils import PTMS as _ALL_PTMS
+            all_codes = {p.code for p in _ALL_PTMS}
+            ptm_list = None if set(ptm_selected) == all_codes else ptm_selected
+
+            max_ptm_ctrl = controls.get('max_ptm')
+            try:
+                max_ptm = int(max_ptm_ctrl.value) if max_ptm_ctrl else 5
+            except (ValueError, AttributeError):
+                max_ptm = 5
+
+            tool_settings_map[tid] = {
+                'ptm_list': ptm_list,
+                'max_ptm': max_ptm,
+            }
+
         dialog = ProgressDialog(page, "Calculating Ion Coverage")
         dialog.show()
 
         total_processed = 0
+
+        # Sub-batch size: split each DB batch across all workers
+        chunk_size = max(1, math.ceil(_BATCH_SIZE / _WORKER_COUNT))
 
         try:
             loop = asyncio.get_event_loop()
 
             with ProcessPoolExecutor(max_workers=_WORKER_COUNT) as executor:
                 for tool_id in tool_ids:
+                    t_settings = tool_settings_map.get(tool_id, {})
+                    ptm_list = t_settings.get('ptm_list', None)
+                    max_ptm = t_settings.get('max_ptm', 5)
+
                     offset = 0
                     while True:
                         batch_objects = await self.project.get_identifications_with_spectra_batch(
@@ -179,16 +222,35 @@ class IonCalculations:
 
                         worker_batch = [obj.to_worker_dict() for obj in batch_objects]
 
-                        results = await loop.run_in_executor(
-                            executor,
-                            process_identification_batch,
-                            worker_batch,
-                            params_dict,
-                            fragment_charges,
-                            ignore_spectre_charges,
-                            min_charge,
-                            max_charge,
-                        )
+                        # Split into sub-batches for parallel processing
+                        sub_batches = [
+                            worker_batch[i:i + chunk_size]
+                            for i in range(0, len(worker_batch), chunk_size)
+                        ]
+
+                        # Launch all sub-batches concurrently
+                        futures = [
+                            loop.run_in_executor(
+                                executor,
+                                process_identificatons_batch,
+                                sub_batch,
+                                params_dict,
+                                fragment_charges,
+                                target_ppm,
+                                min_charge,
+                                max_charge,
+                                max_isotope_offset,
+                                force_isotope_offset,
+                                ptm_list,
+                                max_ptm,
+                                seq_criteria,
+                            )
+                            for sub_batch in sub_batches
+                        ]
+
+                        sub_results = await asyncio.gather(*futures)
+                        # Flatten results from all sub-batches
+                        results = [item for sub in sub_results for item in sub]
 
                         await self.project.put_identification_data_batch(results)
 
@@ -218,7 +280,7 @@ class IonCalculations:
             self.show_error(f"Error: {exc}")
 
     # ------------------------------------------------------------------
-    # Protein match metrics (batch, via coverage_worker)
+    # Protein match metrics (batch, via coverage_worker — unchanged)
     # ------------------------------------------------------------------
 
     async def calculate_protein_metrics_internal(self):
@@ -244,9 +306,6 @@ class IonCalculations:
         }
         fragment_charges = list(self.state.fragment_charges)
 
-        # Fetch all peptide matches with spectrum data
-        # We join peptide_match with identification to get spectre_id and override_charge,
-        # then join spectre for mz/intensity arrays.
         matches_with_spectra = await self.project.get_peptide_matches_with_spectra()
 
         if not matches_with_spectra:
@@ -263,7 +322,6 @@ class IonCalculations:
             loop = asyncio.get_event_loop()
 
             with ProcessPoolExecutor(max_workers=_WORKER_COUNT) as executor:
-                # Process in batches
                 for batch_start in range(0, total, _BATCH_SIZE):
                     batch = matches_with_spectra[batch_start: batch_start + _BATCH_SIZE]
 

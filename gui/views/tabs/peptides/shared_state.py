@@ -27,6 +27,13 @@ class PeptidesTabState:
     ignore_spectre_charges: bool = True
     min_precursor_charge: int = 1
     max_precursor_charge: int = 4
+
+    # Isotope offset settings (identification_processor)
+    force_isotope_offset: bool = True
+    max_isotope_offset: int = 2
+
+    # Sequence selection criteria
+    seq_criteria: str = 'coverage'
     
     # FASTA/Protein data
     protein_count: int = 0

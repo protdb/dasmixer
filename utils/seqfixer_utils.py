@@ -93,9 +93,9 @@ PTMS = [
         'C',
     ),
     FixedPTM(
-        'Deamidation',
+        'Deamidated',
         ['N', 'Q'],
-        # mono_mass=0.984016,
+        mono_mass=0.984016,
     ),
     FixedPTM(
         'Amidated',

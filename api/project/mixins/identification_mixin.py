@@ -401,7 +401,8 @@ class IdentificationMixin:
 
         Keys recognised:
             id, ppm, theor_mass, override_charge,
-            intensity_coverage, ions_matched, ion_match_type, top_peaks_covered
+            intensity_coverage, ions_matched, ion_match_type, top_peaks_covered,
+            source_sequence, isotope_offset
         """
         query = """
             UPDATE identification
@@ -412,11 +413,18 @@ class IdentificationMixin:
                 intensity_coverage = ?,
                 ions_matched = ?,
                 ion_match_type = ?,
-                top_peaks_covered = ?
+                top_peaks_covered = ?,
+                source_sequence = ?,
+                isotope_offset = ?
             WHERE id = ?
         """
         params = []
         for data_row in data_rows:
+            # Store source_sequence only if it differs from the (possibly modified) sequence
+            src_seq = data_row.get('source_sequence')
+            result_seq = data_row.get('sequence')
+            source_sequence_value = src_seq if (src_seq and src_seq != result_seq) else None
+
             params.append((
                 data_row.get('ppm'),
                 data_row.get('theor_mass'),
@@ -425,6 +433,8 @@ class IdentificationMixin:
                 data_row.get('ions_matched'),
                 data_row.get('ion_match_type'),
                 data_row.get('top_peaks_covered'),
+                source_sequence_value,
+                data_row.get('isotope_offset'),
                 data_row['id'],
             ))
         await self._executemany(query, params)

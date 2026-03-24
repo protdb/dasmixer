@@ -2,7 +2,11 @@
 
 import flet as ft
 
+from utils.seqfixer_utils import PTMS
 from .base_section import BaseSection
+
+# Full list of available PTM codes from PTMS registry
+_ALL_PTM_CODES: list[str] = [ptm.code for ptm in PTMS]
 
 
 class ToolSettingsSection(BaseSection):
@@ -59,12 +63,24 @@ class ToolSettingsSection(BaseSection):
         Includes:
         - Basic quality filters: max_ppm, min_score, min_ion_intensity_coverage
         - Peptide length filters: min_peptide_length, max_peptide_length
-        - NEW quality filters: min_top_peaks, min_ions_covered, min_spectre_peaks
+        - Quality filters: min_top_peaks, min_ions_covered, min_spectre_peaks
         - Protein matching: use_protein_from_file, min_protein_identity,
           denovo_correction
-        - NEW: leucine_combinatorics
+        - leucine_combinatorics
+        - PTM selection (via dialog)
+        - max_ptm: maximum simultaneous PTMs to try
         """
         settings = tool.settings or {}
+
+        # Determine initial PTM selection
+        saved_ptm_list = settings.get('ptm_list', None)
+        # None means "all PTMs"; empty list means "no PTMs"
+        if saved_ptm_list is None:
+            initial_ptm_selected = list(_ALL_PTM_CODES)
+        else:
+            initial_ptm_selected = list(saved_ptm_list)
+
+        ptm_display_text = ', '.join(initial_ptm_selected) if initial_ptm_selected else '(none)'
 
         return {
             # ── Basic quality filters ──────────────────────────────────────
@@ -99,7 +115,7 @@ class ToolSettingsSection(BaseSection):
                 width=150,
                 keyboard_type=ft.KeyboardType.NUMBER,
             ),
-            # ── NEW: Ion / peak quality thresholds ────────────────────────
+            # ── Ion / peak quality thresholds ─────────────────────────────
             'min_top_peaks': ft.TextField(
                 label="Min Top-10 Peaks Covered",
                 value=str(settings.get('min_top_peaks', 1)),
@@ -133,15 +149,45 @@ class ToolSettingsSection(BaseSection):
                 label="De novo correction",
                 value=settings.get('denovo_correction', False),
             ),
-            # ── NEW: Leucine combinatorics ─────────────────────────────────
+            # ── Leucine combinatorics ──────────────────────────────────────
             'leucine_combinatorics': ft.Checkbox(
                 label="Use Leucine Combinatorics (I/L)",
                 value=settings.get('leucine_combinatorics', False),
+            ),
+            # ── PTM selection ──────────────────────────────────────────────
+            # Internal state: list of selected PTM codes
+            'ptm_selected': initial_ptm_selected,
+            # Display text showing selected PTMs
+            'ptm_display': ft.Text(
+                value=ptm_display_text,
+                size=12,
+                color=ft.Colors.GREY_700,
+                expand=True,
+            ),
+            # ── Max PTM combinations ───────────────────────────────────────
+            'max_ptm': ft.TextField(
+                label="Max PTM combinations",
+                value=str(settings.get('max_ptm', 5)),
+                width=180,
+                keyboard_type=ft.KeyboardType.NUMBER,
+                tooltip="Maximum number of simultaneous PTMs to try per sequence",
             ),
         }
 
     def _build_tool_card(self, tool, controls: dict) -> ft.Container:
         """Build a visual card for one tool's settings."""
+        tool_id = tool.id
+
+        ptm_button = ft.OutlinedButton(
+            content=ft.Row([
+                ft.Icon(ft.Icons.TUNE, size=16),
+                ft.Text("Select PTMs...", size=13),
+            ], spacing=4, tight=True),
+            on_click=lambda e, tid=tool_id: ft.context.page.run_task(
+                self._open_ptm_dialog, tid
+            ),
+        )
+
         return ft.Container(
             content=ft.Column([
                 ft.Text(
@@ -160,7 +206,7 @@ class ToolSettingsSection(BaseSection):
                     controls['min_peptide_length'],
                     controls['max_peptide_length'],
                 ], spacing=10),
-                # Row 3: NEW ion / peak thresholds
+                # Row 3: ion / peak thresholds
                 ft.Row([
                     controls['min_top_peaks'],
                     controls['min_ions_covered'],
@@ -172,14 +218,92 @@ class ToolSettingsSection(BaseSection):
                     controls['min_protein_identity'],
                     controls['denovo_correction'],
                 ], spacing=10),
-                # Row 5: NEW leucine combinatorics
+                # Row 5: leucine combinatorics
                 controls['leucine_combinatorics'],
+                # Row 6: PTM selection + max_ptm
+                ft.Row([
+                    controls['max_ptm'],
+                ], spacing=10),
+                ft.Row(
+                    controls=[
+                        ft.Container(
+                            content=controls['ptm_display'],
+                            expand=True,
+                            border=ft.border.all(1, ft.Colors.GREY_300),
+                            border_radius=4,
+                            padding=ft.padding.symmetric(horizontal=8, vertical=6),
+                        ),
+                        ptm_button,
+                    ],
+                    spacing=8,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                ),
             ], spacing=10),
             padding=15,
             border=ft.border.all(1, ft.Colors.BLUE_200),
             border_radius=8,
             bgcolor=ft.Colors.BLUE_50,
         )
+
+    # ------------------------------------------------------------------
+    # PTM dialog
+    # ------------------------------------------------------------------
+
+    async def _open_ptm_dialog(self, tool_id: int):
+        """Open PTM selection dialog for the given tool."""
+        page = ft.context.page
+        controls = self.state.tool_settings_controls.get(tool_id)
+        if not controls:
+            return
+
+        current_selected: list[str] = list(controls['ptm_selected'])
+
+        # Build checkboxes — one per PTM
+        checkboxes: dict[str, ft.Checkbox] = {
+            code: ft.Checkbox(
+                label=code,
+                value=(code in current_selected),
+            )
+            for code in _ALL_PTM_CODES
+        }
+
+        async def on_apply(e):
+            selected = [code for code, cb in checkboxes.items() if cb.value]
+            controls['ptm_selected'] = selected
+            display_text = ', '.join(selected) if selected else '(none)'
+            controls['ptm_display'].value = display_text
+            controls['ptm_display'].update()
+            dlg.open = False
+            page.update()
+
+        def on_cancel(e):
+            dlg.open = False
+            page.update()
+
+        dlg = ft.AlertDialog(
+            modal=True,
+            title=ft.Text("Select PTMs"),
+            content=ft.Column(
+                controls=list(checkboxes.values()),
+                tight=True,
+                scroll=ft.ScrollMode.AUTO,
+                width=300,
+                height=300,
+            ),
+            actions=[
+                ft.TextButton("Cancel", on_click=on_cancel),
+                ft.ElevatedButton(
+                    "Apply",
+                    icon=ft.Icons.CHECK,
+                    on_click=lambda e: page.run_task(on_apply, e),
+                ),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+
+        page.overlay.append(dlg)
+        dlg.open = True
+        page.update()
 
     # ------------------------------------------------------------------
     # Validation
@@ -225,6 +349,10 @@ class ToolSettingsSection(BaseSection):
             if int(controls['min_spectre_peaks'].value) < 0:
                 return False, "Min Spectrum Peaks must be ≥ 0"
 
+            max_ptm_val = int(controls['max_ptm'].value)
+            if max_ptm_val < 0:
+                return False, "Max PTM combinations must be ≥ 0"
+
             return True, None
 
         except ValueError as exc:
@@ -248,6 +376,10 @@ class ToolSettingsSection(BaseSection):
         if not tool:
             raise ValueError(f"Tool {tool_id} not found")
 
+        # PTM list: store None if all PTMs selected (== default), else store list
+        ptm_selected: list[str] = controls['ptm_selected']
+        ptm_list_to_save = None if set(ptm_selected) == set(_ALL_PTM_CODES) else ptm_selected
+
         tool.settings = {
             'max_ppm': float(controls['max_ppm'].value),
             'min_score': float(controls['min_score'].value),
@@ -257,11 +389,12 @@ class ToolSettingsSection(BaseSection):
             'denovo_correction': controls['denovo_correction'].value,
             'min_peptide_length': int(controls['min_peptide_length'].value),
             'max_peptide_length': int(controls['max_peptide_length'].value),
-            # NEW
             'min_top_peaks': int(controls['min_top_peaks'].value),
             'min_ions_covered': int(controls['min_ions_covered'].value),
             'min_spectre_peaks': int(controls['min_spectre_peaks'].value),
             'leucine_combinatorics': controls['leucine_combinatorics'].value,
+            'ptm_list': ptm_list_to_save,
+            'max_ptm': int(controls['max_ptm'].value),
         }
 
         await self.project.update_tool(tool)
@@ -285,6 +418,10 @@ class ToolSettingsSection(BaseSection):
         """
         tool_settings = {}
         for tool_id, controls in self.state.tool_settings_controls.items():
+            ptm_selected: list[str] = controls['ptm_selected']
+            # Pass None to pipeline if all PTMs selected (use full PTMS list)
+            ptm_list = None if set(ptm_selected) == set(_ALL_PTM_CODES) else ptm_selected
+
             tool_settings[tool_id] = {
                 'max_ppm': float(controls['max_ppm'].value),
                 'min_score': float(controls['min_score'].value),
@@ -293,10 +430,11 @@ class ToolSettingsSection(BaseSection):
                 'denovo_correction': controls['denovo_correction'].value,
                 'min_peptide_length': int(controls['min_peptide_length'].value),
                 'max_peptide_length': int(controls['max_peptide_length'].value),
-                # NEW
                 'min_top_peaks': int(controls['min_top_peaks'].value),
                 'min_ions_covered': int(controls['min_ions_covered'].value),
                 'min_spectre_peaks': int(controls['min_spectre_peaks'].value),
                 'leucine_combinatorics': controls['leucine_combinatorics'].value,
+                'ptm_list': ptm_list,
+                'max_ptm': int(controls['max_ptm'].value),
             }
         return tool_settings

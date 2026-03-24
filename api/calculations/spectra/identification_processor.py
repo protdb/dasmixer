@@ -1,4 +1,5 @@
 from api.calculations.ppm import SeqFixer, SeqMatchParams
+import traceback
 from dataclasses import asdict
 from typing import Literal
 from utils.seqfixer_utils import PTMS, FixedPTM
@@ -6,6 +7,8 @@ from api.calculations.spectra.ion_match import IonMatchParameters, match_predict
 
 def _get_best_override(overrides: list[tuple[SeqMatchParams, MatchResult]], criteria: str) -> tuple[SeqMatchParams, MatchResult]:
     # Выбираем наилучшее покрытие по критерию, второй критерий - ppm
+    if criteria == "coverage":
+        criteria = 'intensity_percent'
     overrides.sort(
         key=lambda row: (-getattr(row[1], criteria), row[0].abs_ppm),
     )
@@ -20,15 +23,16 @@ def process_single_ident(
     mz_array,
     intensity_array,
     mgf_charge: int | None = None,
-    selection_criteria: Literal['peaks', 'top_peaks', 'coverage'] = 'coverage'
+    selection_criteria: str = 'intensity_percent'
 ) -> dict:
     seq_results = fixer.get_ppm(
         sequence,
         pepmass,
         mgf_charge
     )
+    print(seq_results)
     if not seq_results.override:
-        ppm_result = seq_results.original,
+        ppm_result = seq_results.original
         match_result = match_predictions(
                 params=params,
                 mz=mz_array,
@@ -51,6 +55,7 @@ def process_single_ident(
             all_matches,
             criteria=selection_criteria
         )
+    print(ppm_result)
     return {
         'sequence': ppm_result.sequence,
         'ppm': ppm_result.ppm,
@@ -63,8 +68,10 @@ def process_single_ident(
         'top_peaks_covered': match_result.top10_intensity_matches,
     }
 
+def process_matched_peptide(
 
-
+):
+    pass
 
 def process_identificatons_batch(
     batch: list[dict],
@@ -124,6 +131,8 @@ def process_identificatons_batch(
             results.append(result)
         except Exception as exc:
             print(f"[ident processor] Error on id={ident_id}: {exc}")
+            print(traceback.print_exc())
+            print()
             results.append({
                 'id': ident_id,
                 'sequence': sequence,

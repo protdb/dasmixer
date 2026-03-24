@@ -46,6 +46,28 @@ class IonSettingsSection(BaseSection):
             width=150, keyboard_type=ft.KeyboardType.NUMBER
         )
 
+        # Isotope offset settings
+        self.force_isotope_offset_cb = ft.Checkbox(
+            label="Force isotope offset lookover",
+            value=True
+        )
+        self.max_isotope_offset_field = ft.TextField(
+            label="Max isotope offset", value="2",
+            width=180, keyboard_type=ft.KeyboardType.NUMBER
+        )
+
+        # Sequence selection criteria
+        self.seq_criteria_dropdown = ft.Dropdown(
+            label="Sequence selection criteria",
+            width=220,
+            value="coverage",
+            options=[
+                ft.DropdownOption(key="intensity_percent", text="Coverage"),
+                ft.DropdownOption(key="max_ion_matches", text="Peaks"),
+                ft.DropdownOption(key="top10_intensity_matches", text="Top Peaks"),
+            ],
+        )
+
         return ft.Column([
             ft.Text("Ion Matching Settings", size=18, weight=ft.FontWeight.BOLD),
             ft.Row([
@@ -65,7 +87,14 @@ class IonSettingsSection(BaseSection):
                 self.ignore_spectre_charges_cb,
                 self.min_precursor_charge_field,
                 self.max_precursor_charge_field
-            ], spacing=10)
+            ], spacing=10),
+            ft.Row([
+                self.force_isotope_offset_cb,
+                self.max_isotope_offset_field,
+            ], spacing=10),
+            ft.Row([
+                self.seq_criteria_dropdown,
+            ], spacing=10),
         ], spacing=10)
 
     async def load_data(self):
@@ -95,6 +124,16 @@ class IonSettingsSection(BaseSection):
             )
             self.max_precursor_charge_field.value = await self.project.get_setting(
                 'max_precursor_charge', '4'
+            )
+
+            self.force_isotope_offset_cb.value = (
+                await self.project.get_setting('force_isotope_offset', '1')
+            ) == '1'
+            self.max_isotope_offset_field.value = await self.project.get_setting(
+                'max_isotope_offset', '2'
+            )
+            self.seq_criteria_dropdown.value = await self.project.get_setting(
+                'seq_criteria', 'coverage'
             )
 
             self._sync_to_state()
@@ -130,6 +169,15 @@ class IonSettingsSection(BaseSection):
         await self.project.set_setting(
             'max_precursor_charge', self.max_precursor_charge_field.value
         )
+        await self.project.set_setting(
+            'force_isotope_offset', '1' if self.force_isotope_offset_cb.value else '0'
+        )
+        await self.project.set_setting(
+            'max_isotope_offset', self.max_isotope_offset_field.value
+        )
+        await self.project.set_setting(
+            'seq_criteria', self.seq_criteria_dropdown.value or 'coverage'
+        )
 
         self._sync_to_state()
 
@@ -146,17 +194,20 @@ class IonSettingsSection(BaseSection):
     def _sync_to_state(self):
         """Sync current UI values to shared state."""
         self.state.ion_types = self._get_selected_ion_types()
-        self.state.water_loss = self.water_loss_cb.value
-        self.state.nh3_loss = self.nh3_loss_cb.value
-        self.state.ion_ppm_threshold = float(self.ion_ppm_threshold_field.value)
+        self.state.water_loss = bool(self.water_loss_cb.value)
+        self.state.nh3_loss = bool(self.nh3_loss_cb.value)
+        self.state.ion_ppm_threshold = float(self.ion_ppm_threshold_field.value or 20)
         self.state.fragment_charges = [
             int(c.strip())
-            for c in self.fragment_charges_field.value.split(',')
+            for c in (self.fragment_charges_field.value or '1,2').split(',')
             if c.strip()
         ]
-        self.state.ignore_spectre_charges = self.ignore_spectre_charges_cb.value
+        self.state.ignore_spectre_charges = bool(self.ignore_spectre_charges_cb.value)
         self.state.min_precursor_charge = int(self.min_precursor_charge_field.value or 1)
         self.state.max_precursor_charge = int(self.max_precursor_charge_field.value or 4)
+        self.state.force_isotope_offset = bool(self.force_isotope_offset_cb.value)
+        self.state.max_isotope_offset = int(self.max_isotope_offset_field.value or 2)
+        self.state.seq_criteria = self.seq_criteria_dropdown.value or 'coverage'
 
     def get_ion_match_parameters(self) -> IonMatchParameters:
         """Create IonMatchParameters from current settings."""
@@ -171,10 +222,13 @@ class IonSettingsSection(BaseSection):
         )
 
     def get_charge_parameters(self) -> dict:
-        """Return precursor charge parameters for coverage_worker."""
+        """Return precursor charge and isotope parameters for identification_processor."""
         self._sync_to_state()
         return {
             'ignore_spectre_charges': self.state.ignore_spectre_charges,
             'min_charge': self.state.min_precursor_charge,
             'max_charge': self.state.max_precursor_charge,
+            'force_isotope_offset': self.state.force_isotope_offset,
+            'max_isotope_offset': self.state.max_isotope_offset,
+            'seq_criteria': self.state.seq_criteria,
         }

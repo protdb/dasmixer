@@ -110,6 +110,8 @@ CREATE TABLE IF NOT EXISTS identification (
     ion_match_type TEXT,
     top_peaks_covered INTEGER,
     override_charge INTEGER,
+    source_sequence TEXT,  -- original unmodified sequence; NULL if same as sequence
+    isotope_offset INTEGER,  -- precursor isotope offset; NULL if not determined
     FOREIGN KEY (spectre_id) REFERENCES spectre(id) ON DELETE CASCADE,
     FOREIGN KEY (tool_id) REFERENCES tool(id) ON DELETE CASCADE,
     FOREIGN KEY (ident_file_id) REFERENCES identification_file(id) ON DELETE CASCADE

@@ -7,7 +7,8 @@ from pathlib import Path
 
 from api.project.project import Project
 from api.inputs.proteins.fasta import FastaParser
-from api.calculations.peptides.matching import select_preferred_identifications, map_proteins
+from api.calculations.peptides.matching import select_preferred_identifications
+from api.calculations.peptides.protein_map import map_proteins
 from api.calculations.spectra.plot_matches import plot_ion_match
 from api.calculations.spectra.ion_match import IonMatchParameters, match_predictions
 from utils.ppm import calculate_ppm

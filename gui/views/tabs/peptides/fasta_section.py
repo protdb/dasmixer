@@ -4,7 +4,7 @@ import flet as ft
 from pathlib import Path
 
 from api.inputs.proteins.fasta import FastaParser
-from api.calculations.peptides.matching import map_proteins
+from api.calculations.peptides.protein_map import map_proteins
 from .base_section import BaseSection
 from .dialogs.progress_dialog import ProgressDialog
 

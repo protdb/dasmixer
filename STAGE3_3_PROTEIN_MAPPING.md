@@ -273,12 +273,13 @@ Peptides Tab → Ion Matching Settings
 ### Использование map_proteins()
 
 ```python
-from api.calculations.peptides.matching import map_proteins
+
+from api.calculations.peptides.protein_map import map_proteins
 
 # Подготовка tool_settings
 tool_settings = {
-    1: {'min_protein_identity': 0.75},
-    2: {'min_protein_identity': 0.80}
+   1: {'min_protein_identity': 0.75},
+   2: {'min_protein_identity': 0.80}
 }
 
 # Запуск mapping
@@ -288,18 +289,18 @@ async for matches_df, count, tool_id in map_proteins(
         only_prefered=False,
         batch_size=1000
 ):
-    # matches_df содержит:
-    # - protein_id
-    # - identification_id
-    # - matched_sequence
-    # - identity
-    # - unique_evidence
-    # - matched_theor_mass
-    # - matched_ppm (None)
-    # - matched_coverage_percent (None - заполняется позже)
+   # matches_df содержит:
+   # - protein_id
+   # - identification_id
+   # - matched_sequence
+   # - identity
+   # - unique_evidence
+   # - matched_theor_mass
+   # - matched_ppm (None)
+   # - matched_coverage_percent (None - заполняется позже)
 
-    await project.add_peptide_matches_batch(matches_df)
-    print(f"Added {count} matches for tool {tool_id}")
+   await project.add_peptide_matches_batch(matches_df)
+   print(f"Added {count} matches for tool {tool_id}")
 
 await project.save()
 ```
@@ -433,7 +434,7 @@ matched_coverage = result.intensity_percent
 # В UI: нажать "Match Proteins to Identifications"
 
 # Программно:
-from api.calculations.peptides.matching import map_proteins
+from api.calculations.peptides.protein_map import map_proteins
 
 tool_settings = {tool_id: {'min_protein_identity': 0.75}}
 
@@ -442,7 +443,7 @@ await project.clear_peptide_matches()
 async for matches_df, count, tool_id in map_proteins(
         project, tool_settings, only_prefered=False
 ):
-    await project.add_peptide_matches_batch(matches_df)
+   await project.add_peptide_matches_batch(matches_df)
 
 await project.save()
 ```
