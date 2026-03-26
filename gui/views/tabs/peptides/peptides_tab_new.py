@@ -27,7 +27,7 @@ class PeptidesTab(ft.Container):
         super().__init__()
         print("PeptidesTab init...")
         self.project = project
-        self.expand = True
+        self.expand = False
         self.padding = 0
         
         # Create shared state
@@ -49,12 +49,12 @@ class PeptidesTab(ft.Container):
         Returns:
             dict mapping section name to section instance
         """
+
         sections = {'fasta': FastaSection(self.project, self.state),
                     'tool_settings': ToolSettingsSection(self.project, self.state),
                     'ion_settings': IonSettingsSection(self.project, self.state),
                     'matching': MatchingSection(self.project, self.state),
                     'actions': ActionsSection(self.project, self.state, self)}
-        
         # FASTA section - protein library loading
 
         # Tool settings section
@@ -86,34 +86,71 @@ class PeptidesTab(ft.Container):
     
     def _build_content(self) -> ft.Control:
         """Build tab layout."""
-        return ft.Column([
-            # FASTA loading
-            self.sections['fasta'],
-            ft.Container(height=10),
-            
-            # Tool settings
-            self.sections['tool_settings'],
-            ft.Container(height=10),
-            
-            # Ion settings
-            self.sections['ion_settings'],
-            ft.Container(height=10),
-            
-            # Actions - NEW unified workflow
-            self.sections['actions'],
-            ft.Container(height=10),
-            
-            # Matching
-            self.sections['matching'],
-            ft.Container(height=10),
-            
-            # Search and view - NOW BaseTableAndPlotView
-            self.sections['search']
-        ],
-        spacing=10,
-        scroll=ft.ScrollMode.AUTO,
-        expand=True
+        resp_sections = ['ion_settings', 'fasta']
+        default_col = {
+            ft.ResponsiveRowBreakpoint.LG: 4,
+            ft.ResponsiveRowBreakpoint.MD: 6,
+            ft.ResponsiveRowBreakpoint.SM: 12
+        }
+        for k in resp_sections:
+            self.sections[k].col = default_col
+            self.sections[k].expand = True
+
+        new_tab_layout = ft.Column(
+            [
+                ft.ResponsiveRow([
+                    ft.Column(
+                        [
+                            self.sections['actions'],
+                            self.sections['matching'],
+                        ],
+                        col = default_col,
+                        expand = True,
+                    ),
+                    ft.Container(content=self.sections['ion_settings'], expand = True, col = default_col),
+                    ft.Container(content=self.sections['fasta'], expand = True, col = default_col),
+                    # self.sections['ion_settings'],
+                    # self.sections['fasta'],
+                    ]
+                ),
+                ft.Container(height=10),
+                self.sections['tool_settings'],
+                ft.Container(height=10),
+                self.sections['search']
+            ],
+            spacing=10,
+            scroll=ft.ScrollMode.AUTO,
+            expand=True
         )
+        return new_tab_layout
+        # return ft.Column([
+        #     # FASTA loading
+        #     self.sections['fasta'],
+        #     ft.Container(height=10),
+        #
+        #     # Tool settings
+        #     self.sections['tool_settings'],
+        #     ft.Container(height=10),
+        #
+        #     # Ion settings
+        #     self.sections['ion_settings'],
+        #     ft.Container(height=10),
+        #
+        #     # Actions - NEW unified workflow
+        #     self.sections['actions'],
+        #     ft.Container(height=10),
+        #
+        #     # Matching
+        #     self.sections['matching'],
+        #     ft.Container(height=10),
+        #
+        #     # Search and view - NOW BaseTableAndPlotView
+        #     self.sections['search']
+        # ],
+        # spacing=10,
+        # scroll=ft.ScrollMode.AUTO,
+        # expand=True
+        # )
     
     def did_mount(self):
         """Load initial data when tab is mounted."""

@@ -147,6 +147,11 @@ CREATE TABLE IF NOT EXISTS peptide_match (
     matched_theor_mass REAL,
     unique_evidence INTEGER,  -- BOOLEAN as INTEGER
     matched_coverage_percent REAL,
+    matched_peaks INTEGER,          -- ions_matched for matched sequence
+    matched_top_peaks INTEGER,      -- top_peaks_covered for matched sequence
+    matched_ion_type TEXT,          -- ion_match_type for matched sequence
+    matched_sequence_modified TEXT, -- ProForma with PTMs if get_matched_ppm found override; NULL otherwise
+    substitution INTEGER NOT NULL DEFAULT 0,  -- BOOLEAN: 1 if saved as AA substitution candidate
     FOREIGN KEY (protein_id) REFERENCES protein(id) ON DELETE CASCADE,
     FOREIGN KEY (identification_id) REFERENCES identification(id) ON DELETE CASCADE
 );

@@ -270,5 +270,53 @@ class SpectraMixin:
         """
         
         rows = await self._fetchall(query, (int(spectra_file_id),))
-        
+
         return [{by: row[by], 'spectre_id': row['id']} for row in rows]
+
+    async def get_spectra_for_identification_ids(
+        self,
+        identification_ids: list[int],
+    ) -> dict[int, dict]:
+        """
+        Fetch spectrum arrays for a given list of identification IDs.
+
+        Used during protein mapping to retrieve spectral data only for
+        identifications that require PPM / ion-coverage recalculation
+        (i.e. those whose BLAST identity < 1.0).
+
+        Args:
+            identification_ids: List of identification.id values.
+
+        Returns:
+            Dict mapping identification_id → dict with keys:
+                mz_array (list[float]), intensity_array (list[float]),
+                pepmass (float), charge (int | None)
+        """
+        if not identification_ids:
+            return {}
+
+        placeholders = ",".join("?" * len(identification_ids))
+        query = f"""
+            SELECT
+                i.id AS identification_id,
+                s.pepmass,
+                s.charge,
+                s.mz_array,
+                s.intensity_array
+            FROM identification i
+            JOIN spectre s ON i.spectre_id = s.id
+            WHERE i.id IN ({placeholders})
+        """
+        rows = await self._fetchall(query, tuple(identification_ids))
+
+        result: dict[int, dict] = {}
+        for row in rows:
+            mz = decompress_array(row['mz_array']).tolist() if row['mz_array'] else []
+            intensity = decompress_array(row['intensity_array']).tolist() if row['intensity_array'] else []
+            result[row['identification_id']] = {
+                'mz_array': mz,
+                'intensity_array': intensity,
+                'pepmass': row['pepmass'],
+                'charge': row['charge'],
+            }
+        return result

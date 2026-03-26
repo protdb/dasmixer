@@ -82,6 +82,9 @@ class ToolSettingsSection(BaseSection):
 
         ptm_display_text = ', '.join(initial_ptm_selected) if initial_ptm_selected else '(none)'
 
+        # Match correction criteria — load from saved settings
+        saved_criteria: list[str] = settings.get('match_correction_criteria', ['ppm', 'intensity_coverage'])
+
         return {
             # ── Basic quality filters ──────────────────────────────────────
             'max_ppm': ft.TextField(
@@ -172,6 +175,29 @@ class ToolSettingsSection(BaseSection):
                 keyboard_type=ft.KeyboardType.NUMBER,
                 tooltip="Maximum number of simultaneous PTMs to try per sequence",
             ),
+            # ── Match correction criteria ──────────────────────────────────
+            'match_correction_ppm': ft.Checkbox(
+                label="PPM",
+                value='ppm' in saved_criteria,
+            ),
+            'match_correction_intensity': ft.Checkbox(
+                label="Intensity coverage",
+                value='intensity_coverage' in saved_criteria,
+            ),
+            'match_correction_ions': ft.Checkbox(
+                label="Ions matched",
+                value='ions_matched' in saved_criteria,
+            ),
+            'match_correction_top10': ft.Checkbox(
+                label="Top 10 ions matched",
+                value='top10_ions_matched' in saved_criteria,
+            ),
+            # ── Save AA substitutions ──────────────────────────────────────
+            'save_aa_substitutions': ft.Checkbox(
+                label="Save AA substitutions",
+                value=settings.get('save_aa_substitutions', False),
+                tooltip="Save partial matches as amino acid substitution candidates",
+            ),
         }
 
     def _build_tool_card(self, tool, controls: dict) -> ft.Container:
@@ -238,6 +264,21 @@ class ToolSettingsSection(BaseSection):
                     spacing=8,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
+                # Row 7: Match correction criteria
+                ft.Text(
+                    "Match Correction Criteria",
+                    size=13,
+                    weight=ft.FontWeight.W_500,
+                    color=ft.Colors.GREY_700,
+                ),
+                ft.Row([
+                    controls['match_correction_ppm'],
+                    controls['match_correction_intensity'],
+                    controls['match_correction_ions'],
+                    controls['match_correction_top10'],
+                ], spacing=15),
+                # Row 8: Save AA substitutions
+                controls['save_aa_substitutions'],
             ], spacing=10),
             padding=15,
             border=ft.border.all(1, ft.Colors.BLUE_200),
@@ -380,6 +421,15 @@ class ToolSettingsSection(BaseSection):
         ptm_selected: list[str] = controls['ptm_selected']
         ptm_list_to_save = None if set(ptm_selected) == set(_ALL_PTM_CODES) else ptm_selected
 
+        # Build match correction criteria list
+        criteria_map = {
+            'ppm': controls['match_correction_ppm'],
+            'intensity_coverage': controls['match_correction_intensity'],
+            'ions_matched': controls['match_correction_ions'],
+            'top10_ions_matched': controls['match_correction_top10'],
+        }
+        match_correction_criteria = [k for k, cb in criteria_map.items() if cb.value]
+
         tool.settings = {
             'max_ppm': float(controls['max_ppm'].value),
             'min_score': float(controls['min_score'].value),
@@ -395,6 +445,8 @@ class ToolSettingsSection(BaseSection):
             'leucine_combinatorics': controls['leucine_combinatorics'].value,
             'ptm_list': ptm_list_to_save,
             'max_ptm': int(controls['max_ptm'].value),
+            'match_correction_criteria': match_correction_criteria,
+            'save_aa_substitutions': controls['save_aa_substitutions'].value,
         }
 
         await self.project.update_tool(tool)
@@ -422,6 +474,14 @@ class ToolSettingsSection(BaseSection):
             # Pass None to pipeline if all PTMs selected (use full PTMS list)
             ptm_list = None if set(ptm_selected) == set(_ALL_PTM_CODES) else ptm_selected
 
+            criteria_map = {
+                'ppm': controls['match_correction_ppm'],
+                'intensity_coverage': controls['match_correction_intensity'],
+                'ions_matched': controls['match_correction_ions'],
+                'top10_ions_matched': controls['match_correction_top10'],
+            }
+            match_correction_criteria = [k for k, cb in criteria_map.items() if cb.value]
+
             tool_settings[tool_id] = {
                 'max_ppm': float(controls['max_ppm'].value),
                 'min_score': float(controls['min_score'].value),
@@ -436,5 +496,7 @@ class ToolSettingsSection(BaseSection):
                 'leucine_combinatorics': controls['leucine_combinatorics'].value,
                 'ptm_list': ptm_list,
                 'max_ptm': int(controls['max_ptm'].value),
+                'match_correction_criteria': match_correction_criteria,
+                'save_aa_substitutions': controls['save_aa_substitutions'].value,
             }
         return tool_settings

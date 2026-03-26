@@ -31,6 +31,12 @@ class PeptideIonTableView(BaseTableView):
         'is_preferred': 'Preferred',
         'protein_id': 'Protein',
         'gene': 'Gene',
+        # New peptide_match fields (hidden by default)
+        'matched_peaks': 'Match Ions',
+        'matched_top_peaks': 'Match Top-10',
+        'matched_ion_type': 'Match Ion Type',
+        'matched_sequence_modified': 'Match Seq (modified)',
+        'substitution': 'AA Substitution',
     }
 
     column_filter_mapping = {

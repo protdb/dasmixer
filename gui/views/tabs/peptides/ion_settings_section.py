@@ -8,7 +8,7 @@ from .base_section import BaseSection
 
 class IonSettingsSection(BaseSection):
     """Ion matching parameters configuration."""
-
+    col = 1
     def _build_content(self) -> ft.Control:
         # Ion type checkboxes
         self.ion_type_a_cb = ft.Checkbox(label="a", value=False)

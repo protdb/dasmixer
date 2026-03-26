@@ -490,7 +490,7 @@ class BaseTableView(ft.Container):
 
         # Replace entire content — full re-render, no incremental patch.
         # Caller is responsible for calling page.update() after this.
-        self.data_container.content = ft.Column([self.data_table], scroll=ft.ScrollMode.AUTO)
+        self.data_container.content = ft.Column([ft.Row([self.data_table], scroll=ft.ScrollMode.ADAPTIVE)], scroll=ft.ScrollMode.AUTO)
         self.data_container.alignment = None
         self.data_container.height = None
         # Do NOT call self.data_container.update() here — that triggers an incremental

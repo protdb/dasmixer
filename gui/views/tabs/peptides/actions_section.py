@@ -17,7 +17,6 @@ class ActionsSection(BaseSection):
     3. Calculate PPM and coverage for protein matches
     4. Run identification matching
     """
-    
     def __init__(self, project, state, parent_tab):
         """
         Initialize actions section.
@@ -42,7 +41,7 @@ class ActionsSection(BaseSection):
                 color=ft.Colors.WHITE
             )
         )
-        
+
         # Advanced options panel (collapsed by default)
         self.advanced_panel = ft.ExpansionPanelList(
             expand_icon_color=ft.Colors.BLUE,
@@ -59,13 +58,6 @@ class ActionsSection(BaseSection):
                                 icon=ft.Icons.CALCULATE,
                                 on_click=lambda e: self.page.run_task(
                                     self.parent_tab.ion_calculations.calculate_ion_coverage_dialog, e
-                                )
-                            ),
-                            ft.ElevatedButton(
-                                content=ft.Text("Calculate PPM and Coverage for Proteins"),
-                                icon=ft.Icons.SCIENCE,
-                                on_click=lambda e: self.page.run_task(
-                                    self.parent_tab.ion_calculations.calculate_protein_metrics_internal, e
                                 )
                             ),
                             ft.ElevatedButton(
@@ -89,7 +81,7 @@ class ActionsSection(BaseSection):
                 )
             ]
         )
-        
+
         return ft.Column([
             ft.Text("Actions", size=18, weight=ft.FontWeight.BOLD),
             self.calc_peptides_btn,
@@ -100,50 +92,41 @@ class ActionsSection(BaseSection):
     async def calculate_peptides(self, e):
         """
         Run complete peptide calculation workflow.
-        
+
         Steps:
-        1. Match proteins to identifications
-        2. Calculate ion coverage (only missing)
-        3. Calculate PPM and coverage for protein matches
-        4. Run identification matching
+        1. Match proteins to identifications (includes PPM/coverage for partial matches)
+        2. Calculate ion coverage for identifications
+        3. Run identification matching
         """
         try:
             print("Starting Calculate Peptides workflow...")
-            
-            # Step 1: Match proteins
+
+            # Step 1: Match proteins (PPM/coverage now computed inside mapping)
             await self._run_step(
                 "Matching Proteins",
                 self._match_proteins_step()
             )
-            
+
             # Short delay between steps
             await asyncio.sleep(0.5)
-            
-            # Step 2: Calculate ion coverage
+
+            # Step 2: Calculate ion coverage for identifications
             await self._run_step(
                 "Calculating Ion Coverage",
                 self._calculate_coverage_step()
             )
-            
+
             await asyncio.sleep(0.5)
-            
-            # Step 3: Calculate protein metrics
-            await self._run_step(
-                "Calculating Protein Metrics",
-                self._calculate_protein_metrics_step()
-            )
-            
-            await asyncio.sleep(0.5)
-            
-            # Step 4: Run matching
+
+            # Step 3: Run identification matching
             await self._run_step(
                 "Running Identification Matching",
                 self._run_matching_step()
             )
-            
+
             # Final success message
             self.show_success("Peptide calculations complete!")
-            
+
         except Exception as ex:
             import traceback
             print(f"Error in calculate_peptides: {traceback.format_exc()}")
@@ -174,15 +157,10 @@ class ActionsSection(BaseSection):
             print("Warning: fasta section not found or missing match_proteins_internal method")
     
     async def _calculate_coverage_step(self):
-        """Step 2: Calculate ion coverage (only missing)."""
+        """Step 2: Calculate ion coverage for identifications (only missing)."""
         # Use ion_calculations service from parent tab
         await self.parent_tab.ion_calculations.run_coverage_calc(recalc_all=False)
-    
-    async def _calculate_protein_metrics_step(self):
-        """Step 3: Calculate PPM and coverage for protein matches."""
-        # Use ion_calculations service from parent tab
-        await self.parent_tab.ion_calculations.calculate_protein_metrics_internal()
-    
+
     async def _run_matching_step(self):
         """Step 4: Run identification matching."""
         matching_section = self.parent_tab.sections.get('matching')

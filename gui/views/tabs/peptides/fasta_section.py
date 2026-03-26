@@ -60,11 +60,6 @@ class FastaSection(BaseSection):
         )
         
         # Protein mapping settings
-        self.match_preferred_only_cb = ft.Checkbox(
-            label="Match preferred only",
-            value=False
-        )
-        
         self.blast_max_accepts_field = ft.TextField(
             label="BLAST Max Accepts",
             value="16",
@@ -96,7 +91,6 @@ class FastaSection(BaseSection):
             self.fasta_status_text,
             ft.Container(height=15),
             ft.Text("Protein Mapping Settings", size=16, weight=ft.FontWeight.BOLD),
-            self.match_preferred_only_cb,
             ft.Row([self.blast_max_accepts_field, self.blast_max_rejects_field], spacing=10),
             ft.Container(height=5),
             self.match_proteins_btn
@@ -234,48 +228,80 @@ class FastaSection(BaseSection):
         """Match proteins to identifications (internal, no event)."""
         try:
             await self.save_blast_settings()
-            
+
             # Get tool settings from tool_settings section
-            tool_settings = {}
-            for tool_id, controls in self.state.tool_settings_controls.items():
-                tool_settings[tool_id] = {
-                    'min_protein_identity': float(controls['min_protein_identity'].value)
-                }
-            
+            tool_settings_section = None
+            if hasattr(self, 'page') and hasattr(self.page, 'peptides_tab'):
+                tool_settings_section = self.page.peptides_tab.sections.get('tool_settings')
+
+            if tool_settings_section:
+                tool_settings = tool_settings_section.get_tool_settings_for_matching()
+            else:
+                # Fallback: minimal settings from state controls
+                tool_settings = {}
+                for tool_id, controls in self.state.tool_settings_controls.items():
+                    tool_settings[tool_id] = {
+                        'min_protein_identity': float(controls['min_protein_identity'].value),
+                        'max_ppm': float(controls['max_ppm'].value),
+                        'match_correction_criteria': ['ppm', 'intensity_coverage'],
+                        'save_aa_substitutions': False,
+                    }
+
             if not tool_settings:
                 self.show_warning("No tools configured")
                 return
-            
+
+            # Build ion_params from shared state
+            ion_params = {
+                'ions': self.state.ion_types,
+                'tolerance': self.state.ion_ppm_threshold,
+                'mode': 'largest',
+                'water_loss': self.state.water_loss,
+                'ammonia_loss': self.state.nh3_loss,
+            }
+
+            fragment_charges = list(self.state.fragment_charges)
+
+            seqfixer_params = {
+                'target_ppm': self.state.ion_ppm_threshold,
+                'min_charge': self.state.min_precursor_charge,
+                'max_charge': self.state.max_precursor_charge,
+                'max_isotope_offset': self.state.max_isotope_offset,
+                'force_isotope_offset': self.state.force_isotope_offset,
+            }
+
             # Clear existing matches
             await self.project.clear_peptide_matches()
-            
+
             # Run mapping with progress
             dialog = ProgressDialog(self.page, "Matching Proteins")
             dialog.show()
             dialog.update_progress(0, "Mapping...")
-            
+
             total_matches = 0
-            
+
             async for matches_df, count, tool_id in map_proteins(
                 self.project,
                 tool_settings,
-                only_prefered=self.match_preferred_only_cb.value,
-                batch_size=10000
+                ion_params=ion_params,
+                fragment_charges=fragment_charges,
+                seqfixer_params=seqfixer_params,
+                batch_size=5000,
             ):
                 await self.project.add_peptide_matches_batch(matches_df)
                 total_matches += count
                 dialog.update_progress(None, "Mapping...", f"Mapped {total_matches} matches...")
-            
+
             await self.project.save()
-            
+
             dialog.complete(f"Total: {total_matches}")
-            
+
             import asyncio
             await asyncio.sleep(1)
             dialog.close()
-            
+
             self.show_success(f"Mapped {total_matches} matches")
-            
+
         except Exception as ex:
             import traceback
             print(f"Error: {traceback.format_exc()}")

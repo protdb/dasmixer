@@ -23,7 +23,7 @@ class PeptideMixin:
     async def add_peptide_matches_batch(self, matches_df: pd.DataFrame) -> None:
         """
         Add batch of peptide matches.
-        
+
         Args:
             matches_df: DataFrame with columns:
                 - protein_id: str
@@ -34,27 +34,57 @@ class PeptideMixin:
                 - matched_theor_mass: float | None
                 - unique_evidence: bool | None
                 - matched_coverage_percent: float | None
+                - matched_peaks: int | None
+                - matched_top_peaks: int | None
+                - matched_ion_type: str | None
+                - matched_sequence_modified: str | None
+                - substitution: bool
         """
         rows_to_insert = []
-        
+
+        def _float(val):
+            try:
+                import math
+                v = float(val)
+                return None if math.isnan(v) else v
+            except (TypeError, ValueError):
+                return None
+
+        def _int(val):
+            try:
+                import math
+                v = float(val)
+                if math.isnan(v):
+                    return None
+                return int(v)
+            except (TypeError, ValueError):
+                return None
+
         for _, row in matches_df.iterrows():
             rows_to_insert.append((
                 row['protein_id'],
                 int(row['identification_id']),
                 row['matched_sequence'],
                 float(row['identity']),
-                float(row['matched_ppm']) if row.get('matched_ppm') is not None else None,
-                float(row['matched_theor_mass']) if row.get('matched_theor_mass') is not None else None,
+                _float(row.get('matched_ppm')),
+                _float(row.get('matched_theor_mass')),
                 1 if row.get('unique_evidence', False) else 0,
-                float(row['matched_coverage_percent']) if row.get('matched_coverage_percent') is not None else None
+                _float(row.get('matched_coverage_percent')),
+                _int(row.get('matched_peaks')),
+                _int(row.get('matched_top_peaks')),
+                row.get('matched_ion_type') or None,
+                row.get('matched_sequence_modified') or None,
+                1 if row.get('substitution', False) else 0,
             ))
-        
+
         if rows_to_insert:
             await self._executemany(
-                """INSERT INTO peptide_match 
+                """INSERT INTO peptide_match
                    (protein_id, identification_id, matched_sequence, identity,
-                    matched_ppm, matched_theor_mass, unique_evidence, matched_coverage_percent)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                    matched_ppm, matched_theor_mass, unique_evidence, matched_coverage_percent,
+                    matched_peaks, matched_top_peaks, matched_ion_type,
+                    matched_sequence_modified, substitution)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 rows_to_insert
             )
             # Note: No auto-save for batch efficiency
@@ -453,53 +483,60 @@ class PeptideMixin:
              SELECT
                 sb.sample, sb.subset, sb.sample_id, sb.subset_id,
                 s.id as spectre_id, s.seq_no, s.scans, s.charge, s.rt, s.pepmass, s.intensity,
-                id.tool, id.tool_id, id.identification_id, id.sequence, 
+                id.tool, id.tool_id, id.identification_id, id.sequence,
                 id.canonical_sequence, id.ppm, id.score, id.is_preferred,
-				id.ions_matched, id.ion_match_type, id.top_peaks_covered,
-				id.intensity_coverage,
+                id.ions_matched, id.ion_match_type, id.top_peaks_covered,
+                id.intensity_coverage,
                 mp.matched_sequence, mp.matched_ppm, mp.protein_id, mp.identity,
-                mp.unique_evidence, mp.gene
+                mp.unique_evidence, mp.gene,
+                mp.matched_peaks, mp.matched_top_peaks, mp.matched_ion_type,
+                mp.matched_sequence_modified, mp.substitution
             FROM
                 spectre AS s
             LEFT JOIN
-                (SELECT 
-                    sm.id AS sample_id, 
-                    f.id AS spectre_file_id, 
-                    sm.name AS sample, 
-                    sb.name AS subset, 
-                    sb.id AS subset_id 
-                 FROM sample sm, subset sb, spectre_file f 
+                (SELECT
+                    sm.id AS sample_id,
+                    f.id AS spectre_file_id,
+                    sm.name AS sample,
+                    sb.name AS subset,
+                    sb.id AS subset_id
+                 FROM sample sm, subset sb, spectre_file f
                  WHERE sm.subset_id = sb.id AND f.sample_id = sm.id) AS sb
                 ON sb.spectre_file_id = s.spectre_file_id
             LEFT JOIN
-                (SELECT 
-                    i.spectre_id, 
-                    t.name AS tool, 
-                    t.id AS tool_id, 
-                    i.id AS identification_id, 
-                    i.sequence, 
-                    i.canonical_sequence, 
-                    i.ppm, 
+                (SELECT
+                    i.spectre_id,
+                    t.name AS tool,
+                    t.id AS tool_id,
+                    i.id AS identification_id,
+                    i.sequence,
+                    i.canonical_sequence,
+                    i.ppm,
                     i.score,
-                    i.is_preferred, 
-					i.intensity_coverage,
-					i.ions_matched,
-					i.ion_match_type,
-					i.top_peaks_covered
-                 FROM identification i, tool t 
-                 WHERE t.id = i.tool_id) AS id 
+                    i.is_preferred,
+                    i.intensity_coverage,
+                    i.ions_matched,
+                    i.ion_match_type,
+                    i.top_peaks_covered
+                 FROM identification i, tool t
+                 WHERE t.id = i.tool_id) AS id
                 ON id.spectre_id = s.id
             LEFT JOIN
-                (SELECT 
-                    m.matched_sequence, 
-                    m.matched_ppm, 
-                    m.protein_id, 
-                    m.identification_id, 
+                (SELECT
+                    m.matched_sequence,
+                    m.matched_ppm,
+                    m.protein_id,
+                    m.identification_id,
                     m.unique_evidence,
                     m.identity,
+                    m.matched_peaks,
+                    m.matched_top_peaks,
+                    m.matched_ion_type,
+                    m.matched_sequence_modified,
+                    m.substitution,
                     p.gene
-                 FROM peptide_match m, protein p 
-                 WHERE p.id = m.protein_id) AS mp 
+                 FROM peptide_match m, protein p
+                 WHERE p.id = m.protein_id) AS mp
                 ON mp.identification_id = id.identification_id
             WHERE 1=1
         """

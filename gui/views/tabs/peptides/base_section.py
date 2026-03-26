@@ -14,7 +14,6 @@ class BaseSection(ft.Container, ABC):
     All sections inherit from ft.Container and must implement _build_content().
     State is shared via PeptidesTabState instance.
     """
-    
     def __init__(self, project: Project, state: PeptidesTabState):
         """
         Initialize section.

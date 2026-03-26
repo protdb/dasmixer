@@ -150,9 +150,16 @@ class IdentificationMixin:
     ) -> pd.DataFrame:
         """Get identifications as DataFrame with joined metadata."""
         query_parts = ["""
-            SELECT i.*, s.title as spectrum_title, s.pepmass, s.rt, s.charge,
-                   t.name as tool_name, t.parser as tool_parser,
-                   sf.sample_id, sam.name as sample_name
+            SELECT
+                i.id, i.spectre_id, i.tool_id, i.ident_file_id, i.is_preferred,
+                i.sequence, i.canonical_sequence,
+                i.ppm, i.theor_mass, i.score, i.positional_scores,
+                i.intensity_coverage, i.ions_matched, i.ion_match_type,
+                i.top_peaks_covered, i.override_charge, i.source_sequence,
+                i.isotope_offset,
+                s.title as spectrum_title, s.pepmass, s.rt, s.charge,
+                t.name as tool_name, t.parser as tool_parser,
+                sf.sample_id, sam.name as sample_name
             FROM identification i
             JOIN spectre s ON i.spectre_id = s.id
             JOIN tool t ON i.tool_id = t.id
@@ -407,6 +414,7 @@ class IdentificationMixin:
         query = """
             UPDATE identification
             SET
+                sequence = ?
                 ppm = ?,
                 theor_mass = ?,
                 override_charge = ?,
@@ -426,6 +434,7 @@ class IdentificationMixin:
             source_sequence_value = src_seq if (src_seq and src_seq != result_seq) else None
 
             params.append((
+                result_seq,
                 data_row.get('ppm'),
                 data_row.get('theor_mass'),
                 data_row.get('override_charge'),
