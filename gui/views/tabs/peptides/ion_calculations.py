@@ -16,7 +16,7 @@ from .dialogs.progress_dialog import ProgressDialog
 
 # Number of worker processes: leave one CPU free for the UI/async loop
 _WORKER_COUNT = max(1, (os.cpu_count() or 2) - 1)
-_BATCH_SIZE = 1000
+_BATCH_SIZE = 20000
 
 
 class IonCalculations:
@@ -251,7 +251,7 @@ class IonCalculations:
                         sub_results = await asyncio.gather(*futures)
                         # Flatten results from all sub-batches
                         results = [item for sub in sub_results for item in sub]
-
+                        print(results)
                         await self.project.put_identification_data_batch(results)
 
                         total_processed += len(results)

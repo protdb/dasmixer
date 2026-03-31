@@ -14,7 +14,7 @@ class ToolSettingsSection(BaseSection):
 
     def _build_content(self) -> ft.Control:
         """Build tool settings UI."""
-        self.tools_container = ft.Column(spacing=10)
+        self.tools_container = ft.ResponsiveRow(spacing=10)
 
         return ft.Column([
             ft.Text("Tool Settings", size=18, weight=ft.FontWeight.BOLD),
@@ -87,22 +87,26 @@ class ToolSettingsSection(BaseSection):
 
         return {
             # ── Basic quality filters ──────────────────────────────────────
+            'ignore_criteria': ft.Checkbox(
+                label="Trust all identifications",
+                value=settings.get('ignore_criteria', False)
+            ),
             'max_ppm': ft.TextField(
                 label="Max PPM",
                 value=str(settings.get('max_ppm', 50)),
-                width=150,
+                width=100,
                 keyboard_type=ft.KeyboardType.NUMBER,
             ),
             'min_score': ft.TextField(
                 label="Min Score",
                 value=str(settings.get('min_score', 0.8)),
-                width=150,
+                width=100,
                 keyboard_type=ft.KeyboardType.NUMBER,
             ),
             'min_ion_intensity_coverage': ft.TextField(
                 label="Min Ion Coverage (%)",
                 value=str(settings.get('min_ion_intensity_coverage', 25)),
-                width=200,
+                width=150,
                 keyboard_type=ft.KeyboardType.NUMBER,
             ),
             # ── Peptide length ─────────────────────────────────────────────
@@ -122,19 +126,19 @@ class ToolSettingsSection(BaseSection):
             'min_top_peaks': ft.TextField(
                 label="Min Top-10 Peaks Covered",
                 value=str(settings.get('min_top_peaks', 1)),
-                width=210,
+                width=150,
                 keyboard_type=ft.KeyboardType.NUMBER,
             ),
             'min_ions_covered': ft.TextField(
                 label="Min Ions Covered",
                 value=str(settings.get('min_ions_covered', 5)),
-                width=180,
+                width=150,
                 keyboard_type=ft.KeyboardType.NUMBER,
             ),
             'min_spectre_peaks': ft.TextField(
                 label="Min Spectrum Peaks",
                 value=str(settings.get('min_spectre_peaks', 10)),
-                width=180,
+                width=150,
                 keyboard_type=ft.KeyboardType.NUMBER,
             ),
             # ── Protein matching ───────────────────────────────────────────
@@ -181,7 +185,7 @@ class ToolSettingsSection(BaseSection):
                 value='ppm' in saved_criteria,
             ),
             'match_correction_intensity': ft.Checkbox(
-                label="Intensity coverage",
+                label="Intensity\ncoverage",
                 value='intensity_coverage' in saved_criteria,
             ),
             'match_correction_ions': ft.Checkbox(
@@ -189,7 +193,7 @@ class ToolSettingsSection(BaseSection):
                 value='ions_matched' in saved_criteria,
             ),
             'match_correction_top10': ft.Checkbox(
-                label="Top 10 ions matched",
+                label="Top 10\nions matched",
                 value='top10_ions_matched' in saved_criteria,
             ),
             # ── Save AA substitutions ──────────────────────────────────────
@@ -221,6 +225,9 @@ class ToolSettingsSection(BaseSection):
                     size=16,
                     weight=ft.FontWeight.BOLD,
                 ),
+                ft.Row([
+                    controls['ignore_criteria']
+                ]),
                 # Row 1: basic quality
                 ft.Row([
                     controls['max_ppm'],
@@ -284,6 +291,10 @@ class ToolSettingsSection(BaseSection):
             border=ft.border.all(1, ft.Colors.BLUE_200),
             border_radius=8,
             bgcolor=ft.Colors.BLUE_50,
+            col = {
+                ft.ResponsiveRowBreakpoint.LG: 6,
+                ft.ResponsiveRowBreakpoint.MD: 12
+            }
         )
 
     # ------------------------------------------------------------------
@@ -483,6 +494,7 @@ class ToolSettingsSection(BaseSection):
             match_correction_criteria = [k for k, cb in criteria_map.items() if cb.value]
 
             tool_settings[tool_id] = {
+                'ignore_criteria': bool(controls['ignore_criteria'].value),
                 'max_ppm': float(controls['max_ppm'].value),
                 'min_score': float(controls['min_score'].value),
                 'min_ion_intensity_coverage': float(controls['min_ion_intensity_coverage'].value),

@@ -1,6 +1,7 @@
 """Ion matching settings section."""
 
 import flet as ft
+from sqlalchemy.dialects.mssql.information_schema import columns
 
 from api.calculations.spectra.ion_match import IonMatchParameters
 from .base_section import BaseSection
@@ -24,36 +25,35 @@ class IonSettingsSection(BaseSection):
 
         # Threshold fields
         self.ion_ppm_threshold_field = ft.TextField(
-            label="PPM Threshold", value="20",
-            width=150, keyboard_type=ft.KeyboardType.NUMBER
+            label="PPM Threshold", value="20", width=100, keyboard_type=ft.KeyboardType.NUMBER
         )
         self.fragment_charges_field = ft.TextField(
             label="Fragment Charges", value="1,2",
-            hint_text="e.g., 1,2,3", width=250
+            hint_text="e.g., 1,2,3", width=100,
         )
 
         # Precursor charge settings for PPM calculation
         self.ignore_spectre_charges_cb = ft.Checkbox(
-            label="Ignore spectre charges",
+            label="Ignore\nspectre charges",
             value=True
         )
         self.min_precursor_charge_field = ft.TextField(
-            label="Min precursor charge", value="1",
-            width=150, keyboard_type=ft.KeyboardType.NUMBER
+            label="Min charge", value="1",
+            width=100, keyboard_type=ft.KeyboardType.NUMBER
         )
         self.max_precursor_charge_field = ft.TextField(
-            label="Max precursor charge", value="4",
-            width=150, keyboard_type=ft.KeyboardType.NUMBER
+            label="Max charge", value="4",
+            width=100, keyboard_type=ft.KeyboardType.NUMBER
         )
 
         # Isotope offset settings
         self.force_isotope_offset_cb = ft.Checkbox(
-            label="Force isotope offset lookover",
+            label="Force isotope\noffset lookover",
             value=True
         )
         self.max_isotope_offset_field = ft.TextField(
             label="Max isotope offset", value="2",
-            width=180, keyboard_type=ft.KeyboardType.NUMBER
+            width=200, keyboard_type=ft.KeyboardType.NUMBER
         )
 
         # Sequence selection criteria
@@ -70,19 +70,19 @@ class IonSettingsSection(BaseSection):
 
         return ft.Column([
             ft.Text("Ion Matching Settings", size=18, weight=ft.FontWeight.BOLD),
+            ft.Text("Ion Types:", weight=ft.FontWeight.W_500),
             ft.Row([
-                ft.Text("Ion Types:", weight=ft.FontWeight.W_500),
                 self.ion_type_a_cb, self.ion_type_b_cb, self.ion_type_c_cb,
                 self.ion_type_x_cb, self.ion_type_y_cb, self.ion_type_z_cb
             ], spacing=15),
             ft.Row([
-                ft.Text("Losses:", weight=ft.FontWeight.W_500),
                 self.water_loss_cb, self.nh3_loss_cb
             ], spacing=15),
             ft.Row([
                 self.ion_ppm_threshold_field,
                 self.fragment_charges_field
             ], spacing=10),
+            ft.Text("Precursor charge override:", weight=ft.FontWeight.W_500),
             ft.Row([
                 self.ignore_spectre_charges_cb,
                 self.min_precursor_charge_field,

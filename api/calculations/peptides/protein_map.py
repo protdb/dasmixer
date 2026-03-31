@@ -235,13 +235,17 @@ async def map_proteins(
         )
 
         max_ppm: float = tool_params.get('max_ppm', 50.0)
+        trust_everyting = tool_params.get('ignore_criteria', False)
         denovo_correction: bool = tool_params.get('denovo_correction', False)
         denovo_correction_ppm: float = tool_params.get('denovo_correction_ppm', 50000.0)
         leucine_combinatorics: bool = tool_params.get('leucine_combinatorics', False)
         match_correction_criteria: list[str] = tool_params.get('match_correction_criteria', [])
         save_aa_substitutions: bool = tool_params.get('save_aa_substitutions', False)
+        if not trust_everyting:
+            query_ppm = denovo_correction_ppm if denovo_correction else max_ppm
+        else:
+            query_ppm = None
 
-        query_ppm = denovo_correction_ppm if denovo_correction else max_ppm
 
         counter = 0
         while True:

@@ -88,13 +88,15 @@ class PeptidesTab(ft.Container):
         """Build tab layout."""
         resp_sections = ['ion_settings', 'fasta']
         default_col = {
-            ft.ResponsiveRowBreakpoint.LG: 4,
-            ft.ResponsiveRowBreakpoint.MD: 6,
-            ft.ResponsiveRowBreakpoint.SM: 12
+            ft.ResponsiveRowBreakpoint.XL: 6,
+            ft.ResponsiveRowBreakpoint.LG: 5,
+            ft.ResponsiveRowBreakpoint.MD: 8,
+            ft.ResponsiveRowBreakpoint.SM: 16
         }
         for k in resp_sections:
             self.sections[k].col = default_col
             self.sections[k].expand = True
+            self.sections[k].height = 500
 
         new_tab_layout = ft.Column(
             [
@@ -104,14 +106,22 @@ class PeptidesTab(ft.Container):
                             self.sections['actions'],
                             self.sections['matching'],
                         ],
-                        col = default_col,
+                        col = {
+                            ft.ResponsiveRowBreakpoint.XL: 4,
+                            ft.ResponsiveRowBreakpoint.LG: 6,
+                            ft.ResponsiveRowBreakpoint.MD: 8,
+                            ft.ResponsiveRowBreakpoint.SM: 16
+
+                        },
                         expand = True,
+                        height = 500
                     ),
                     ft.Container(content=self.sections['ion_settings'], expand = True, col = default_col),
                     ft.Container(content=self.sections['fasta'], expand = True, col = default_col),
                     # self.sections['ion_settings'],
                     # self.sections['fasta'],
-                    ]
+                    ],
+                    columns = 16
                 ),
                 ft.Container(height=10),
                 self.sections['tool_settings'],

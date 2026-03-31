@@ -352,6 +352,22 @@ class IdentificationMixin:
         )
         await self.save()
 
+    async def get_identifications_count(
+            self,
+            tool_id: int,
+            only_missing: bool = False
+    ) -> int:
+
+        missing_filter = "AND intensity_coverage IS NULL" if only_missing else ""
+        query = f"""
+        SELECT count(*) as count from identification where tool_id = ? {missing_filter}
+        """
+        result = await self.execute_query_df(query)
+        if len(result) == 0:
+            return 0
+        return int(result.iloc[0]['count'])
+
+
     async def get_identifications_with_spectra_batch(
             self,
             tool_id: int,
@@ -390,7 +406,7 @@ class IdentificationMixin:
                 i.sequence,
                 i.canonical_sequence
             FROM identification i
-            JOIN spectre s ON s.id = i.spectre_id
+            LEFT JOIN spectre s ON s.id = i.spectre_id
             WHERE i.tool_id = ?
             {missing_filter}
             LIMIT ? OFFSET ?
@@ -414,7 +430,7 @@ class IdentificationMixin:
         query = """
             UPDATE identification
             SET
-                sequence = ?
+                sequence = ?,
                 ppm = ?,
                 theor_mass = ?,
                 override_charge = ?,

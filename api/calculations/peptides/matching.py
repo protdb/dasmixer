@@ -42,17 +42,20 @@ async def select_preferred_identifications(
     for _, spectra_file in spectra_files.iterrows():
         idents_not_merged = []
         for tool_id, tool_params in tool_settings.items():
+            idents = await project.get_identifications(spectra_file['id'], tool_id)
+            if tool_params.get("ignore_criteria", False):
+                idents_not_merged.append(idents.copy())
+                continue
             max_ppm = tool_params.get("max_ppm", 50000)
             min_score = tool_params.get("min_score", 0)
             min_ion_intensity_coverage = tool_params["min_ion_intensity_coverage"]
             min_len = tool_params.get("min_peptide_length", 7)
             max_len = tool_params.get("max_peptide_length", 30)
 
-            idents = await project.get_identifications(spectra_file['id'], tool_id)
+
 
             idents['canonical_length'] = idents['canonical_sequence'].str.len()
             idents['ppm'] = idents['ppm'].abs()
-
             if not tool_params.get("denovo_correction", False):
                 query = (
                     "ppm <= @max_ppm and "
