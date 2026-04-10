@@ -362,7 +362,7 @@ class IdentificationMixin:
         query = f"""
         SELECT count(*) as count from identification where tool_id = ? {missing_filter}
         """
-        result = await self.execute_query_df(query)
+        result = await self.execute_query_df(query, (int(tool_id),))
         if len(result) == 0:
             return 0
         return int(result.iloc[0]['count'])

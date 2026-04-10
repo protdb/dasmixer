@@ -192,7 +192,17 @@ class IonCalculations:
                 'max_ptm': max_ptm,
             }
 
-        dialog = ProgressDialog(page, "Calculating Ion Coverage")
+        only_missing = not recalc_all
+
+        # Get total identification count for progress bar
+        total_count = 0
+        for tool_id in tool_ids:
+            total_count += await self.project.get_identifications_count(
+                tool_id=tool_id,
+                only_missing=only_missing,
+            )
+
+        dialog = ProgressDialog(page, "Calculating Ion Coverage", stoppable=True)
         dialog.show()
 
         total_processed = 0
@@ -200,11 +210,16 @@ class IonCalculations:
         # Sub-batch size: split each DB batch across all workers
         chunk_size = max(1, math.ceil(_BATCH_SIZE / _WORKER_COUNT))
 
+        stopped_early = False
+
         try:
             loop = asyncio.get_event_loop()
 
             with ProcessPoolExecutor(max_workers=_WORKER_COUNT) as executor:
                 for tool_id in tool_ids:
+                    if stopped_early:
+                        break
+
                     t_settings = tool_settings_map.get(tool_id, {})
                     ptm_list = t_settings.get('ptm_list', None)
                     max_ptm = t_settings.get('max_ptm', 5)
@@ -215,7 +230,7 @@ class IonCalculations:
                             tool_id=tool_id,
                             offset=offset,
                             limit=_BATCH_SIZE,
-                            only_missing=not recalc_all,
+                            only_missing=only_missing,
                         )
                         if not batch_objects:
                             break
@@ -257,14 +272,26 @@ class IonCalculations:
                         total_processed += len(results)
                         offset += _BATCH_SIZE
 
+                        progress_value = (total_processed / total_count) if total_count > 0 else None
                         dialog.update_progress(
-                            None,
+                            progress_value,
                             "Calculating...",
-                            f"Processed {total_processed} identifications...",
+                            f"Processed {total_processed} / {total_count}",
+                            processed=total_processed,
+                            total=total_count,
                         )
 
+                        # Check stop request after batch is safely written to DB
+                        if dialog.stop_requested:
+                            stopped_early = True
+                            break
+
             await self.project.save()
-            dialog.complete(f"Done: {total_processed} identifications")
+
+            if stopped_early:
+                dialog.complete(f"Stopped: {total_processed} / {total_count} processed")
+            else:
+                dialog.complete(f"Done: {total_processed} identifications")
             await asyncio.sleep(1)
             dialog.close()
 
