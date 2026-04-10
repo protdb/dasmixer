@@ -1,7 +1,6 @@
 """Ion matching settings section."""
 
 import flet as ft
-from sqlalchemy.dialects.mssql.information_schema import columns
 
 from dasmixer.api.calculations.spectra.ion_match import IonMatchParameters
 from .base_section import BaseSection
