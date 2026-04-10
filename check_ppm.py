@@ -1,8 +1,8 @@
 import sys
 sys.path.insert(0, '.')
 
-from utils.seqfixer_utils import PTMS
-from api.calculations.ppm.seqfixer import SeqFixer
+from dasmixer.utils.seqfixer_utils import PTMS
+from dasmixer.api.calculations.ppm.seqfixer import SeqFixer
 
 fixer = SeqFixer(
     ptm_list=PTMS,

@@ -17,8 +17,8 @@ import sys
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
-from api.project.project import Project
-from api.reporting.reports.sample_report import SampleReport
+from dasmixer.api.project.project import Project
+from dasmixer.api.reporting.reports.sample_report import SampleReport
 
 
 async def test_export():

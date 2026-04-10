@@ -1,7 +1,7 @@
 """Test script to verify refactored Project class."""
 
 import asyncio
-from api.project import Project
+from dasmixer.api.project import Project
 
 
 async def test_basic_operations():
