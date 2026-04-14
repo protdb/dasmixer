@@ -141,13 +141,17 @@ async def calculate_preferred_identifications_for_file(
             top_peaks_covered=top_peaks_count,
         )
         print(idents)
+        print(tool_id, spectra_file_id)
         if denovo_correction:
             idents['min_ppm'] = idents.apply(
                 lambda row: min(abs(row['ppm']), abs(row['matched_ppm'])), axis=1
             )
             idents = idents.query('min_ppm <= @max_ppm')
         else:
-            idents['min_ppm'] = idents['ppm'].abs()
+            try:
+                idents['min_ppm'] = idents['ppm'].abs()
+            except KeyError:
+                idents['min_ppm'] = None
         idents_not_merged.append(idents.copy())
 
     df = pd.concat(idents_not_merged, ignore_index=True)
