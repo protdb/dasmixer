@@ -273,6 +273,12 @@ class SpectraMixin:
 
         return [{by: row[by], 'spectre_id': row['id']} for row in rows]
 
+    async def delete_spectra_file(self, spectra_file_id: int) -> None:
+        """Delete spectra file (cascades to spectra → identifications → peptide_matches)."""
+        await self._execute("DELETE FROM spectre_file WHERE id = ?", (int(spectra_file_id),))
+        await self.save()
+        logger.info(f"Deleted spectra file id={spectra_file_id}")
+
     async def get_spectra_for_identification_ids(
         self,
         identification_ids: list[int],

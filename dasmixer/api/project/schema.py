@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS sample (
     name TEXT UNIQUE NOT NULL,
     subset_id INTEGER,
     additions TEXT,  -- JSON as TEXT
+    outlier INTEGER NOT NULL DEFAULT 0,  -- BOOLEAN: 1 if sample is marked as outlier
     FOREIGN KEY (subset_id) REFERENCES subset(id) ON DELETE SET NULL
 );
 
@@ -187,6 +188,24 @@ CREATE TABLE IF NOT EXISTS protein_quantification_result (
 
 CREATE INDEX IF NOT EXISTS idx_prot_quant_ident ON protein_quantification_result(protein_identification_id);
 CREATE INDEX IF NOT EXISTS idx_prot_quant_algo ON protein_quantification_result(algorithm);
+
+-- Sample status cache (Stage 11)
+-- Stores pre-computed aggregated statistics per sample for fast panel rendering.
+-- Updated whenever stats are recalculated; read on project open.
+CREATE TABLE IF NOT EXISTS sample_status_cache (
+    sample_id INTEGER PRIMARY KEY,
+    spectra_files_count INTEGER NOT NULL DEFAULT 0,
+    ident_files_count INTEGER NOT NULL DEFAULT 0,
+    identifications_count INTEGER NOT NULL DEFAULT 0,
+    preferred_count INTEGER NOT NULL DEFAULT 0,
+    coverage_known_count INTEGER NOT NULL DEFAULT 0,
+    protein_ids_count INTEGER NOT NULL DEFAULT 0,
+    empty_ident_files_count INTEGER NOT NULL DEFAULT 0,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY (sample_id) REFERENCES sample(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_sample_status_cache ON sample_status_cache(sample_id);
 
 -- Generated reports (updated for Stage 5)
 CREATE TABLE IF NOT EXISTS generated_reports (

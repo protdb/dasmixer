@@ -39,18 +39,19 @@ class MatchingSection(BaseSection):
         """Run identification matching (with UI)."""
         await self.run_matching_internal()
     
-    async def run_matching_internal(self):
-        """Run identification matching (internal, no event)."""
+    async def run_matching_internal(self, sample_id: int | None = None):
+        """Run identification matching (internal, no event). Delegates to SelectPreferredAction."""
         try:
+            from dasmixer.gui.actions.ion_actions import SelectPreferredAction
             # Get tool settings section
             tool_settings_section = None
             if hasattr(self, 'page') and hasattr(self.page, 'peptides_tab'):
                 tool_settings_section = self.page.peptides_tab.sections.get('tool_settings')
-            
+
             if not tool_settings_section:
                 self.show_error("Tool settings not available")
                 return
-            
+
             # Validate and save all tool settings
             for tool_id in self.state.tool_settings_controls.keys():
                 is_valid, error_msg = tool_settings_section.validate_tool_settings(tool_id)
@@ -58,53 +59,17 @@ class MatchingSection(BaseSection):
                     self.show_warning(f"Validation error: {error_msg}")
                     return
                 await tool_settings_section.save_tool_settings(tool_id)
-            
-            # Get criterion
-            criterion = self.selection_criterion_group.value
-            
-            # Get tool settings for matching
+
+            criterion = self.selection_criterion_group.value or 'intensity'
             tool_settings = tool_settings_section.get_tool_settings_for_matching()
-            
-            if not tool_settings:
-                self.show_warning("No tools configured")
-                return
-            
-            # Run matching with progress
-            dialog = ProgressDialog(self.page, "Running Matching")
-            dialog.show()
 
+            action = SelectPreferredAction(self.project, self.page)
+            await action.run(
+                tool_settings=tool_settings,
+                criterion=criterion,
+                sample_id=sample_id,
+            )
 
-            spectre_files = await self.project.get_spectra_files()
-            progres = 0.0
-            processed_files = 0
-            progres_step = round(1 / len(spectre_files), 3)
-            for _, spectra_file in spectre_files.iterrows():
-                file_name = Path(spectra_file['path']).name
-                dialog.update_progress(
-                    progres,
-                    f"Processing {file_name} ({processed_files+1}/{len(spectre_files)})..."
-                )
-                idents = await calculate_preferred_identifications_for_file(
-                    self.project,
-                    spectra_file['id'],
-                    criterion,
-                    tool_settings,
-                )
-                dialog.update_progress(progres, f"Saving {file_name} ({processed_files+1}/{len(spectre_files)})...")
-                await self.project.set_preferred_identifications_for_file(
-                    spectra_file['id'],
-                    idents,
-                )
-                progres += progres_step
-                processed_files += 1
-            dialog.complete(f"Completed {processed_files+1}/{len(spectre_files)}!")
-            
-            import asyncio
-            await asyncio.sleep(0.5)
-            dialog.close()
-            
-            self.show_success(f"Processed {processed_files} spectra files!")
-            
         except Exception as ex:
             import traceback
             print(f"Error: {traceback.format_exc()}")

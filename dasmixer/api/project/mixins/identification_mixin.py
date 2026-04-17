@@ -355,14 +355,27 @@ class IdentificationMixin:
     async def get_identifications_count(
             self,
             tool_id: int,
-            only_missing: bool = False
+            only_missing: bool = False,
+            spectra_file_ids: list[int] | None = None,
     ) -> int:
 
-        missing_filter = "AND intensity_coverage IS NULL" if only_missing else ""
+        missing_filter = "AND i.intensity_coverage IS NULL" if only_missing else ""
+        sf_filter = ""
+        if spectra_file_ids:
+            placeholders = ",".join("?" * len(spectra_file_ids))
+            sf_filter = f"AND s.spectre_file_id IN ({placeholders})"
         query = f"""
-        SELECT count(*) as count from identification where tool_id = ? {missing_filter}
+            SELECT COUNT(*) AS count
+            FROM identification i
+            LEFT JOIN spectre s ON s.id = i.spectre_id
+            WHERE i.tool_id = ?
+            {missing_filter}
+            {sf_filter}
         """
-        result = await self.execute_query_df(query, (int(tool_id),))
+        params_list: list = [int(tool_id)]
+        if spectra_file_ids:
+            params_list.extend(int(x) for x in spectra_file_ids)
+        result = await self.execute_query_df(query, tuple(params_list))
         if len(result) == 0:
             return 0
         return int(result.iloc[0]['count'])
@@ -374,6 +387,7 @@ class IdentificationMixin:
             offset: int = 0,
             limit: int = 1000,
             only_missing: bool = False,
+            spectra_file_ids: list[int] | None = None,
     ) -> list[IdentificationWithSpectrum]:
         """
         Fetch a batch of identifications with associated spectrum arrays.
@@ -388,11 +402,17 @@ class IdentificationMixin:
             limit: Batch size (number of rows to return).
             only_missing: If True, only return rows where intensity_coverage IS NULL
                           (i.e. not yet calculated).
+            spectra_file_ids: If provided, only return identifications for these spectra files.
 
         Returns:
             List of IdentificationWithSpectrum instances.
         """
         missing_filter = "AND i.intensity_coverage IS NULL" if only_missing else ""
+        sf_filter = ""
+        if spectra_file_ids:
+            placeholders = ",".join("?" * len(spectra_file_ids))
+            sf_filter = f"AND s.spectre_file_id IN ({placeholders})"
+
         query = f"""
             SELECT
                 i.id,
@@ -409,11 +429,21 @@ class IdentificationMixin:
             LEFT JOIN spectre s ON s.id = i.spectre_id
             WHERE i.tool_id = ?
             {missing_filter}
+            {sf_filter}
             LIMIT ? OFFSET ?
         """
-        params = (int(tool_id), int(limit), int(offset))
-        rows = await self._fetchall(query, params)
+        params_list: list = [int(tool_id)]
+        if spectra_file_ids:
+            params_list.extend(int(x) for x in spectra_file_ids)
+        params_list.extend([int(limit), int(offset)])
+        rows = await self._fetchall(query, tuple(params_list))
         return [IdentificationWithSpectrum.from_dict(dict(row)) for row in rows]
+
+    async def delete_identification_file(self, ident_file_id: int) -> None:
+        """Delete identification file (cascades to identifications → peptide_matches)."""
+        await self._execute("DELETE FROM identification_file WHERE id = ?", (int(ident_file_id),))
+        await self.save()
+        logger.info(f"Deleted identification file id={ident_file_id}")
 
     async def put_identification_data_batch(self, data_rows: list[dict[str, Any]]) -> None:
         """

@@ -572,3 +572,19 @@ class PeptideMixin:
 
         # Execute query
         return await self.execute_query_df(query, tuple(params) if params else None)
+
+    async def clear_peptide_matches_for_sample(self, sample_id: int) -> None:
+        """
+        Delete peptide_match records for all identifications of a given sample.
+        Used when re-running protein mapping for a single sample.
+        """
+        await self._execute("""
+            DELETE FROM peptide_match WHERE identification_id IN (
+                SELECT i.id FROM identification i
+                JOIN spectre s ON i.spectre_id = s.id
+                JOIN spectre_file sf ON s.spectre_file_id = sf.id
+                WHERE sf.sample_id = ?
+            )
+        """, (int(sample_id),))
+        await self.save()
+        logger.debug(f"Cleared peptide matches for sample_id={sample_id}")

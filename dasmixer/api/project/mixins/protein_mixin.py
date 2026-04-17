@@ -522,3 +522,28 @@ class ProteinMixin:
 
         df = await self.execute_query_df(query, tuple(params))
         return df
+
+    async def clear_protein_identifications_for_sample(self, sample_id: int) -> None:
+        """
+        Delete protein identification results for a given sample.
+        Cascade-deletes linked protein_quantification_result rows via FK.
+        """
+        await self._execute(
+            "DELETE FROM protein_identification_result WHERE sample_id = ?",
+            (int(sample_id),)
+        )
+        await self.save()
+        logger.info(f"Cleared protein identifications for sample_id={sample_id}")
+
+    async def clear_protein_quantifications_for_sample(self, sample_id: int) -> None:
+        """
+        Delete LFQ quantification records for a given sample.
+        """
+        await self._execute("""
+            DELETE FROM protein_quantification_result
+            WHERE protein_identification_id IN (
+                SELECT id FROM protein_identification_result WHERE sample_id = ?
+            )
+        """, (int(sample_id),))
+        await self.save()
+        logger.info(f"Cleared protein quantifications for sample_id={sample_id}")

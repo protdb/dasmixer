@@ -278,6 +278,12 @@ class LFQSection(BaseSection):
             self.show_error("Please enter valid numbers")
             return
         
+        # Update state from current field values
+        self.state.empai_base_value = empai_base
+        self.state.min_peptide_length = min_len
+        self.state.max_peptide_length = max_len
+        self.state.max_cleavage_sites = max_cleav
+
         # Save settings to project
         for method in ['emPAI', 'iBAQ', 'NSAF', 'Top3']:
             await self.project.set_setting(f'lfq_method_{method}', str(self.state.lfq_methods[method]))
@@ -286,69 +292,12 @@ class LFQSection(BaseSection):
         await self.project.set_setting('lfq_min_peptide_length', str(min_len))
         await self.project.set_setting('lfq_max_peptide_length', str(max_len))
         await self.project.set_setting('lfq_max_cleavage_sites', str(max_cleav))
-        
-        # Create progress dialog
-        dialog = ProgressDialog(self.page, "Calculating LFQ")
-        dialog.show()
-        
-        try:
-            # Clear old results
-            dialog.update_progress(None, "Clearing old quantifications...")
-            await self.project.clear_protein_quantifications()
-            
-            # Get all sample IDs
-            dialog.update_progress(None, "Loading samples...")
-            samples = await self.project.execute_query_df("SELECT DISTINCT id FROM sample ORDER BY id")
-            
-            if len(samples) == 0:
-                dialog.close()
-                self.show_warning("No samples found in project")
-                return
-            
-            total_samples = len(samples)
-            
-            # Process each sample
-            for idx, row in samples.iterrows():
-                sample_id = row['id']
-                
-                dialog.update_progress(
-                    (idx + 1) / total_samples,
-                    f"Processing sample {idx + 1} of {total_samples}"
-                )
-                
-                # Calculate LFQ (FIXED: parameter name)
-                result_df = await calculate_lfq(
-                    project=self.project,
-                    sample_id=sample_id,
-                    methods=selected_methods,
-                    enzyme=self.state.enzyme,
-                    min_length=min_len,
-                    max_length=max_len,
-                    max_cleavage_sites=max_cleav,
-                    empai_base=empai_base
-                )
-                
-                # Save results
-                if len(result_df) > 0:
-                    await self.project.add_protein_quantifications_batch(result_df)
-            
-            # Update counts
-            self.state.protein_quantification_count = await self.project.get_protein_quantification_count()
-            
-            # Complete
-            dialog.complete()
-            await asyncio.sleep(1)
-            dialog.close()
-            
-            self.show_success(f"LFQ calculated: {self.state.protein_quantification_count} total quantifications")
-            
-            # Refresh table
-            if hasattr(self.parent_tab, 'sections') and 'table' in self.parent_tab.sections:
-                await self.parent_tab.sections['table'].load_data()
-        
-        except Exception as ex:
-            print(ex.with_traceback())
-            import traceback
-            traceback.print_exc()
-            dialog.close()
-            self.show_error(f"Error: {str(ex)}")
+
+        from dasmixer.gui.actions.lfq_action import LFQAction
+        action = LFQAction(self.project, self.page)
+        await action.run(state=self.state)
+
+        # Update counts and refresh table
+        self.state.protein_quantification_count = await self.project.get_protein_quantification_count()
+        if hasattr(self.parent_tab, 'sections') and 'table' in self.parent_tab.sections:
+            await self.parent_tab.sections['table'].load_data()

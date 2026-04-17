@@ -93,6 +93,7 @@ class Sample:
     name: str = ""
     subset_id: int | None = None
     additions: dict | None = None  # albumin, total_protein, etc.
+    outlier: bool = False  # True if sample is marked as outlier
     
     # Computed fields (not stored in DB, filled on load)
     subset_name: str | None = field(default=None, repr=False)
@@ -104,7 +105,8 @@ class Sample:
             'id': self.id,
             'name': self.name,
             'subset_id': self.subset_id,
-            'additions': json.dumps(self.additions) if self.additions else None
+            'additions': json.dumps(self.additions) if self.additions else None,
+            'outlier': 1 if self.outlier else 0
         }
     
     @classmethod
@@ -119,6 +121,7 @@ class Sample:
             name=data.get('name', ''),
             subset_id=data.get('subset_id'),
             additions=additions,
+            outlier=bool(data.get('outlier', False)),
             subset_name=data.get('subset_name'),
             spectra_files_count=data.get('spectra_files_count', 0)
         )

@@ -101,105 +101,36 @@ class DetectionSection(BaseSection):
         except ValueError:
             pass
     
-    async def calculate_identifications(self, e):
+    async def calculate_identifications(self, e, sample_id: int | None = None):
         """
-        Calculate protein identifications.
-        
-        Workflow:
-        1. Validate parameters
-        2. Show progress dialog
-        3. Clear old results
-        4. Get peptide data and protein DB
-        5. Run find_protein_identifications()
-        6. Save results
-        7. Update state and refresh table
+        Calculate protein identifications. Delegates to ProteinIdentificationsAction.
         """
-        # Validate parameters
         try:
             min_pep = int(self.min_peptides_field.value)
             min_uq = int(self.min_unique_field.value)
-            
             if min_pep < 1:
                 self.show_error("Minimum peptides must be at least 1")
                 return
-            
             if min_uq < 0:
                 self.show_error("Minimum unique peptides cannot be negative")
                 return
         except ValueError:
             self.show_error("Please enter valid numbers")
             return
-        
+
         # Save settings to project
         await self.project.set_setting('proteins_min_peptides', str(min_pep))
         await self.project.set_setting('proteins_min_unique_evidence', str(min_uq))
-        
-        # Create progress dialog
-        dialog = ProgressDialog(self.page, "Calculating Protein Identifications")
-        dialog.show()
-        
-        try:
-            # Clear old results
-            dialog.update_progress(None, "Clearing old results...")
-            await self.project.clear_protein_identifications()
-            
-            # Get data
-            dialog.update_progress(None, "Loading peptide data...")
-            joined_data = await self.project.get_joined_peptide_data(
-                is_preferred=True,
-                protein_identified=True
-            )
-            
-            if len(joined_data) == 0:
-                dialog.close()
-                self.show_warning("No protein-matched identifications found. Please run peptide matching first.")
-                return
-            
-            dialog.update_progress(None, "Loading protein database...")
-            sequences_db = await self.project.get_protein_db_to_search()
-            
-            if len(sequences_db) == 0:
-                dialog.close()
-                self.show_warning("No proteins loaded. Please load a FASTA file first.")
-                return
-            
-            # Calculate total samples for progress
-            total_samples = joined_data['sample_id'].nunique()
-            current_sample = 0
-            
-            # Run identification calculation
-            async for result_df, sample_id in find_protein_identifications(
-                joined_data=joined_data,
-                sequences_db=sequences_db,
-                min_peptides=min_pep,
-                min_uq_evidence=min_uq
-            ):
-                current_sample += 1
-                dialog.update_progress(
-                    current_sample / total_samples,
-                    f"Processing sample {current_sample} of {total_samples}"
-                )
-                
-                # Save batch
-                if len(result_df) > 0:
-                    await self.project.add_protein_identifications_batch(result_df)
-            
-            # Update counts
-            self.state.protein_identification_count = await self.project.get_protein_identification_count()
-            
-            # Complete
-            dialog.complete()
-            await asyncio.sleep(1)
-            dialog.close()
-            
-            self.show_success(f"Protein identifications calculated: {self.state.protein_identification_count} total")
-            
-            # Refresh table
-            if hasattr(self.parent_tab, 'sections') and 'table' in self.parent_tab.sections:
-                await self.parent_tab.sections['table'].load_data()
-        
-        except Exception as ex:
-            import traceback
-            traceback.print_exc()
-            dialog.close()
-            self.show_error(f"Error: {str(ex)}")
+
+        from dasmixer.gui.actions.protein_ident_action import ProteinIdentificationsAction
+        action = ProteinIdentificationsAction(self.project, self.page)
+        total = await action.run(
+            min_peptides=min_pep,
+            min_uq_evidence=min_uq,
+            sample_id=sample_id,
+        )
+
+        # Update counts and refresh table
+        self.state.protein_identification_count = await self.project.get_protein_identification_count()
+        if hasattr(self.parent_tab, 'sections') and 'table' in self.parent_tab.sections:
+            await self.parent_tab.sections['table'].load_data()

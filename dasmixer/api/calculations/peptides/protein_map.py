@@ -173,6 +173,7 @@ async def map_proteins(
     fragment_charges: list[int],
     seqfixer_params: dict,
     batch_size: int = 5000,
+    sample_id: int | None = None,
 ) -> AsyncIterator[tuple[pd.DataFrame, int, int]]:
     """
     Perform protein mapping in batches and yield results per batch.
@@ -192,6 +193,7 @@ async def map_proteins(
             target_ppm, min_charge, max_charge, max_isotope_offset,
             force_isotope_offset (bool).
         batch_size: Identifications per DB batch.
+        sample_id: If provided, only process identifications for this sample.
 
     Yields:
         (matches_df, count, tool_id) — DataFrame ready for
@@ -255,6 +257,7 @@ async def map_proteins(
                 max_abs_ppm=query_ppm,
                 offset=counter,
                 limit=batch_size,
+                sample_id=sample_id,
             )
             if len(batch_data) == 0:
                 break

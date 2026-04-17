@@ -117,29 +117,54 @@ class SamplesTab(ft.Container):
         self.page.run_task(self._load_initial_data)
     
     async def _load_initial_data(self):
-        """Load all initial data for sections."""
+        """Load all initial data for sections.
+        
+        Loads groups/tools/import sections first, then samples section last
+        (after other UI is rendered) as per STAGE11 spec.
+        """
         print("Loading samples tab initial data...")
         try:
-            # Load data for each section that has load_data method
-            for section_name, section in self.sections.items():
-                print(f"Loading data for {section_name}...")
-                if hasattr(section, 'load_data'):
+            # Load non-samples sections first
+            priority_sections = ['groups', 'import', 'tools']
+            for section_name in priority_sections:
+                section = self.sections.get(section_name)
+                if section and hasattr(section, 'load_data'):
+                    print(f"Loading data for {section_name}...")
                     await section.load_data()
-            
+
+            # Load samples section last — after the rest of UI is rendered
+            samples_section = self.sections.get('samples')
+            if samples_section and hasattr(samples_section, 'load_data'):
+                print("Loading data for samples...")
+                await samples_section.load_data()
+
             print("Samples tab initial data loaded successfully.")
-            
+
         except Exception as ex:
             print(f"Error loading initial data: {ex}")
             import traceback
             traceback.print_exc()
     
     async def _on_import_complete(self):
-        """Callback after import completes."""
-        # Refresh all sections
-        await self.refresh_all()
-    
+        """Callback after import completes.
+        
+        After import:
+        - Reload counts in groups/tools/import sections (fast).
+        - Trigger full samples recalc (recomputes stats + writes cache).
+        """
+        # Reload counts in non-samples sections
+        for section_name in ['groups', 'import', 'tools']:
+            section = self.sections.get(section_name)
+            if section and hasattr(section, 'load_data'):
+                await section.load_data()
+
+        # Trigger full samples update (recalc + cache)
+        samples_section = self.sections.get('samples')
+        if samples_section and hasattr(samples_section, '_on_update_clicked'):
+            await samples_section._on_update_clicked()
+
     async def refresh_all(self):
-        """Refresh all sections."""
+        """Refresh all sections (full reload)."""
         for section in self.sections.values():
             if hasattr(section, 'load_data'):
                 await section.load_data()
