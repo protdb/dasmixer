@@ -27,7 +27,14 @@ class ProjectLifecycle(ProjectBase):
         try:
             self._db = await aiosqlite.connect(self._db_path)
             self._db.row_factory = aiosqlite.Row
-            
+
+            # WAL mode: readers don't block writers; file stays consistent on
+            # crash (the WAL is replayed on next open, not left as a corrupt
+            # journal).  synchronous=NORMAL is safe with WAL and much faster
+            # than the default FULL while still surviving OS crashes.
+            await self._db.execute("PRAGMA journal_mode = WAL")
+            await self._db.execute("PRAGMA synchronous = NORMAL")
+
             # Enable foreign keys
             await self._db.execute("PRAGMA foreign_keys = ON")
             

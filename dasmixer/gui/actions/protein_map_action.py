@@ -1,6 +1,7 @@
 """Protein mapping action."""
 
 import asyncio
+from typing import Any
 
 import flet as ft
 
@@ -8,6 +9,14 @@ from dasmixer.api.project.project import Project
 from dasmixer.api.calculations.peptides.protein_map import map_proteins
 from dasmixer.gui.views.tabs.peptides.shared_state import PeptidesTabState
 from .base import BaseAction
+
+
+async def _anext_or_none(gen) -> Any | None:
+    """Advance an async iterator, returning None on exhaustion."""
+    try:
+        return await gen.__anext__()
+    except StopAsyncIteration:
+        return None
 
 
 class MatchProteinsAction(BaseAction):
@@ -80,8 +89,13 @@ class MatchProteinsAction(BaseAction):
 
         total_matches = 0
 
+        async def _write_batch_and_commit(matches_df) -> None:
+            """Write peptide matches and lightweight-commit (no modified_at update)."""
+            await self.project.add_peptide_matches_batch(matches_df)
+            await self.project._commit()
+
         try:
-            async for matches_df, count, tool_id in map_proteins(
+            gen = map_proteins(
                 self.project,
                 tool_settings,
                 ion_params=ion_params,
@@ -89,10 +103,28 @@ class MatchProteinsAction(BaseAction):
                 seqfixer_params=seqfixer_params,
                 batch_size=5000,
                 sample_id=sample_id,
-            ):
-                await self.project.add_peptide_matches_batch(matches_df)
-                total_matches += count
+            )
+
+            # Prime: get first batch from generator
+            first_item = await _anext_or_none(gen)
+            if first_item is not None:
+                pending_df, pending_count, _ = first_item
+            else:
+                pending_df, pending_count = None, 0
+
+            while pending_df is not None:
+                # Overlap: write previous batch AND advance generator in parallel
+                write_task = asyncio.create_task(_write_batch_and_commit(pending_df))
+                next_task = asyncio.create_task(_anext_or_none(gen))
+                _, next_item = await asyncio.gather(write_task, next_task)
+
+                total_matches += pending_count
                 dialog.update_progress(None, "Mapping...", f"Mapped {total_matches} matches...")
+
+                if next_item is None:
+                    pending_df = None
+                else:
+                    pending_df, pending_count, _ = next_item
 
             await self.project.save()
             dialog.complete(f"Total: {total_matches}")

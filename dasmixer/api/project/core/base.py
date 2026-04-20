@@ -59,6 +59,19 @@ class ProjectBase:
         if not self._db:
             raise RuntimeError("Project not initialized")
         return await self._db.executemany(query, params_list)
+
+    async def _commit(self) -> None:
+        """
+        Lightweight commit for hot-path batch loops.
+
+        Unlike save(), this does NOT update project_metadata.modified_at.
+        Use it inside tight batch loops where every fsync matters.
+        Call save() once at the end of the full operation to persist
+        the modified_at timestamp.
+        """
+        if not self._db:
+            raise RuntimeError("Project not initialized")
+        await self._db.commit()
     
     async def _fetchone(self, query: str, params: tuple | dict | None = None) -> dict | None:
         """Fetch one row as dictionary."""
