@@ -34,6 +34,10 @@ class PeptidesTabState:
 
     # Sequence selection criteria
     seq_criteria: str = 'coverage'
+
+    # PTM site limit: sequences with more candidate PTM sites than this value
+    # will skip PTM enumeration and use isotope-offset correction only.
+    max_ptm_sites: int = 10
     
     # FASTA/Protein data
     protein_count: int = 0

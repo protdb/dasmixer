@@ -1,18 +1,64 @@
-from dasmixer.api.calculations.ppm import SeqFixer, SeqMatchParams
+import logging
+import os
+import time
 import traceback
-from dataclasses import asdict
+from pathlib import Path
 from typing import Literal
+
+from dasmixer.api.calculations.ppm import SeqFixer, SeqMatchParams
 from dasmixer.utils.seqfixer_utils import PTMS, FixedPTM
 from dasmixer.api.calculations.spectra.ion_match import IonMatchParameters, match_predictions, MatchResult
 
-def _get_best_override(overrides: list[tuple[SeqMatchParams, MatchResult]], criteria: str) -> tuple[SeqMatchParams, MatchResult]:
-    # Выбираем наилучшее покрытие по критерию, второй критерий - ppm
+# ---------------------------------------------------------------------------
+# Per-worker file logger
+# ---------------------------------------------------------------------------
+# Each worker process gets its own log file named worker_<PID>.log so there is
+# no contention and we can pinpoint exactly which identification causes a hang.
+# Logging is intentionally coarse (one line per item) to keep overhead low.
+# ---------------------------------------------------------------------------
+
+_worker_logger: logging.Logger | None = None
+
+
+def _get_worker_logger() -> logging.Logger:
+    """Return (and lazily create) the per-process file logger."""
+    global _worker_logger
+    if _worker_logger is not None:
+        return _worker_logger
+
+    log_dir = Path.home() / ".cache" / "dasmixer" / "worker_logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+
+    pid = os.getpid()
+    log_path = log_dir / f"worker_{pid}.log"
+
+    logger = logging.getLogger(f"dasmixer.worker.{pid}")
+    logger.setLevel(logging.DEBUG)
+    logger.propagate = False  # don't pollute the root logger
+
+    if not logger.handlers:
+        fh = logging.FileHandler(log_path, mode="a", encoding="utf-8")
+        fh.setLevel(logging.DEBUG)
+        fh.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+        logger.addHandler(fh)
+
+    _worker_logger = logger
+    return logger
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _get_best_override(
+    overrides: list[tuple[SeqMatchParams, MatchResult]], criteria: str
+) -> tuple[SeqMatchParams, MatchResult]:
+    """Select the best override by primary criterion, then by abs_ppm."""
     if criteria == "coverage":
-        criteria = 'intensity_percent'
-    overrides.sort(
-        key=lambda row: (-getattr(row[1], criteria), row[0].abs_ppm),
-    )
+        criteria = "intensity_percent"
+    overrides.sort(key=lambda row: (-getattr(row[1], criteria), row[0].abs_ppm))
     return overrides[0]
+
 
 def process_single_ident(
     fixer: SeqFixer,
@@ -23,22 +69,17 @@ def process_single_ident(
     mz_array,
     intensity_array,
     mgf_charge: int | None = None,
-    selection_criteria: str = 'intensity_percent'
+    selection_criteria: str = "intensity_percent",
 ) -> dict:
-    seq_results = fixer.get_ppm(
-        sequence,
-        pepmass,
-        mgf_charge
-    )
-    print(seq_results)
+    seq_results = fixer.get_ppm(sequence, pepmass, mgf_charge)
     if not seq_results.override:
         ppm_result = seq_results.original
         match_result = match_predictions(
-                params=params,
-                mz=mz_array,
-                intensity=intensity_array,
-                charges=fragment_charges,
-                sequence=sequence,
+            params=params,
+            mz=mz_array,
+            intensity=intensity_array,
+            charges=fragment_charges,
+            sequence=sequence,
         )
     else:
         all_matches = []
@@ -51,27 +92,28 @@ def process_single_ident(
                 sequence=override.sequence,
             )
             all_matches.append((override, match_res))
-        ppm_result, match_result = _get_best_override(
-            all_matches,
-            criteria=selection_criteria
-        )
-    print(ppm_result)
+        ppm_result, match_result = _get_best_override(all_matches, criteria=selection_criteria)
+
     return {
-        'sequence': ppm_result.sequence,
-        'ppm': ppm_result.ppm,
-        'theor_mass': ppm_result.seq_neutral_mass,
-        'override_charge': ppm_result.charge,
-        'isotope_offset': ppm_result.isotope_offset,
-        'intensity_coverage': match_result.intensity_percent,
-        'ions_matched': match_result.max_ion_matches,
-        'ion_match_type': match_result.top_matched_ion_type,
-        'top_peaks_covered': match_result.top10_intensity_matches,
+        "sequence": ppm_result.sequence,
+        "ppm": ppm_result.ppm,
+        "theor_mass": ppm_result.seq_neutral_mass,
+        "override_charge": ppm_result.charge,
+        "isotope_offset": ppm_result.isotope_offset,
+        "intensity_coverage": match_result.intensity_percent,
+        "ions_matched": match_result.max_ion_matches,
+        "ion_match_type": match_result.top_matched_ion_type,
+        "top_peaks_covered": match_result.top10_intensity_matches,
     }
 
-def process_matched_peptide(
 
-):
+def process_matched_peptide():
     pass
+
+
+# ---------------------------------------------------------------------------
+# Batch entry point (called from ProcessPoolExecutor)
+# ---------------------------------------------------------------------------
 
 def process_identificatons_batch(
     batch: list[dict],
@@ -84,19 +126,24 @@ def process_identificatons_batch(
     force_isotope_offset_lookover: bool = True,
     ptm_names_list: list[str] | None = None,
     max_ptm: int = 5,
-    seq_criteria: Literal['peaks', 'top_peaks', 'coverage'] = 'coverage'
+    seq_criteria: Literal["peaks", "top_peaks", "coverage"] = "coverage",
+    max_ptm_sites: int = 10,
 ) -> list[dict]:
+    log = _get_worker_logger()
+    log.info("=== batch START  size=%d  pid=%d ===", len(batch), os.getpid())
+
     params = IonMatchParameters(
-        ions=params_dict.get('ions', ['b', 'y']),
-        tolerance=params_dict.get('tolerance', 20.0),
-        mode=params_dict.get('mode', 'largest'),
-        water_loss=params_dict.get('water_loss', False),
-        ammonia_loss=params_dict.get('ammonia_loss', False),
+        ions=params_dict.get("ions", ["b", "y"]),
+        tolerance=params_dict.get("tolerance", 20.0),
+        mode=params_dict.get("mode", "largest"),
+        water_loss=params_dict.get("water_loss", False),
+        ammonia_loss=params_dict.get("ammonia_loss", False),
     )
     if ptm_names_list is None:
         ptms = PTMS
     else:
         ptms = [x for x in PTMS if x.code in ptm_names_list]
+
     fixer = SeqFixer(
         ptm_list=ptms,
         max_ptm=max_ptm,
@@ -104,15 +151,24 @@ def process_identificatons_batch(
         override_charges=(min_charge, max_charge),
         max_isotope_offset=max_isotope_offset,
         force_isotope_offset_lookover=force_isotope_offset_lookover,
+        max_ptm_sites=max_ptm_sites,
     )
+
     results = []
     for item in batch:
-        ident_id = item['id']
-        sequence = item.get('sequence', '')
-        pepmass = item.get('pepmass')
-        charge = item.get('charge')
-        mz_array = item.get('mz_array', [])
-        intensity_array = item.get('intensity_array', [])
+        ident_id = item["id"]
+        spectre_id = item.get("spectre_id", "?")
+        sequence = item.get("sequence", "")
+        pepmass = item.get("pepmass")
+        charge = item.get("charge")
+        mz_array = item.get("mz_array", [])
+        intensity_array = item.get("intensity_array", [])
+
+        log.debug(
+            "ENTER  ident_id=%s  spectre_id=%s  seq=%s  pepmass=%s  charge=%s  peaks=%d",
+            ident_id, spectre_id, sequence, pepmass, charge, len(mz_array),
+        )
+        t0 = time.monotonic()
 
         try:
             result = process_single_ident(
@@ -124,26 +180,37 @@ def process_identificatons_batch(
                 mz_array,
                 intensity_array,
                 mgf_charge=charge,
-                selection_criteria=seq_criteria
+                selection_criteria=seq_criteria,
             )
-            result['id'] = ident_id
-            result['source_sequence'] = sequence
+            elapsed = time.monotonic() - t0
+            log.debug(
+                "DONE   ident_id=%s  spectre_id=%s  elapsed=%.3fs  ppm=%s  cov=%s",
+                ident_id, spectre_id, elapsed,
+                result.get("ppm"), result.get("intensity_coverage"),
+            )
+            result["id"] = ident_id
+            result["source_sequence"] = sequence
             results.append(result)
+
         except Exception as exc:
-            print(f"[ident processor] Error on id={ident_id}: {exc}")
-            print(traceback.print_exc())
-            print()
+            elapsed = time.monotonic() - t0
+            log.error(
+                "ERROR  ident_id=%s  spectre_id=%s  elapsed=%.3fs  exc=%s\n%s",
+                ident_id, spectre_id, elapsed, exc, traceback.format_exc(),
+            )
             results.append({
-                'id': ident_id,
-                'sequence': sequence,
-                'ppm': None,
-                'theor_mass': None,
-                'override_charge': None,
-                'intensity_coverage': None,
-                'ions_matched': None,
-                'ion_match_type': None,
-                'top_peaks_covered': None,
-                'isotope_offset': None,
-                'source_sequence': sequence,
+                "id": ident_id,
+                "sequence": sequence,
+                "ppm": None,
+                "theor_mass": None,
+                "override_charge": None,
+                "intensity_coverage": None,
+                "ions_matched": None,
+                "ion_match_type": None,
+                "top_peaks_covered": None,
+                "isotope_offset": None,
+                "source_sequence": sequence,
             })
+
+    log.info("=== batch DONE   size=%d  results=%d ===", len(batch), len(results))
     return results

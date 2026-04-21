@@ -50,8 +50,6 @@ class ProjectBase:
         """Execute a query."""
         if not self._db:
             raise RuntimeError("Project not initialized")
-        print(query)
-        print(params)
         return await self._db.execute(query, params or ())
     
     async def _executemany(self, query: str, params_list: list) -> aiosqlite.Cursor:

@@ -79,6 +79,8 @@ class IonCoverageAction(BaseAction):
             return
 
         # Per-tool PTM settings
+        max_ptm_sites = state.max_ptm_sites
+
         tool_settings_map = {}
         for tid, controls in state.tool_settings_controls.items():
             ptm_selected: list[str] = controls.get('ptm_selected', [])
@@ -144,6 +146,7 @@ class IonCoverageAction(BaseAction):
                     ptm_list,
                     max_ptm,
                     seq_criteria,
+                    max_ptm_sites,
                 )
                 for sub_batch in sub_batches
             ]

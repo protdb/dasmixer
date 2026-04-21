@@ -26,6 +26,9 @@ from dasmixer.utils.ppm import (
 )
 from dasmixer.utils.seqfixer_utils import FixedPTM, PossiblePTMPosition
 
+import logging as _logging
+_seqfixer_log = _logging.getLogger("dasmixer.seqfixer")
+
 # ── isotope-offset mass constants ────────────────────────────────────────────
 ISOTOPE_MASS_13C = 1.003355   # 13C – 12C  (standard for peptide isotope patterns)
 ISOTOPE_MASS_NEUTRON = 1.008665  # physical neutron mass
@@ -120,6 +123,18 @@ def _apply_positions_to_split(
     return to_proforma(res_seq, **params)
 
 
+_MAX_PTM_COMBOS = 50_000  # hard cap to prevent combinatorial explosion
+
+
+def _count_ptm_combos(n_sites: int, max_ptm: int, n_term_combos: int) -> int:
+    """Estimate total PTM combo iterations (internal × terminal)."""
+    from math import comb
+    total = 0
+    for lim in range(0, max_ptm + 1):
+        total += comb(n_sites, lim)
+    return total * n_term_combos
+
+
 def _iter_ptm_combos(
     split: list[tuple[str, list | None]],
     params: dict,
@@ -134,10 +149,36 @@ def _iter_ptm_combos(
     """
     Enumerate all PTM combinations (0 … max_ptm sites) plus terminal mods.
     Returns all SeqMatchParams whose abs_ppm <= target_ppm.
+
+    Guards against combinatorial explosion: if the estimated number of
+    combinations exceeds _MAX_PTM_COMBOS, max_ptm is silently capped so
+    that the total stays within budget.
     """
     n_term_candidates: list[FixedPTM | None] = [None] + [p for p in ptm_list if p.n_term]
     c_term_candidates: list[FixedPTM | None] = [None] + [p for p in ptm_list if p.c_term]
     term_combos = list(product(n_term_candidates, c_term_candidates))
+    n_term_combos = len(term_combos)
+    n_sites = len(ptm_sites)
+
+    # --- guard: cap max_ptm if combo count would explode ---
+    effective_max_ptm = max_ptm
+    if n_sites > 0:
+        estimated = _count_ptm_combos(n_sites, max_ptm, n_term_combos)
+        if estimated > _MAX_PTM_COMBOS:
+            # Binary-search for the highest lim that stays within budget
+            lo, hi = 0, max_ptm
+            while lo < hi:
+                mid = (lo + hi + 1) // 2
+                if _count_ptm_combos(n_sites, mid, n_term_combos) <= _MAX_PTM_COMBOS:
+                    lo = mid
+                else:
+                    hi = mid - 1
+            effective_max_ptm = lo
+            _seqfixer_log.warning(
+                "PTM combo explosion: %d sites × max_ptm=%d → ~%d combos "
+                "(limit %d). Capping max_ptm to %d.",
+                n_sites, max_ptm, estimated, _MAX_PTM_COMBOS, effective_max_ptm,
+            )
 
     results: list[SeqMatchParams] = []
 
@@ -157,8 +198,8 @@ def _iter_ptm_combos(
                 isotope_offset=isotope_offset,
             ))
 
-    # 1 … max_ptm internal sites
-    for lim in range(1, max_ptm + 1):
+    # 1 … effective_max_ptm internal sites
+    for lim in range(1, effective_max_ptm + 1):
         for combo in combinations(ptm_sites, lim):
             # reject combos with two mods on the same residue index
             if len({p.idx for p in combo}) < len(combo):
@@ -195,6 +236,12 @@ class SeqFixer:
         PTM candidates to enumerate over.
     max_ptm : int
         Maximum number of simultaneous internal PTMs to try.
+    max_ptm_sites : int
+        Maximum number of candidate PTM sites on a sequence before PTM
+        enumeration is skipped entirely and only isotope-offset correction
+        is attempted.  Sequences with more sites than this value (e.g. long
+        poly-Q/poly-L repeats) would otherwise cause a combinatorial explosion.
+        Default 10.
     target_ppm : float
         Absolute PPM threshold; results with abs_ppm > target_ppm are rejected.
     override_charges : tuple[int, int]
@@ -223,9 +270,11 @@ class SeqFixer:
         max_isotope_offset: int,
         isotope_mode: IsotopeMode = "13C",
         force_isotope_offset_lookover: bool = False,
+        max_ptm_sites: int = 10,
     ) -> None:
         self.ptm_list = ptm_list
         self.max_ptm = max_ptm
+        self.max_ptm_sites = max_ptm_sites
         self.target_ppm = target_ppm
         self.override_charges = override_charges
         self.max_isotope_offset = max_isotope_offset
@@ -481,6 +530,16 @@ class SeqFixer:
         if charge is None:
             # Without charge we cannot compute m/z — bail out
             return None
+
+        # Guard: too many PTM sites → skip PTM enumeration entirely,
+        # fall back to isotope-offset-only search (ptm_sites=[]).
+        if len(ptm_sites) > self.max_ptm_sites:
+            _seqfixer_log.warning(
+                "PTM site count %d exceeds max_ptm_sites=%d — skipping PTM "
+                "enumeration, isotope-offset only.",
+                len(ptm_sites), self.max_ptm_sites,
+            )
+            ptm_sites = []
 
         all_hits: list[SeqMatchParams] = []
 
