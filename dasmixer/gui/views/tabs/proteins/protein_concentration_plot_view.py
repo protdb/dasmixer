@@ -6,6 +6,7 @@ import numpy as np
 
 from dasmixer.gui.components.base_plot_view import BasePlotView
 from dasmixer.api.project.project import Project
+from dasmixer.gui.utils import show_snack
 
 
 class ProteinConcentrationPlotView(BasePlotView):
@@ -131,11 +132,7 @@ class ProteinConcentrationPlotView(BasePlotView):
             
         except Exception as ex:
             if self.page:
-                self.page.snack_bar = ft.SnackBar(
-                    content=ft.Text(f"Error loading subsets: {ex}"),
-                    bgcolor=ft.Colors.RED_400
-                )
-                self.page.snack_bar.open = True
+                show_snack(self.page, f"Error loading subsets: {ex}", ft.Colors.RED_400)
                 self.page.update()
     
     async def _update_settings_from_ui(self):

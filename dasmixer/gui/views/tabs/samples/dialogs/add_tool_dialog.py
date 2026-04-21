@@ -3,6 +3,7 @@
 import flet as ft
 
 from dasmixer.api.inputs.registry import registry
+from dasmixer.gui.utils import show_snack
 
 
 class AddToolDialog:
@@ -41,11 +42,7 @@ class AddToolDialog:
         ]
         
         if not parser_options:
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text("No identification parsers available"),
-                bgcolor=ft.Colors.RED_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, "No identification parsers available", ft.Colors.RED_400)
             self.page.update()
             return
         
@@ -103,11 +100,7 @@ class AddToolDialog:
                 self.page.update()
                 
                 # Show success
-                self.page.snack_bar = ft.SnackBar(
-                    content=ft.Text(f"Added tool: {name_field.value}"),
-                    bgcolor=ft.Colors.GREEN_400
-                )
-                self.page.snack_bar.open = True
+                show_snack(self.page, f"Added tool: {name_field.value}", ft.Colors.GREEN_400)
                 self.page.update()
                 
                 # Call success callback
@@ -115,11 +108,7 @@ class AddToolDialog:
                     await self.on_success_callback()
                 
             except Exception as ex:
-                self.page.snack_bar = ft.SnackBar(
-                    content=ft.Text(f"Error: {ex}"),
-                    bgcolor=ft.Colors.RED_400
-                )
-                self.page.snack_bar.open = True
+                show_snack(self.page, f"Error: {ex}", ft.Colors.RED_400)
                 self.page.update()
         
         dialog = ft.AlertDialog(

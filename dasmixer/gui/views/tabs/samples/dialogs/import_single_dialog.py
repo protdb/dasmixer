@@ -4,6 +4,7 @@ import flet as ft
 from pathlib import Path
 from dasmixer.api.project.project import Project
 from dasmixer.api.inputs.registry import registry
+from dasmixer.gui.utils import show_snack
 
 
 class ImportSingleDialog:
@@ -71,11 +72,7 @@ class ImportSingleDialog:
         except Exception as ex:
             import traceback
             traceback.print_exc()
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(f"Error opening file picker: {ex}"),
-                bgcolor=ft.Colors.RED_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, f"Error opening file picker: {ex}", ft.Colors.RED_400)
             self.page.update()
 
     async def _show_config_dialog(self, file_list):
@@ -90,11 +87,7 @@ class ImportSingleDialog:
             ]
 
             if not group_options and not self.lock_group:
-                self.page.snack_bar = ft.SnackBar(
-                    content=ft.Text("Please create at least one comparison group first"),
-                    bgcolor=ft.Colors.ORANGE_400
-                )
-                self.page.snack_bar.open = True
+                show_snack(self.page, "Please create at least one comparison group first", ft.Colors.ORANGE_400)
                 self.page.update()
                 return
 
@@ -104,11 +97,7 @@ class ImportSingleDialog:
             ]
 
             if not parser_options:
-                self.page.snack_bar = ft.SnackBar(
-                    content=ft.Text("No spectra parsers available"),
-                    bgcolor=ft.Colors.RED_400
-                )
-                self.page.snack_bar.open = True
+                show_snack(self.page, "No spectra parsers available", ft.Colors.RED_400)
                 self.page.update()
                 return
 
@@ -128,11 +117,7 @@ class ImportSingleDialog:
             if not self.fixed_sample_name:
                 samples = await self.project.get_samples()
                 if not samples:
-                    self.page.snack_bar = ft.SnackBar(
-                        content=ft.Text("Please import spectra first"),
-                        bgcolor=ft.Colors.ORANGE_400
-                    )
-                    self.page.snack_bar.open = True
+                    show_snack(self.page, "Please import spectra first", ft.Colors.ORANGE_400)
                     self.page.update()
                     return
 
@@ -243,11 +228,7 @@ class ImportSingleDialog:
                         )
 
             except Exception as ex:
-                self.page.snack_bar = ft.SnackBar(
-                    content=ft.Text(f"Import error: {ex}"),
-                    bgcolor=ft.Colors.RED_400
-                )
-                self.page.snack_bar.open = True
+                show_snack(self.page, f"Import error: {ex}", ft.Colors.RED_400)
                 self.page.update()
 
         config_dialog = ft.AlertDialog(

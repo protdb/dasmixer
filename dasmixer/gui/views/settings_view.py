@@ -3,6 +3,7 @@
 import re
 import flet as ft
 from dasmixer.api.config import config
+from dasmixer.gui.utils import show_snack
 
 _HEX_RE = re.compile(r'^#[0-9a-fA-F]{6}$')
 
@@ -111,7 +112,7 @@ class SettingsView(ft.View):
             self._add_color_row(hex_color)
 
         add_color_btn = ft.TextButton(
-            text="Add color",
+            content=ft.Text("Add color"),
             icon=ft.Icons.ADD,
             on_click=lambda _: self._on_add_color(),
         )
@@ -127,7 +128,7 @@ class SettingsView(ft.View):
 
         # --- Save button ---
         save_btn = ft.ElevatedButton(
-            text="Save",
+            content=ft.Text("Save"),
             icon=ft.Icons.SAVE,
             on_click=lambda _: self.page.run_task(self._save_settings),
         )
@@ -301,11 +302,7 @@ class SettingsView(ft.View):
                 new_colors.append(val)
 
         if errors:
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text("Fix errors before saving: " + "; ".join(errors)),
-                bgcolor=ft.Colors.RED_400,
-                open=True,
-            )
+            show_snack(self.page, "Fix errors before saving: " + "; ".join(errors), ft.Colors.RED_400)
             self.page.update()
             return
 
@@ -328,11 +325,7 @@ class SettingsView(ft.View):
         )
         self.page.update()
 
-        self.page.snack_bar = ft.SnackBar(
-            content=ft.Text("Settings saved"),
-            bgcolor=ft.Colors.GREEN_400,
-            open=True,
-        )
+        show_snack(self.page, "Settings saved", ft.Colors.GREEN_400)
         self.page.update()
 
     async def _confirm_large_batch(self, large_fields: list[str]) -> bool:

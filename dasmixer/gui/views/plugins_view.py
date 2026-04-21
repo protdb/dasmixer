@@ -17,6 +17,7 @@ from dasmixer.api.plugin_loader import (
 # Import registries to enumerate built-ins
 from dasmixer.api.inputs.registry import registry as inputs_registry
 from dasmixer.api.reporting.registry import registry as reports_registry
+from dasmixer.gui.utils import show_snack
 
 
 def _get_plugin_load_results() -> list[dict]:
@@ -128,14 +129,14 @@ class PluginsView(ft.View):
     ) -> ft.Column:
         """Build a plugin section with header, list, and action buttons."""
         install_btn = ft.ElevatedButton(
-            text="Install from file...",
+            content=ft.Text("Install from file..."),
             icon=ft.Icons.UPLOAD_FILE,
             on_click=lambda _, pt=plugin_type: self.page.run_task(
                 self._pick_plugin_file, pt
             ),
         )
         open_dir_btn = ft.OutlinedButton(
-            text="Open plugins folder",
+            content=ft.Text("Open plugins folder"),
             icon=ft.Icons.FOLDER_OPEN,
             on_click=lambda _, d=plugins_dir: self._open_directory(d),
         )
@@ -277,42 +278,28 @@ class PluginsView(ft.View):
 
     async def _pick_plugin_file(self, plugin_type: str):
         """Open file picker to select a plugin file (.py or .zip)."""
-        file_picker = ft.FilePicker()
-        self.page.overlay.append(file_picker)
-        self.page.update()
-
-        files = await file_picker.pick_files(
+        files = await ft.FilePicker().pick_files(
             dialog_title="Select plugin file",
             file_type=ft.FilePickerFileType.CUSTOM,
             allowed_extensions=["py", "zip"],
             allow_multiple=False,
         )
 
-        self.page.overlay.remove(file_picker)
-        self.page.update()
-
-        if not files:
+        if not files or not files[0].path:
             return
 
         src_path = Path(files[0].path)
         success, plugin_id, error = install_plugin_file(src_path, plugin_type)
 
         if not success:
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(f"Failed to install plugin: {error}"),
-                bgcolor=ft.Colors.RED_400,
-                open=True,
-            )
+            show_snack(self.page, f"Failed to install plugin: {error}", ft.Colors.RED_400)
             self.page.update()
             return
 
-        self.page.snack_bar = ft.SnackBar(
-            content=ft.Text(
-                f"Plugin '{plugin_id}' installed. "
-                "Restart the application to load it."
-            ),
-            bgcolor=ft.Colors.GREEN_400,
-            open=True,
+        show_snack(
+            self.page,
+            f"Plugin '{plugin_id}' installed. Restart the application to load it.",
+            ft.Colors.GREEN_400,
         )
         self.page.update()
 
@@ -367,19 +354,11 @@ class PluginsView(ft.View):
 
         success, error = delete_plugin(plugin_id)
         if success:
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(f"Plugin '{display_name}' deleted."),
-                bgcolor=ft.Colors.BLUE_400,
-                open=True,
-            )
+            show_snack(self.page, f"Plugin '{display_name}' deleted.", ft.Colors.BLUE_400)
             self._refresh_lists()
             self.page.update()
         else:
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(f"Failed to delete plugin: {error}"),
-                bgcolor=ft.Colors.RED_400,
-                open=True,
-            )
+            show_snack(self.page, f"Failed to delete plugin: {error}", ft.Colors.RED_400)
             self.page.update()
 
     async def _show_restart_dialog(self, plugin_id: str):

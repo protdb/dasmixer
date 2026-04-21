@@ -4,6 +4,7 @@ import flet as ft
 import json
 from dasmixer.api.project.project import Project
 from dasmixer.api.project.dataclasses import Sample
+from dasmixer.gui.utils import show_snack
 
 
 class SampleDialog:
@@ -147,11 +148,7 @@ class SampleDialog:
             self._close()
             
             # Show success
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(f"Updated sample: {self.sample.name}"),
-                bgcolor=ft.Colors.GREEN_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, f"Updated sample: {self.sample.name}", ft.Colors.GREEN_400)
             self.page.update()
             
             # Call success callback
@@ -162,9 +159,5 @@ class SampleDialog:
             import traceback
             traceback.print_exc()
             
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(f"Error: {ex}"),
-                bgcolor=ft.Colors.RED_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, f"Error: {ex}", ft.Colors.RED_400)
             self.page.update()

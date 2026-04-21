@@ -4,6 +4,7 @@ import flet as ft
 import multiprocessing
 import plotly.graph_objects as go
 import base64
+from dasmixer.gui.utils import show_snack
 
 
 def show_webview(fig: go.Figure, title: str):
@@ -95,9 +96,5 @@ class PlotlyViewer(ft.Container):
             process.start()
         except Exception as ex:
             if self.page:
-                self.page.snack_bar = ft.SnackBar(
-                    content=ft.Text(f"Error launching interactive mode: {ex}"),
-                    bgcolor=ft.Colors.RED_400
-                )
-                self.page.snack_bar.open = True
+                show_snack(self.page, f"Error launching interactive mode: {ex}", ft.Colors.RED_400)
                 self.page.update()

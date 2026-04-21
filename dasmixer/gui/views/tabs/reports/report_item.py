@@ -8,6 +8,7 @@ from dasmixer.api.project.project import Project
 from dasmixer.api.reporting.base import BaseReport
 from dasmixer.api.reporting.viewer import ReportViewer
 from .shared_state import ReportsTabState
+from dasmixer.gui.utils import show_snack
 
 
 class ReportItem(ft.Container):
@@ -338,19 +339,11 @@ class ReportItem(ft.Container):
     def _show_error(self, message: str):
         """Show error."""
         if self.page:
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(message),
-                bgcolor=ft.Colors.RED_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, message, ft.Colors.RED_400)
             self.page.update()
     
     def _show_success(self, message: str):
         """Show success."""
         if self.page:
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(message),
-                bgcolor=ft.Colors.GREEN_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, message, ft.Colors.GREEN_400)
             self.page.update()

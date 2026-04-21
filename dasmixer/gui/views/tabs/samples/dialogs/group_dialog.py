@@ -4,6 +4,7 @@ import flet as ft
 from dasmixer.api.project.project import Project
 from dasmixer.api.project.dataclasses import Subset
 from ..constants import get_default_color
+from dasmixer.gui.utils import show_snack
 
 
 class GroupDialog:
@@ -157,11 +158,7 @@ class GroupDialog:
             self._close()
             
             # Show success
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(success_message),
-                bgcolor=ft.Colors.GREEN_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, success_message, ft.Colors.GREEN_400)
             self.page.update()
             
             # Call success callback
@@ -169,9 +166,5 @@ class GroupDialog:
                 await self.on_success_callback()
         
         except Exception as ex:
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(f"Error: {ex}"),
-                bgcolor=ft.Colors.RED_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, f"Error: {ex}", ft.Colors.RED_400)
             self.page.update()

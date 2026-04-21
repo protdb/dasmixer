@@ -7,6 +7,7 @@ import multiprocessing
 
 from dasmixer.api.project.project import Project
 from dasmixer.gui.components.plotly_viewer import PlotlyViewer, show_webview
+from dasmixer.gui.utils import show_snack
 
 _PLOT_WIDTH = 1100
 _PLOT_HEIGHT = 700
@@ -153,10 +154,7 @@ class BasePlotView(ft.Container):
             await self._generate_and_display_plot()
 
         if self.page:
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text("Settings applied"), bgcolor=ft.Colors.GREEN_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, "Settings applied", ft.Colors.GREEN_400)
             self.page.update()
 
     async def _update_settings_from_ui(self):
@@ -248,11 +246,7 @@ class BasePlotView(ft.Container):
             p.start()
         except Exception as ex:
             if self.page:
-                self.page.snack_bar = ft.SnackBar(
-                    content=ft.Text(f"Error launching interactive mode: {ex}"),
-                    bgcolor=ft.Colors.RED_400
-                )
-                self.page.snack_bar.open = True
+                show_snack(self.page, f"Error launching interactive mode: {ex}", ft.Colors.RED_400)
                 self.page.update()
 
     async def _on_save_to_project(self, e):
@@ -270,18 +264,12 @@ class BasePlotView(ft.Container):
                 settings=settings_to_save
             )
             if self.page:
-                self.page.snack_bar = ft.SnackBar(
-                    content=ft.Text(f"Plot saved (ID: {plot_id})"), bgcolor=ft.Colors.GREEN_400
-                )
-                self.page.snack_bar.open = True
+                show_snack(self.page, f"Plot saved (ID: {plot_id})", ft.Colors.GREEN_400)
                 self.page.update()
 
         except Exception as ex:
             if self.page:
-                self.page.snack_bar = ft.SnackBar(
-                    content=ft.Text(f"Error saving plot: {ex}"), bgcolor=ft.Colors.RED_400
-                )
-                self.page.snack_bar.open = True
+                show_snack(self.page, f"Error saving plot: {ex}", ft.Colors.RED_400)
                 self.page.update()
 
     async def _on_export(self, e):
@@ -311,19 +299,12 @@ class BasePlotView(ft.Container):
                 if file_result:
                     self.current_figure.write_image(file_result, format=fmt)
                     if self.page:
-                        self.page.snack_bar = ft.SnackBar(
-                            content=ft.Text(f"Plot exported to {file_result}"),
-                            bgcolor=ft.Colors.GREEN_400
-                        )
-                        self.page.snack_bar.open = True
+                        show_snack(self.page, f"Plot exported to {file_result}", ft.Colors.GREEN_400)
                         self.page.update()
 
             except Exception as ex:
                 if self.page:
-                    self.page.snack_bar = ft.SnackBar(
-                        content=ft.Text(f"Error exporting: {ex}"), bgcolor=ft.Colors.RED_400
-                    )
-                    self.page.snack_bar.open = True
+                    show_snack(self.page, f"Error exporting: {ex}", ft.Colors.RED_400)
                     self.page.update()
 
         dialog = ft.AlertDialog(

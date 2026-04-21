@@ -6,6 +6,7 @@ import pandas as pd
 from dasmixer.api.project.project import Project
 from dasmixer.api.inputs.registry import registry
 from pathlib import Path
+from dasmixer.gui.utils import show_snack
 
 
 class SamplesTab(ft.Container):
@@ -318,11 +319,7 @@ class SamplesTab(ft.Container):
                 await self.refresh_samples()  # Update samples display
                 
                 # Show success
-                self.page.snack_bar = ft.SnackBar(
-                    content=ft.Text(f"Deleted group: {group.name}"),
-                    bgcolor=ft.Colors.GREEN_400
-                )
-                self.page.snack_bar.open = True
+                show_snack(self.page, f"Deleted group: {group.name}", ft.Colors.GREEN_400)
                 self.page.update()
                 
             except ValueError as ex:
@@ -330,21 +327,13 @@ class SamplesTab(ft.Container):
                 confirm_dialog.open = False
                 self.page.update()
                 
-                self.page.snack_bar = ft.SnackBar(
-                    content=ft.Text(f"Cannot delete: {str(ex)}"),
-                    bgcolor=ft.Colors.ORANGE_400
-                )
-                self.page.snack_bar.open = True
+                show_snack(self.page, f"Cannot delete: {str(ex)}", ft.Colors.ORANGE_400)
                 self.page.update()
             except Exception as ex:
                 confirm_dialog.open = False
                 self.page.update()
                 
-                self.page.snack_bar = ft.SnackBar(
-                    content=ft.Text(f"Error: {str(ex)}"),
-                    bgcolor=ft.Colors.RED_400
-                )
-                self.page.snack_bar.open = True
+                show_snack(self.page, f"Error: {str(ex)}", ft.Colors.RED_400)
                 self.page.update()
         
         confirm_dialog = ft.AlertDialog(
@@ -386,11 +375,7 @@ class SamplesTab(ft.Container):
                 await self.refresh_tools()
                 
                 # Show success
-                self.page.snack_bar = ft.SnackBar(
-                    content=ft.Text(f"Deleted tool: {tool.name}"),
-                    bgcolor=ft.Colors.GREEN_400
-                )
-                self.page.snack_bar.open = True
+                show_snack(self.page, f"Deleted tool: {tool.name}", ft.Colors.GREEN_400)
                 self.page.update()
                 
             except ValueError as ex:
@@ -398,21 +383,13 @@ class SamplesTab(ft.Container):
                 confirm_dialog.open = False
                 self.page.update()
                 
-                self.page.snack_bar = ft.SnackBar(
-                    content=ft.Text(f"Cannot delete: {str(ex)}"),
-                    bgcolor=ft.Colors.ORANGE_400
-                )
-                self.page.snack_bar.open = True
+                show_snack(self.page, f"Cannot delete: {str(ex)}", ft.Colors.ORANGE_400)
                 self.page.update()
             except Exception as ex:
                 confirm_dialog.open = False
                 self.page.update()
                 
-                self.page.snack_bar = ft.SnackBar(
-                    content=ft.Text(f"Error: {str(ex)}"),
-                    bgcolor=ft.Colors.RED_400
-                )
-                self.page.snack_bar.open = True
+                show_snack(self.page, f"Error: {str(ex)}", ft.Colors.RED_400)
                 self.page.update()
         
         confirm_dialog = ft.AlertDialog(
@@ -477,22 +454,14 @@ class SamplesTab(ft.Container):
             group_name = "None" if sample.subset_id is None else \
                 [g.name for g in await self.project.get_subsets() if g.id == sample.subset_id][0]
             
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(f"Updated sample '{sample.name}' group to '{group_name}'"),
-                bgcolor=ft.Colors.GREEN_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, f"Updated sample '{sample.name}' group to '{group_name}'", ft.Colors.GREEN_400)
             self.page.update()
             
         except Exception as ex:
             import traceback
             traceback.print_exc()
             
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(f"Error updating sample group: {str(ex)}"),
-                bgcolor=ft.Colors.RED_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, f"Error updating sample group: {str(ex)}", ft.Colors.RED_400)
             self.page.update()
     
     async def show_add_group_dialog(self, e):
@@ -529,19 +498,11 @@ class SamplesTab(ft.Container):
                 await self.refresh_groups()
                 
                 # Show success
-                self.page.snack_bar = ft.SnackBar(
-                    content=ft.Text(f"Added group: {name_field.value}"),
-                    bgcolor=ft.Colors.GREEN_400
-                )
-                self.page.snack_bar.open = True
+                show_snack(self.page, f"Added group: {name_field.value}", ft.Colors.GREEN_400)
                 self.page.update()
                 
             except Exception as ex:
-                self.page.snack_bar = ft.SnackBar(
-                    content=ft.Text(f"Error: {ex}"),
-                    bgcolor=ft.Colors.RED_400
-                )
-                self.page.snack_bar.open = True
+                show_snack(self.page, f"Error: {ex}", ft.Colors.RED_400)
                 self.page.update()
         
         dialog = ft.AlertDialog(
@@ -577,11 +538,7 @@ class SamplesTab(ft.Container):
         ]
 
         if not parser_options:
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text("No identification parsers available"),
-                bgcolor=ft.Colors.RED_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, "No identification parsers available", ft.Colors.RED_400)
             self.page.update()
             return
 
@@ -640,19 +597,11 @@ class SamplesTab(ft.Container):
                 await self.refresh_tools()
 
                 # Show success
-                self.page.snack_bar = ft.SnackBar(
-                    content=ft.Text(f"Added tool: {name_field.value}"),
-                    bgcolor=ft.Colors.GREEN_400
-                )
-                self.page.snack_bar.open = True
+                show_snack(self.page, f"Added tool: {name_field.value}", ft.Colors.GREEN_400)
                 self.page.update()
 
             except Exception as ex:
-                self.page.snack_bar = ft.SnackBar(
-                    content=ft.Text(f"Error: {ex}"),
-                    bgcolor=ft.Colors.RED_400
-                )
-                self.page.snack_bar.open = True
+                show_snack(self.page, f"Error: {ex}", ft.Colors.RED_400)
                 self.page.update()
 
         dialog = ft.AlertDialog(
@@ -769,22 +718,14 @@ class SamplesTab(ft.Container):
             group_options = [ft.dropdown.Option(key=str(g.id), text=g.name) for g in groups]
             
             if not group_options:
-                self.page.snack_bar = ft.SnackBar(
-                    content=ft.Text("Please create at least one comparison group first"),
-                    bgcolor=ft.Colors.ORANGE_400
-                )
-                self.page.snack_bar.open = True
+                show_snack(self.page, "Please create at least one comparison group first", ft.Colors.ORANGE_400)
                 self.page.update()
                 return
         else:
             # For identifications, check samples exist
             samples = await self.project.get_samples()
             if not samples:
-                self.page.snack_bar = ft.SnackBar(
-                    content=ft.Text("Please import spectra first"),
-                    bgcolor=ft.Colors.ORANGE_400
-                )
-                self.page.snack_bar.open = True
+                show_snack(self.page, "Please import spectra first", ft.Colors.ORANGE_400)
                 self.page.update()
                 return
         
@@ -809,11 +750,7 @@ class SamplesTab(ft.Container):
             parser_options = None  # Parser is fixed by tool
         
         if import_type == "spectra" and not parser_options:
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text("No spectra parsers available"),
-                bgcolor=ft.Colors.RED_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, "No spectra parsers available", ft.Colors.RED_400)
             self.page.update()
             return
         
@@ -876,31 +813,19 @@ class SamplesTab(ft.Container):
                     folder_field.value = folder_path
                     folder_field.update()
             except Exception as ex:
-                self.page.snack_bar = ft.SnackBar(
-                    content=ft.Text(f"Error selecting folder: {ex}"),
-                    bgcolor=ft.Colors.RED_400
-                )
-                self.page.snack_bar.open = True
+                show_snack(self.page, f"Error selecting folder: {ex}", ft.Colors.RED_400)
                 self.page.update()
         
         async def preview_files(e):
             if not folder_field.value:
-                self.page.snack_bar = ft.SnackBar(
-                    content=ft.Text("Please select a folder first"),
-                    bgcolor=ft.Colors.ORANGE_400
-                )
-                self.page.snack_bar.open = True
+                show_snack(self.page, "Please select a folder first", ft.Colors.ORANGE_400)
                 self.page.update()
                 return
             
             try:
                 folder_path = Path(folder_field.value)
                 if not folder_path.exists():
-                    self.page.snack_bar = ft.SnackBar(
-                        content=ft.Text("Folder does not exist"),
-                        bgcolor=ft.Colors.RED_400
-                    )
-                    self.page.snack_bar.open = True
+                    show_snack(self.page, "Folder does not exist", ft.Colors.RED_400)
                     self.page.update()
                     return
                 
@@ -938,20 +863,12 @@ class SamplesTab(ft.Container):
                 files_list.update()
                 
             except Exception as ex:
-                self.page.snack_bar = ft.SnackBar(
-                    content=ft.Text(f"Error: {ex}"),
-                    bgcolor=ft.Colors.RED_400
-                )
-                self.page.snack_bar.open = True
+                show_snack(self.page, f"Error: {ex}", ft.Colors.RED_400)
                 self.page.update()
         
         async def start_import(e):
             if not folder_field.value:
-                self.page.snack_bar = ft.SnackBar(
-                    content=ft.Text("Please select a folder first"),
-                    bgcolor=ft.Colors.ORANGE_400
-                )
-                self.page.snack_bar.open = True
+                show_snack(self.page, "Please select a folder first", ft.Colors.ORANGE_400)
                 self.page.update()
                 return
             
@@ -964,11 +881,7 @@ class SamplesTab(ft.Container):
                 )
                 
                 if not found_files:
-                    self.page.snack_bar = ft.SnackBar(
-                        content=ft.Text("No files found"),
-                        bgcolor=ft.Colors.ORANGE_400
-                    )
-                    self.page.snack_bar.open = True
+                    show_snack(self.page, "No files found", ft.Colors.ORANGE_400)
                     self.page.update()
                     return
                 
@@ -990,11 +903,7 @@ class SamplesTab(ft.Container):
                     )
                 
             except Exception as ex:
-                self.page.snack_bar = ft.SnackBar(
-                    content=ft.Text(f"Error: {ex}"),
-                    bgcolor=ft.Colors.RED_400
-                )
-                self.page.snack_bar.open = True
+                show_snack(self.page, f"Error: {ex}", ft.Colors.RED_400)
                 self.page.update()
         
         # Build row with dropdowns
@@ -1068,11 +977,7 @@ class SamplesTab(ft.Container):
         except Exception as ex:
             import traceback
             traceback.print_exc()
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(f"Error opening file picker: {ex}"),
-                bgcolor=ft.Colors.RED_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, f"Error opening file picker: {ex}", ft.Colors.RED_400)
             self.page.update()
     
     async def show_single_files_config(self, file_list, import_type: str, tool_id: int | None = None):
@@ -1087,11 +992,7 @@ class SamplesTab(ft.Container):
             group_options = [ft.dropdown.Option(key=str(g.id), text=g.name) for g in groups]
             
             if not group_options:
-                self.page.snack_bar = ft.SnackBar(
-                    content=ft.Text("Please create at least one comparison group first"),
-                    bgcolor=ft.Colors.ORANGE_400
-                )
-                self.page.snack_bar.open = True
+                show_snack(self.page, "Please create at least one comparison group first", ft.Colors.ORANGE_400)
                 self.page.update()
                 return
             
@@ -1101,11 +1002,7 @@ class SamplesTab(ft.Container):
             ]
             
             if not parser_options:
-                self.page.snack_bar = ft.SnackBar(
-                    content=ft.Text("No spectra parsers available"),
-                    bgcolor=ft.Colors.RED_400
-                )
-                self.page.snack_bar.open = True
+                show_snack(self.page, "No spectra parsers available", ft.Colors.RED_400)
                 self.page.update()
                 return
             
@@ -1125,11 +1022,7 @@ class SamplesTab(ft.Container):
             # Check if we have samples
             samples = await self.project.get_samples()
             if not samples:
-                self.page.snack_bar = ft.SnackBar(
-                    content=ft.Text("Please import spectra first"),
-                    bgcolor=ft.Colors.ORANGE_400
-                )
-                self.page.snack_bar.open = True
+                show_snack(self.page, "Please import spectra first", ft.Colors.ORANGE_400)
                 self.page.update()
                 return
         
@@ -1235,11 +1128,7 @@ class SamplesTab(ft.Container):
                     )
                 
             except Exception as ex:
-                self.page.snack_bar = ft.SnackBar(
-                    content=ft.Text(f"Import error: {ex}"),
-                    bgcolor=ft.Colors.RED_400
-                )
-                self.page.snack_bar.open = True
+                show_snack(self.page, f"Import error: {ex}", ft.Colors.RED_400)
                 self.page.update()
         
         config_dialog = ft.AlertDialog(
@@ -1335,11 +1224,7 @@ class SamplesTab(ft.Container):
                     progress_dialog.open = False
                     self.page.update()
                     
-                    self.page.snack_bar = ft.SnackBar(
-                        content=ft.Text(f"Invalid file format: {file_path.name}"),
-                        bgcolor=ft.Colors.RED_400
-                    )
-                    self.page.snack_bar.open = True
+                    show_snack(self.page, f"Invalid file format: {file_path.name}", ft.Colors.RED_400)
                     self.page.update()
                     return
                 
@@ -1374,11 +1259,7 @@ class SamplesTab(ft.Container):
             await self.refresh_groups()
             
             # Show success
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(f"Successfully imported {total_spectra} spectra from {total_files} file(s)"),
-                bgcolor=ft.Colors.GREEN_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, f"Successfully imported {total_spectra} spectra from {total_files} file(s)", ft.Colors.GREEN_400)
             self.page.update()
             
         except Exception as ex:
@@ -1389,11 +1270,7 @@ class SamplesTab(ft.Container):
             progress_dialog.open = False
             self.page.update()
             
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(f"Import error: {str(ex)}"),
-                bgcolor=ft.Colors.RED_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, f"Import error: {str(ex)}", ft.Colors.RED_400)
             self.page.update()
     
     async def import_identification_files(self, file_list, tool_id: int):
@@ -1451,11 +1328,7 @@ class SamplesTab(ft.Container):
                     progress_dialog.open = False
                     self.page.update()
                     
-                    self.page.snack_bar = ft.SnackBar(
-                        content=ft.Text(f"Sample '{sample_id}' not found. Import spectra first."),
-                        bgcolor=ft.Colors.RED_400
-                    )
-                    self.page.snack_bar.open = True
+                    show_snack(self.page, f"Sample '{sample_id}' not found. Import spectra first.", ft.Colors.RED_400)
                     self.page.update()
                     return
                 
@@ -1465,11 +1338,7 @@ class SamplesTab(ft.Container):
                     progress_dialog.open = False
                     self.page.update()
                     
-                    self.page.snack_bar = ft.SnackBar(
-                        content=ft.Text(f"No spectra files for sample '{sample_id}'"),
-                        bgcolor=ft.Colors.RED_400
-                    )
-                    self.page.snack_bar.open = True
+                    show_snack(self.page, f"No spectra files for sample '{sample_id}'", ft.Colors.RED_400)
                     self.page.update()
                     return
                 
@@ -1494,11 +1363,7 @@ class SamplesTab(ft.Container):
                     progress_dialog.open = False
                     self.page.update()
                     
-                    self.page.snack_bar = ft.SnackBar(
-                        content=ft.Text(f"Invalid file format: {file_path.name}"),
-                        bgcolor=ft.Colors.RED_400
-                    )
-                    self.page.snack_bar.open = True
+                    show_snack(self.page, f"Invalid file format: {file_path.name}", ft.Colors.RED_400)
                     self.page.update()
                     return
                 
@@ -1553,11 +1418,7 @@ class SamplesTab(ft.Container):
             await self.refresh_groups()
             
             # Show success
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(f"Successfully imported {total_identifications} identifications from {total_files} file(s)"),
-                bgcolor=ft.Colors.GREEN_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, f"Successfully imported {total_identifications} identifications from {total_files} file(s)", ft.Colors.GREEN_400)
             self.page.update()
             
         except Exception as ex:
@@ -1568,9 +1429,5 @@ class SamplesTab(ft.Container):
             progress_dialog.open = False
             self.page.update()
             
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(f"Import error: {str(ex)}"),
-                bgcolor=ft.Colors.RED_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, f"Import error: {str(ex)}", ft.Colors.RED_400)
             self.page.update()

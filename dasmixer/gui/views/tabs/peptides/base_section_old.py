@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 
 from dasmixer.api.project.project import Project
 from .shared_state import PeptidesTabState
+from dasmixer.gui.utils import show_snack
 
 
 class BaseSection(ft.Container, ABC):
@@ -66,39 +67,23 @@ class BaseSection(ft.Container, ABC):
     def show_error(self, message: str):
         """Show error snackbar."""
         if self.page:
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(message),
-                bgcolor=ft.Colors.RED_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, message, ft.Colors.RED_400)
             self.page.update()
     
     def show_success(self, message: str):
         """Show success snackbar."""
         if self.page:
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(message),
-                bgcolor=ft.Colors.GREEN_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, message, ft.Colors.GREEN_400)
             self.page.update()
     
     def show_info(self, message: str):
         """Show info snackbar."""
         if self.page:
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(message),
-                bgcolor=ft.Colors.BLUE_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, message, ft.Colors.BLUE_400)
             self.page.update()
     
     def show_warning(self, message: str):
         """Show warning snackbar."""
         if self.page:
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(message),
-                bgcolor=ft.Colors.ORANGE_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, message, ft.Colors.ORANGE_400)
             self.page.update()

@@ -5,6 +5,7 @@ from pathlib import Path
 from dasmixer.api.project.project import Project
 from dasmixer.api.inputs.registry import registry
 from dasmixer.utils.seek_files import seek_files
+from dasmixer.gui.utils import show_snack
 
 
 class ImportPatternDialog:
@@ -62,11 +63,7 @@ class ImportPatternDialog:
             ]
             
             if not parser_options:
-                self.page.snack_bar = ft.SnackBar(
-                    content=ft.Text("No spectra parsers available"),
-                    bgcolor=ft.Colors.RED_400
-                )
-                self.page.snack_bar.open = True
+                show_snack(self.page, "No spectra parsers available", ft.Colors.RED_400)
                 self.page.update()
                 return
             
@@ -75,11 +72,7 @@ class ImportPatternDialog:
             group_options = [ft.dropdown.Option(key=str(g.id), text=g.name) for g in groups]
             
             if not group_options:
-                self.page.snack_bar = ft.SnackBar(
-                    content=ft.Text("Please create at least one comparison group first"),
-                    bgcolor=ft.Colors.ORANGE_400
-                )
-                self.page.snack_bar.open = True
+                show_snack(self.page, "Please create at least one comparison group first", ft.Colors.ORANGE_400)
                 self.page.update()
                 return
         else:
@@ -95,11 +88,7 @@ class ImportPatternDialog:
             # Check if we have samples
             samples = await self.project.get_samples()
             if not samples:
-                self.page.snack_bar = ft.SnackBar(
-                    content=ft.Text("Please import spectra first"),
-                    bgcolor=ft.Colors.ORANGE_400
-                )
-                self.page.snack_bar.open = True
+                show_snack(self.page, "Please import spectra first", ft.Colors.ORANGE_400)
                 self.page.update()
                 return
         
@@ -217,32 +206,20 @@ class ImportPatternDialog:
                 self.folder_field.value = folder_path
                 self.folder_field.update()
         except Exception as ex:
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(f"Error selecting folder: {ex}"),
-                bgcolor=ft.Colors.RED_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, f"Error selecting folder: {ex}", ft.Colors.RED_400)
             self.page.update()
     
     async def _preview_files(self, e):
         """Preview files matching the pattern."""
         if not self.folder_field.value:
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text("Please select a folder first"),
-                bgcolor=ft.Colors.ORANGE_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, "Please select a folder first", ft.Colors.ORANGE_400)
             self.page.update()
             return
         
         try:
             folder_path = Path(self.folder_field.value)
             if not folder_path.exists():
-                self.page.snack_bar = ft.SnackBar(
-                    content=ft.Text("Folder does not exist"),
-                    bgcolor=ft.Colors.RED_400
-                )
-                self.page.snack_bar.open = True
+                show_snack(self.page, "Folder does not exist", ft.Colors.RED_400)
                 self.page.update()
                 return
             
@@ -280,21 +257,13 @@ class ImportPatternDialog:
             self.files_list.update()
             
         except Exception as ex:
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(f"Error: {ex}"),
-                bgcolor=ft.Colors.RED_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, f"Error: {ex}", ft.Colors.RED_400)
             self.page.update()
     
     async def _start_import(self, e):
         """Start the import process."""
         if not self.folder_field.value:
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text("Please select a folder first"),
-                bgcolor=ft.Colors.ORANGE_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, "Please select a folder first", ft.Colors.ORANGE_400)
             self.page.update()
             return
         
@@ -307,11 +276,7 @@ class ImportPatternDialog:
             )
             
             if not found_files:
-                self.page.snack_bar = ft.SnackBar(
-                    content=ft.Text("No files found"),
-                    bgcolor=ft.Colors.ORANGE_400
-                )
-                self.page.snack_bar.open = True
+                show_snack(self.page, "No files found", ft.Colors.ORANGE_400)
                 self.page.update()
                 return
             
@@ -333,9 +298,5 @@ class ImportPatternDialog:
                     )
             
         except Exception as ex:
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(f"Error: {ex}"),
-                bgcolor=ft.Colors.RED_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, f"Error: {ex}", ft.Colors.RED_400)
             self.page.update()

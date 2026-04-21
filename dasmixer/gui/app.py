@@ -5,6 +5,7 @@ from pathlib import Path
 from dasmixer.api.config import config
 from dasmixer.api.project.project import Project
 import traceback
+from dasmixer.gui.utils import show_snack
 
 
 def run_gui(project_path: str | None = None):
@@ -231,26 +232,17 @@ class DASMixerApp:
     # Snackbar helpers
     # ------------------------------------------------------------------
 
-    def _show_snack(self, message: str, color: str):
-        """Display a snackbar message."""
-        self.page.snack_bar = ft.SnackBar(
-            content=ft.Text(message),
-            bgcolor=color,
-            open=True,
-        )
-        self.page.update()
-
     def _show_error(self, message: str):
         print(f"[app] ERROR: {message}")
-        self._show_snack(message, ft.Colors.RED_400)
+        show_snack(self.page, message, ft.Colors.RED_400)
 
     def _show_success(self, message: str):
         print(f"[app] OK: {message}")
-        self._show_snack(message, ft.Colors.GREEN_400)
+        show_snack(self.page, message, ft.Colors.GREEN_400)
 
     def _show_info(self, message: str):
         print(f"[app] INFO: {message}")
-        self._show_snack(message, ft.Colors.BLUE_400)
+        show_snack(self.page, message, ft.Colors.BLUE_400)
 
     # ------------------------------------------------------------------
     # Project operations
@@ -264,19 +256,12 @@ class DASMixerApp:
         """Create new project."""
         print("[app] new_project called")
         try:
-            file_picker = ft.FilePicker()
-            self.page.overlay.append(file_picker)
-            self.page.update()
-
-            file_path = await file_picker.save_file(
+            file_path = await ft.FilePicker().save_file(
                 dialog_title="Create New Project",
                 file_name="project.dasmix",
                 file_type=ft.FilePickerFileType.CUSTOM,
                 allowed_extensions=["dasmix"]
             )
-
-            self.page.overlay.remove(file_picker)
-            self.page.update()
 
             if not file_path:
                 print("[app] new_project: cancelled")
@@ -309,21 +294,14 @@ class DASMixerApp:
         """Open project via file picker."""
         print("[app] open_project_dialog called")
         try:
-            file_picker = ft.FilePicker()
-            self.page.overlay.append(file_picker)
-            self.page.update()
-
-            files = await file_picker.pick_files(
+            files = await ft.FilePicker().pick_files(
                 dialog_title="Open Project",
                 file_type=ft.FilePickerFileType.CUSTOM,
                 allowed_extensions=["dasmix"],
                 allow_multiple=False
             )
 
-            self.page.overlay.remove(file_picker)
-            self.page.update()
-
-            if files:
+            if files and files[0].path:
                 await self.open_project(files[0].path)
             else:
                 print("[app] open_project_dialog: cancelled")

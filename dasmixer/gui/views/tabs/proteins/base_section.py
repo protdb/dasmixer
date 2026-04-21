@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 
 from dasmixer.api.project.project import Project
 from .shared_state import ProteinsTabState
+from dasmixer.gui.utils import show_snack
 
 
 class BaseSection(ft.Container, ABC):
@@ -67,11 +68,7 @@ class BaseSection(ft.Container, ABC):
         """Show error snackbar using context."""
         try:
             page = ft.context.page
-            page.snack_bar = ft.SnackBar(
-                content=ft.Text(message),
-                bgcolor=ft.Colors.RED_400
-            )
-            page.snack_bar.open = True
+            show_snack(page, message, ft.Colors.RED_400)
             page.update()
         except RuntimeError:
             # Fallback if not in Flet context
@@ -81,11 +78,7 @@ class BaseSection(ft.Container, ABC):
         """Show success snackbar using context."""
         try:
             page = ft.context.page
-            page.snack_bar = ft.SnackBar(
-                content=ft.Text(message),
-                bgcolor=ft.Colors.GREEN_400
-            )
-            page.snack_bar.open = True
+            show_snack(page, message, ft.Colors.GREEN_400)
             page.update()
         except RuntimeError:
             print(f"SUCCESS: {message}")
@@ -94,11 +87,7 @@ class BaseSection(ft.Container, ABC):
         """Show info snackbar using context."""
         try:
             page = ft.context.page
-            page.snack_bar = ft.SnackBar(
-                content=ft.Text(message),
-                bgcolor=ft.Colors.BLUE_400
-            )
-            page.snack_bar.open = True
+            show_snack(page, message, ft.Colors.BLUE_400)
             page.update()
         except RuntimeError:
             print(f"INFO: {message}")
@@ -107,11 +96,7 @@ class BaseSection(ft.Container, ABC):
         """Show warning snackbar using context."""
         try:
             page = ft.context.page
-            page.snack_bar = ft.SnackBar(
-                content=ft.Text(message),
-                bgcolor=ft.Colors.ORANGE_400
-            )
-            page.snack_bar.open = True
+            show_snack(page, message, ft.Colors.ORANGE_400)
             page.update()
         except RuntimeError:
             print(f"WARNING: {message}")

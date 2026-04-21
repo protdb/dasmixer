@@ -16,6 +16,7 @@ from dasmixer.api.calculations.spectra.identification_processor import process_i
 from dasmixer.api.project.project import Project
 from .shared_state import PeptidesTabState
 from .dialogs.progress_dialog import ProgressDialog
+from dasmixer.gui.utils import show_snack
 
 # Number of worker processes: leave one CPU free for the UI/async loop
 _WORKER_COUNT = max(1, (os.cpu_count() or 2) - 1)
@@ -42,8 +43,7 @@ class IonCalculations:
     def show_error(self, message: str):
         page = self._get_page()
         if page:
-            page.snack_bar = ft.SnackBar(content=ft.Text(message), bgcolor=ft.Colors.RED_400)
-            page.snack_bar.open = True
+            show_snack(page, message, ft.Colors.RED_400)
             page.update()
         else:
             print(f"ERROR: {message}")
@@ -51,8 +51,7 @@ class IonCalculations:
     def show_success(self, message: str):
         page = self._get_page()
         if page:
-            page.snack_bar = ft.SnackBar(content=ft.Text(message), bgcolor=ft.Colors.GREEN_400)
-            page.snack_bar.open = True
+            show_snack(page, message, ft.Colors.GREEN_400)
             page.update()
         else:
             print(f"SUCCESS: {message}")
@@ -60,8 +59,7 @@ class IonCalculations:
     def show_info(self, message: str):
         page = self._get_page()
         if page:
-            page.snack_bar = ft.SnackBar(content=ft.Text(message), bgcolor=ft.Colors.BLUE_400)
-            page.snack_bar.open = True
+            show_snack(page, message, ft.Colors.BLUE_400)
             page.update()
         else:
             print(f"INFO: {message}")
@@ -69,8 +67,7 @@ class IonCalculations:
     def show_warning(self, message: str):
         page = self._get_page()
         if page:
-            page.snack_bar = ft.SnackBar(content=ft.Text(message), bgcolor=ft.Colors.ORANGE_400)
-            page.snack_bar.open = True
+            show_snack(page, message, ft.Colors.ORANGE_400)
             page.update()
         else:
             print(f"WARNING: {message}")

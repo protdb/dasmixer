@@ -5,6 +5,7 @@ import pandas as pd
 from pathlib import Path
 from dasmixer.api.project.project import Project
 from dasmixer.api.inputs.registry import registry
+from dasmixer.gui.utils import show_snack
 
 
 class ImportHandlers:
@@ -91,11 +92,7 @@ class ImportHandlers:
                     progress_dialog.open = False
                     self.page.update()
                     
-                    self.page.snack_bar = ft.SnackBar(
-                        content=ft.Text(f"Invalid file format: {file_path.name}"),
-                        bgcolor=ft.Colors.RED_400
-                    )
-                    self.page.snack_bar.open = True
+                    show_snack(self.page, f"Invalid file format: {file_path.name}", ft.Colors.RED_400)
                     self.page.update()
                     return
                 
@@ -126,11 +123,7 @@ class ImportHandlers:
             self.page.update()
             
             # Show success
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(f"Successfully imported {total_spectra} spectra from {total_files} file(s)"),
-                bgcolor=ft.Colors.GREEN_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, f"Successfully imported {total_spectra} spectra from {total_files} file(s)", ft.Colors.GREEN_400)
             self.page.update()
             
             # Call completion callback
@@ -145,11 +138,7 @@ class ImportHandlers:
             progress_dialog.open = False
             self.page.update()
             
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(f"Import error: {str(ex)}"),
-                bgcolor=ft.Colors.RED_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, f"Import error: {str(ex)}", ft.Colors.RED_400)
             self.page.update()
     
     async def import_identification_files(self, file_list, tool_id: int):
@@ -206,11 +195,7 @@ class ImportHandlers:
                     progress_dialog.open = False
                     self.page.update()
                     
-                    self.page.snack_bar = ft.SnackBar(
-                        content=ft.Text(f"Sample '{sample_id}' not found. Import spectra first."),
-                        bgcolor=ft.Colors.RED_400
-                    )
-                    self.page.snack_bar.open = True
+                    show_snack(self.page, f"Sample '{sample_id}' not found. Import spectra first.", ft.Colors.RED_400)
                     self.page.update()
                     return
                 
@@ -220,11 +205,7 @@ class ImportHandlers:
                     progress_dialog.open = False
                     self.page.update()
                     
-                    self.page.snack_bar = ft.SnackBar(
-                        content=ft.Text(f"No spectra files for sample '{sample_id}'"),
-                        bgcolor=ft.Colors.RED_400
-                    )
-                    self.page.snack_bar.open = True
+                    show_snack(self.page, f"No spectra files for sample '{sample_id}'", ft.Colors.RED_400)
                     self.page.update()
                     return
                 
@@ -249,11 +230,7 @@ class ImportHandlers:
                     progress_dialog.open = False
                     self.page.update()
                     
-                    self.page.snack_bar = ft.SnackBar(
-                        content=ft.Text(f"Invalid file format: {file_path.name}"),
-                        bgcolor=ft.Colors.RED_400
-                    )
-                    self.page.snack_bar.open = True
+                    show_snack(self.page, f"Invalid file format: {file_path.name}", ft.Colors.RED_400)
                     self.page.update()
                     return
                 
@@ -306,11 +283,7 @@ class ImportHandlers:
             self.page.update()
             
             # Show success
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(f"Successfully imported {total_identifications} identifications from {total_files} file(s)"),
-                bgcolor=ft.Colors.GREEN_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, f"Successfully imported {total_identifications} identifications from {total_files} file(s)", ft.Colors.GREEN_400)
             self.page.update()
             
             # Call completion callback
@@ -325,9 +298,5 @@ class ImportHandlers:
             progress_dialog.open = False
             self.page.update()
             
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(f"Import error: {str(ex)}"),
-                bgcolor=ft.Colors.RED_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, f"Import error: {str(ex)}", ft.Colors.RED_400)
             self.page.update()

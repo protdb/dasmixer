@@ -13,6 +13,7 @@ from dasmixer.api.calculations.spectra.plot_matches import plot_ion_match
 from dasmixer.api.calculations.spectra.ion_match import IonMatchParameters, match_predictions
 from dasmixer.utils.ppm import calculate_ppm
 import plotly.io as pio
+from dasmixer.gui.utils import show_snack
 
 
 class PeptidesTab(ft.Container):
@@ -171,21 +172,13 @@ class PeptidesTab(ft.Container):
                 self.fasta_file_field.update()
         except Exception as ex:
             print(f"Error: {ex}")
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(f"Error: {str(ex)}"),
-                bgcolor=ft.Colors.RED_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, f"Error: {str(ex)}", ft.Colors.RED_400)
             self.page.update()
     
     async def load_fasta_file(self, e):
         """Load FASTA file."""
         if not self.fasta_file_field.value:
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text("Please select a FASTA file"),
-                bgcolor=ft.Colors.ORANGE_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, "Please select a FASTA file", ft.Colors.ORANGE_400)
             self.page.update()
             return
         
@@ -213,11 +206,7 @@ class PeptidesTab(ft.Container):
             if not await parser.validate():
                 progress_dialog.open = False
                 self.page.update()
-                self.page.snack_bar = ft.SnackBar(
-                    content=ft.Text("Invalid FASTA format"),
-                    bgcolor=ft.Colors.RED_400
-                )
-                self.page.snack_bar.open = True
+                show_snack(self.page, "Invalid FASTA format", ft.Colors.RED_400)
                 self.page.update()
                 return
             
@@ -251,11 +240,7 @@ class PeptidesTab(ft.Container):
             progress_dialog.open = False
             self.page.update()
             
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(f"Loaded {total:,} proteins"),
-                bgcolor=ft.Colors.GREEN_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, f"Loaded {total:,} proteins", ft.Colors.GREEN_400)
             self.page.update()
             
         except Exception as ex:
@@ -263,11 +248,7 @@ class PeptidesTab(ft.Container):
             print(f"Error: {traceback.format_exc()}")
             progress_dialog.open = False
             self.page.update()
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(f"Error: {str(ex)}"),
-                bgcolor=ft.Colors.RED_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, f"Error: {str(ex)}", ft.Colors.RED_400)
             self.page.update()
     
     async def load_blast_settings(self):
@@ -297,11 +278,7 @@ class PeptidesTab(ft.Container):
                 }
             
             if not tool_settings:
-                self.page.snack_bar = ft.SnackBar(
-                    content=ft.Text("No tools configured"),
-                    bgcolor=ft.Colors.ORANGE_400
-                )
-                self.page.snack_bar.open = True
+                show_snack(self.page, "No tools configured", ft.Colors.ORANGE_400)
                 self.page.update()
                 return
             
@@ -348,21 +325,13 @@ class PeptidesTab(ft.Container):
             progress_dialog.open = False
             self.page.update()
             
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(f"Mapped {total_matches} matches"),
-                bgcolor=ft.Colors.GREEN_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, f"Mapped {total_matches} matches", ft.Colors.GREEN_400)
             self.page.update()
             
         except Exception as ex:
             import traceback
             print(f"Error: {traceback.format_exc()}")
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(f"Error: {str(ex)}"),
-                bgcolor=ft.Colors.RED_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, f"Error: {str(ex)}", ft.Colors.RED_400)
             self.page.update()
     
     # Tool Settings Section
@@ -614,8 +583,7 @@ class PeptidesTab(ft.Container):
             idents_df = await self.project.execute_query_df(query)
             
             if len(idents_df) == 0:
-                self.page.snack_bar = ft.SnackBar(content=ft.Text("No identifications"), bgcolor=ft.Colors.BLUE_400)
-                self.page.snack_bar.open = True
+                show_snack(self.page, "No identifications", ft.Colors.BLUE_400)
                 self.page.update()
                 return
             
@@ -672,14 +640,12 @@ class PeptidesTab(ft.Container):
             pdlg.open = False
             self.page.update()
             
-            self.page.snack_bar = ft.SnackBar(content=ft.Text(f"Calculated for {processed}"), bgcolor=ft.Colors.GREEN_400)
-            self.page.snack_bar.open = True
+            show_snack(self.page, f"Calculated for {processed}", ft.Colors.GREEN_400)
             self.page.update()
         except Exception as ex:
             import traceback
             print(f"Error: {traceback.format_exc()}")
-            self.page.snack_bar = ft.SnackBar(content=ft.Text(f"Error: {str(ex)}"), bgcolor=ft.Colors.RED_400)
-            self.page.snack_bar.open = True
+            show_snack(self.page, f"Error: {str(ex)}", ft.Colors.RED_400)
             self.page.update()
     
     async def calculate_protein_match_metrics(self, e):
@@ -690,8 +656,7 @@ class PeptidesTab(ft.Container):
             matches_df = await self.project.get_peptide_matches()
             
             if len(matches_df) == 0:
-                self.page.snack_bar = ft.SnackBar(content=ft.Text("No matches. Run mapping first."), bgcolor=ft.Colors.ORANGE_400)
-                self.page.snack_bar.open = True
+                show_snack(self.page, "No matches. Run mapping first.", ft.Colors.ORANGE_400)
                 self.page.update()
                 return
             
@@ -785,14 +750,12 @@ class PeptidesTab(ft.Container):
             pdlg.open = False
             self.page.update()
             
-            self.page.snack_bar = ft.SnackBar(content=ft.Text(f"Calculated for {processed} matches"), bgcolor=ft.Colors.GREEN_400)
-            self.page.snack_bar.open = True
+            show_snack(self.page, f"Calculated for {processed} matches", ft.Colors.GREEN_400)
             self.page.update()
         except Exception as ex:
             import traceback
             print(f"Error: {traceback.format_exc()}")
-            self.page.snack_bar = ft.SnackBar(content=ft.Text(f"Error: {str(ex)}"), bgcolor=ft.Colors.RED_400)
-            self.page.snack_bar.open = True
+            show_snack(self.page, f"Error: {str(ex)}", ft.Colors.RED_400)
             self.page.update()
     
     # Matching Section
@@ -832,8 +795,7 @@ class PeptidesTab(ft.Container):
             for tool_id in self.tool_settings_controls.keys():
                 is_valid, error_msg = self._validate_tool_settings(tool_id)
                 if not is_valid:
-                    self.page.snack_bar = ft.SnackBar(content=ft.Text(f"Error: {error_msg}"), bgcolor=ft.Colors.ORANGE_400)
-                    self.page.snack_bar.open = True
+                    show_snack(self.page, f"Error: {error_msg}", ft.Colors.ORANGE_400)
                     self.page.update()
                     return
                 await self.save_tool_settings(tool_id)
@@ -867,14 +829,12 @@ class PeptidesTab(ft.Container):
             pdlg.open = False
             self.page.update()
             
-            self.page.snack_bar = ft.SnackBar(content=ft.Text(f"Processed {count} spectra"), bgcolor=ft.Colors.GREEN_400)
-            self.page.snack_bar.open = True
+            show_snack(self.page, f"Processed {count} spectra", ft.Colors.GREEN_400)
             self.page.update()
         except Exception as ex:
             import traceback
             print(f"Error: {traceback.format_exc()}")
-            self.page.snack_bar = ft.SnackBar(content=ft.Text(f"Error: {str(ex)}"), bgcolor=ft.Colors.RED_400)
-            self.page.snack_bar.open = True
+            show_snack(self.page, f"Error: {str(ex)}", ft.Colors.RED_400)
             self.page.update()
     
     # Search Section
@@ -1039,8 +999,7 @@ class PeptidesTab(ft.Container):
         except Exception as ex:
             import traceback
             print(f"Error: {traceback.format_exc()}")
-            self.page.snack_bar = ft.SnackBar(content=ft.Text(f"Error: {str(ex)}"), bgcolor=ft.Colors.RED_400)
-            self.page.snack_bar.open = True
+            show_snack(self.page, f"Error: {str(ex)}", ft.Colors.RED_400)
             self.page.update()
     
     async def view_identification(self, e, ident_row: dict):

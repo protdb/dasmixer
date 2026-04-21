@@ -9,6 +9,7 @@ from jinja2 import Template
 
 from dasmixer.api.project.project import Project
 from dasmixer.gui.components.plotly_viewer import PlotlyViewer
+from dasmixer.gui.utils import show_snack
 
 
 class PlotItemCard(ft.Container):
@@ -227,11 +228,7 @@ class PlotsTab(ft.Container):
             self.page.update()
             
         except Exception as ex:
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(f"Error viewing plot: {ex}"),
-                bgcolor=ft.Colors.RED_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, f"Error viewing plot: {ex}", ft.Colors.RED_400)
             self.page.update()
     
     async def _delete_plot(self, plot_id: int):
@@ -264,41 +261,25 @@ class PlotsTab(ft.Container):
         try:
             await self.project.delete_saved_plot(plot_id)
             
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(f"Plot #{plot_id} deleted"),
-                bgcolor=ft.Colors.GREEN_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, f"Plot #{plot_id} deleted", ft.Colors.GREEN_400)
             
             # Reload list
             await self.load_data()
             
         except Exception as ex:
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(f"Error deleting plot: {ex}"),
-                bgcolor=ft.Colors.RED_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, f"Error deleting plot: {ex}", ft.Colors.RED_400)
             self.page.update()
     
     async def _on_export_selected(self, e):
         """Export selected plots to Word."""
         if not self.selected_ids:
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text("No plots selected"),
-                bgcolor=ft.Colors.ORANGE_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, "No plots selected", ft.Colors.ORANGE_400)
             self.page.update()
             return
         
         try:
             # Pick directory
-            file_picker = ft.FilePicker()
-            self.page.overlay.append(file_picker)
-            self.page.update()
-            
-            result = await file_picker.get_directory_path()
+            result = await ft.FilePicker().get_directory_path()
             if not result:
                 return
             
@@ -306,11 +287,7 @@ class PlotsTab(ft.Container):
             await self._export_plots_to_word(list(self.selected_ids), output_dir)
             
         except Exception as ex:
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(f"Error exporting: {ex}"),
-                bgcolor=ft.Colors.RED_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, f"Error exporting: {ex}", ft.Colors.RED_400)
             self.page.update()
     
     async def _export_plots_to_word(self, plot_ids: list[int], output_dir: Path):
@@ -393,11 +370,7 @@ class PlotsTab(ft.Container):
             output_file = output_dir / f"plots_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx"
             doc.save(str(output_file))
             
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(f"Exported to {output_file.name}"),
-                bgcolor=ft.Colors.GREEN_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, f"Exported to {output_file.name}", ft.Colors.GREEN_400)
             self.page.update()
             
         except Exception as ex:

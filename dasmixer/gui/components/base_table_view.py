@@ -3,6 +3,7 @@
 import flet as ft
 import pandas as pd
 from typing import Callable
+from dasmixer.gui.utils import show_snack
 
 
 class BaseTableView(ft.Container):
@@ -247,10 +248,7 @@ class BaseTableView(ft.Container):
         self.current_page = 0
         await self._load_table_data()
         if self.page:
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text("Filters applied"), bgcolor=ft.Colors.GREEN_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, "Filters applied", ft.Colors.GREEN_400)
             self.page.update()
 
     async def _update_filters_from_ui(self):
@@ -312,10 +310,7 @@ class BaseTableView(ft.Container):
             self.has_data = False
             self._show_error(str(ex))
             if self.page:
-                self.page.snack_bar = ft.SnackBar(
-                    content=ft.Text(f"Error loading data: {ex}"), bgcolor=ft.Colors.RED_400
-                )
-                self.page.snack_bar.open = True
+                show_snack(self.page, f"Error loading data: {ex}", ft.Colors.RED_400)
                 self.page.update()
         finally:
             self.is_loading = False
@@ -601,19 +596,12 @@ class BaseTableView(ft.Container):
                         df.to_excel(file_result, index=False)
 
                     if self.page:
-                        self.page.snack_bar = ft.SnackBar(
-                            content=ft.Text(f"Exported to {file_result}"),
-                            bgcolor=ft.Colors.GREEN_400
-                        )
-                        self.page.snack_bar.open = True
+                        show_snack(self.page, f"Exported to {file_result}", ft.Colors.GREEN_400)
                         self.page.update()
 
             except Exception as ex:
                 if self.page:
-                    self.page.snack_bar = ft.SnackBar(
-                        content=ft.Text(f"Export error: {ex}"), bgcolor=ft.Colors.RED_400
-                    )
-                    self.page.snack_bar.open = True
+                    show_snack(self.page, f"Export error: {ex}", ft.Colors.RED_400)
                     self.page.update()
 
         dialog = ft.AlertDialog(

@@ -5,6 +5,7 @@ from dasmixer.api.project.project import Project
 from dasmixer.api.project.dataclasses import Tool
 from dasmixer.api.inputs.registry import registry
 from ..constants import get_default_color
+from dasmixer.gui.utils import show_snack
 
 
 class ToolDialog:
@@ -43,11 +44,7 @@ class ToolDialog:
         ]
         
         if not parser_options:
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text("No identification parsers available"),
-                bgcolor=ft.Colors.RED_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, "No identification parsers available", ft.Colors.RED_400)
             self.page.update()
             return
         
@@ -196,11 +193,7 @@ class ToolDialog:
             self._close()
             
             # Show success
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(success_message),
-                bgcolor=ft.Colors.GREEN_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, success_message, ft.Colors.GREEN_400)
             self.page.update()
             
             # Call success callback
@@ -208,9 +201,5 @@ class ToolDialog:
                 await self.on_success_callback()
         
         except Exception as ex:
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(f"Error: {ex}"),
-                bgcolor=ft.Colors.RED_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, f"Error: {ex}", ft.Colors.RED_400)
             self.page.update()

@@ -3,6 +3,7 @@
 import flet as ft
 from dasmixer.api.project.project import Project
 from .shared_state import ReportsTabState
+from dasmixer.gui.utils import show_snack
 
 
 class SettingsSection(ft.Container):
@@ -152,29 +153,17 @@ class SettingsSection(ft.Container):
     def _show_error(self, message: str):
         """Show error."""
         if self.page:
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(message),
-                bgcolor=ft.Colors.RED_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, message, ft.Colors.RED_400)
             self.page.update()
     
     def _show_success(self, message: str):
         """Show success."""
         if self.page:
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(message),
-                bgcolor=ft.Colors.GREEN_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, message, ft.Colors.GREEN_400)
             self.page.update()
     
     def _show_warning(self, message: str):
         """Show warning."""
         if self.page:
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(message),
-                bgcolor=ft.Colors.ORANGE_400
-            )
-            self.page.snack_bar.open = True
+            show_snack(self.page, message, ft.Colors.ORANGE_400)
             self.page.update()
