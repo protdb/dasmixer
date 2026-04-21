@@ -19,6 +19,7 @@ Usage:
 """
 
 import typer
+import multiprocessing
 from typing import Annotated
 from pathlib import Path
 
@@ -84,4 +85,5 @@ app.add_typer(import_data.app, name="import", help="Import data files")
 
 
 if __name__ == '__main__':
+    multiprocessing.freeze_support()
     app()

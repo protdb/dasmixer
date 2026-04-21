@@ -22,7 +22,6 @@ dependencies = [
     "uniprot-meta-tool (>=0.2.1,<0.3.0)",
     "aiosqlite (>=0.22.1,<0.23.0)",
     "numpy (>=2.4.1,<3.0.0)",
-    "npysearch (>=1.3.1,<2.0.0)",
     "parse (>=1.20.2,<2.0.0)",
     "aiofiles (>=25.1.0,<26.0.0)",
     "aiocsv (>=1.4.0,<2.0.0)",
@@ -33,7 +32,17 @@ dependencies = [
     "docxtpl (>=0.20.2,<0.21.0)",
     "html-for-docx (>=1.1.3,<2.0.0)",
     "smart-round (>=1.0.1,<2.0.0)",
-
+    # npysearch: custom Windows wheels for Python 3.12/3.14; PyPI for other platforms
+    "npysearch @ https://github.com/protdb/npysearch/releases/download/v1.3.1-windows/npysearch-1.3.1-cp314-cp314-win_amd64.whl ; sys_platform == 'win32' and python_version == '3.14'",
+    "npysearch @ https://github.com/protdb/npysearch/releases/download/v1.3.1-windows/npysearch-1.3.1-cp312-cp312-win_amd64.whl ; sys_platform == 'win32' and python_version == '3.12'",
+    "npysearch (>=1.3.1,<2.0.0) ; sys_platform != 'win32'",
+    # pywebview for Windows (gtk extra is Linux-only)
+    "pywebview (>=6.1,<7.0) ; sys_platform == 'win32'",
+    # pythonnet: required by pywebview on Windows.
+    # Python 3.14/win32: use pre-release 3.1.0rc0 (supports <3.15, no stable release for 3.14).
+    # Python 3.11-3.13/win32: use stable 3.0.5.
+    "pythonnet (==3.1.0rc0) ; sys_platform == 'win32' and python_version >= '3.14' and python_version < '3.15'",
+    "pythonnet (==3.0.5) ; sys_platform == 'win32' and python_version < '3.14'",
 ]
 
 
@@ -47,4 +56,12 @@ build-backend = "poetry.core.masonry.api"
 [dependency-groups]
 dev = [
     "pytest (>=9.0.2,<10.0.0)"
+]
+
+# Enrich pythonnet with allow-prereleases so that the rc0 pre-release can be installed.
+# The version constraints are declared in project.dependencies above.
+[tool.poetry.dependencies]
+pythonnet = [
+    {version = "==3.1.0rc0", python = ">=3.14,<3.15", markers = "sys_platform == 'win32'", allow-prereleases = true},
+    {version = "==3.0.5", python = ">=3.11,<3.14", markers = "sys_platform == 'win32'"},
 ]
