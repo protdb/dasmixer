@@ -43,6 +43,7 @@ class PeptideIonTableView(BaseTableView):
         'scans': 'scans',
         'spectre_id': 'spectre_id',
         'identification_id': 'identification_id',
+        'protein_id': 'protein_id',
     }
 
     default_columns = {
@@ -68,6 +69,9 @@ class PeptideIonTableView(BaseTableView):
             'seq_no': None,
             'scans': None,
             'spectre_id': None,
+            'protein_id': None,
+            'gene': None,
+            'protein_identified': 'All'
         }
 
     def _build_filter_view(self) -> ft.Control:
@@ -120,13 +124,29 @@ class PeptideIonTableView(BaseTableView):
             ],
             width=150,
         )
-
+        self.protein_identified_field = ft.Dropdown(
+            label="Protein Identified", value='None',
+            options=[
+                ft.DropdownOption(key="None", text="All"),
+                ft.DropdownOption(key="True", text="Yes"),
+                ft.DropdownOption(key="False", text="No"),
+            ],
+            width=150,
+        )
+        self.protein_field = ft.TextField(
+            label="Protein id", value="", width=150
+        )
+        self.gene_field = ft.TextField(
+            label="Gene", value="", width=150
+        )
         # Register filter_controls (for set_filters_in_ui)
         self.filter_controls = {
             'identification_id': self.identification_id_field,
             'scans': self.scans_field,
             'spectre_id': self.spectre_id_field,
             'seq_no': self.seq_no_field,
+            'protein_id': self.protein_field,
+            'gene': self.gene_field,
         }
 
         return ft.Column([
@@ -145,6 +165,11 @@ class PeptideIonTableView(BaseTableView):
                 self.sequence_field,
                 self.canonical_sequence_field
             ], spacing=10),
+            ft.Row([
+                self.protein_identified_field,
+                self.protein_field,
+                self.gene_field
+            ])
         ], spacing=10)
 
     async def _update_filters_from_ui(self):
@@ -159,6 +184,10 @@ class PeptideIonTableView(BaseTableView):
         self.filter['scans'] = self.scans_field.value
         self.filter['seq_no'] = self.seq_no_field.value
         self.filter['spectre_id'] = self.spectre_id_field.value
+        self.filter['protein_id'] = self.protein_field.value
+        self.filter['gene'] = self.gene_field.value
+        self.filter['protein_identified'] = self.protein_identified_field.value
+
 
     async def load_data(self):
         await self._load_filter_options()
@@ -197,6 +226,9 @@ class PeptideIonTableView(BaseTableView):
         if self.filter['is_preferred'] != 'None':
             kwargs['is_preferred'] = self.filter['is_preferred'] == 'True'
 
+        if self.filter['protein_identified'] != 'All':
+            kwargs['protein_identified'] = self.filter['protein_identified'] == 'True'
+
         if self.filter.get('identification_id'):
             try:
                 kwargs['identification_id'] = int(self.filter['identification_id'])
@@ -214,6 +246,24 @@ class PeptideIonTableView(BaseTableView):
                 kwargs['seq_no'] = int(self.filter['seq_no'])
             except (ValueError, TypeError):
                 pass
+
+        if self.filter.get('min_score'):
+            try:
+                kwargs['min_score'] = float(self.filter['min_score'])
+            except (ValueError, TypeError):
+                pass
+
+        if self.filter.get('max_ppm'):
+            try:
+                kwargs['max_ppm'] = float(self.filter['max_ppm'])
+            except (ValueError, TypeError):
+                pass
+
+        if self.filter.get('protein_id'):
+            kwargs['protein_id'] = self.filter['protein_id']
+
+        if self.filter.get('gene'):
+            kwargs['gene'] = self.filter['gene']
 
         return kwargs
 
