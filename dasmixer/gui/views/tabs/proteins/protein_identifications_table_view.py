@@ -94,12 +94,8 @@ class ProteinIdentificationsTableView(BaseTableView):
 
     async def get_total_count(self) -> int:
         sample = None if self.filter['sample'] == 'all' else self.filter['sample']
-        df = await self.project.get_protein_results_joined(sample=sample, limit=999999, offset=0)
-
-        if self.filter['min_peptides'] > 0 and 'peptide_count' in df.columns:
-            df = df[df['peptide_count'] >= self.filter['min_peptides']]
-
-        if self.filter['min_unique'] > 0 and 'unique_evidence_count' in df.columns:
-            df = df[df['unique_evidence_count'] >= self.filter['min_unique']]
-
-        return len(df)
+        return await self.project.count_protein_results_joined(
+            sample=sample,
+            min_peptides=self.filter['min_peptides'],
+            min_unique=self.filter['min_unique'],
+        )

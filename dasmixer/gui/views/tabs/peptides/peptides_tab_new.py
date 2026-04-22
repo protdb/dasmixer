@@ -173,24 +173,33 @@ class PeptidesTab(ft.Container):
         self.page.run_task(self._load_initial_data)
     
     async def _load_initial_data(self):
-        """Load all initial data for sections."""
+        """Load all initial data for sections in parallel."""
+        import asyncio
         print("Loading peptides tab initial data...")
         try:
-            # Load data for each section that has load_data method
-            for section_name, section in self.sections.items():
-                print(f"Loading data for {section_name}...")
-                if hasattr(section, 'load_data'):
-                    await section.load_data()
-            
-            # Update protein count in shared state
-            self.state.protein_count = await self.project.get_protein_count()
-            
+            tasks = [
+                section.load_data()
+                for section in self.sections.values()
+                if hasattr(section, 'load_data')
+            ]
+            # Protein count runs alongside section loads
+            tasks.append(self._update_protein_count())
+
+            if tasks:
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+                for i, r in enumerate(results):
+                    if isinstance(r, Exception):
+                        print(f"[PeptidesTab] load_data task {i} failed: {r}")
+
             print("Peptides tab initial data loaded successfully")
-            
+
         except Exception as ex:
             print(f"Error loading initial data: {ex}")
             import traceback
             traceback.print_exc()
+
+    async def _update_protein_count(self):
+        self.state.protein_count = await self.project.get_protein_count()
     
     async def refresh_all(self):
         """Refresh all sections."""

@@ -6,7 +6,7 @@ import json
 import multiprocessing
 
 from dasmixer.api.project.project import Project
-from dasmixer.gui.components.plotly_viewer import PlotlyViewer, show_webview
+from dasmixer.gui.components.plotly_viewer import PlotlyViewer, show_webview, render_png_async
 from dasmixer.gui.utils import show_snack
 
 _PLOT_WIDTH = 1100
@@ -44,6 +44,8 @@ class BasePlotView(ft.Container):
         self.plot_settings = self.get_default_settings()
         self.current_entity_id: str | None = None
         self.current_figure: go.Figure | None = None
+        # Cached PNG bytes — avoids re-rendering when suspending/resuming
+        self._last_img_bytes: bytes | None = None
 
         self.settings_panel: ft.ExpansionPanel | None = None
         self.preview_panel: ft.ExpansionPanel | None = None
@@ -52,6 +54,9 @@ class BasePlotView(ft.Container):
         self.save_button: ft.ElevatedButton | None = None
         self.export_button: ft.ElevatedButton | None = None
         self.webview_button: ft.ElevatedButton | None = None
+
+        # suspend/resume support
+        self._is_suspended: bool = False
 
         self.content = self._build_ui()
         self.padding = 10
@@ -191,12 +196,19 @@ class BasePlotView(ft.Container):
             return
 
         try:
-            self.preview_container.content = ft.ProgressRing()
+            if self.preview_container is not None:
+                self.preview_container.content = ft.Column(
+                    [ft.ProgressRing(width=32, height=32, stroke_width=3)],
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    alignment=ft.MainAxisAlignment.CENTER,
+                )
             if self.page:
                 self.page.update()
 
             fig = await self.generate_plot(self.current_entity_id)
             self.current_figure = fig
+            # Invalidate cached PNG — figure changed
+            self._last_img_bytes = None
 
             fig = await self._apply_global_settings(fig)
             await self._display_plot(fig)
@@ -210,9 +222,10 @@ class BasePlotView(ft.Container):
                 self.page.update()
 
         except Exception as ex:
-            self.preview_container.content = ft.Text(
-                f"Error generating plot: {ex}", color=ft.Colors.RED_400
-            )
+            if self.preview_container is not None:
+                self.preview_container.content = ft.Text(
+                    f"Error generating plot: {ex}", color=ft.Colors.RED_400
+                )
             if self.page:
                 self.page.update()
 
@@ -223,14 +236,24 @@ class BasePlotView(ft.Container):
         return fig
 
     async def _display_plot(self, fig: go.Figure):
+        """
+        Render the figure to PNG asynchronously (no event-loop blocking),
+        cache the bytes, then update the preview container.
+        """
+        # Render PNG in a thread pool — Kaleido subprocess won't block the loop
+        img_bytes = await render_png_async(fig, _PLOT_WIDTH, _PLOT_HEIGHT)
+        self._last_img_bytes = img_bytes
+
         viewer = PlotlyViewer(
             figure=fig,
             width=_PLOT_WIDTH,
             height=_PLOT_HEIGHT,
             title=self.title,
-            show_interactive_button=False  # we have our own button in the button row
+            show_interactive_button=False,  # we have our own button in the button row
+            img_bytes=img_bytes,            # pass pre-rendered bytes — no second render
         )
-        self.preview_container.content = viewer
+        if self.preview_container is not None:
+            self.preview_container.content = viewer
         if self.page:
             self.page.update()
 
@@ -331,6 +354,62 @@ class BasePlotView(ft.Container):
         dialog.open = False
         if self.page:
             self.page.update()
+
+    # ------------------------------------------------------------------
+    # Suspend / Resume  (called when parent tab becomes inactive/active)
+    # ------------------------------------------------------------------
+
+    def suspend(self) -> None:
+        """
+        Replace the plot viewer with a lightweight placeholder.
+
+        go.Figure and _last_img_bytes are kept in memory so resume()
+        can restore the view instantly without re-rendering.
+        """
+        if self._is_suspended or self.current_figure is None:
+            return
+        self._is_suspended = True
+
+        if self.preview_container is not None:
+            self.preview_container.content = ft.Container(
+                content=ft.Text(
+                    "Plot hidden (switch back to reload)",
+                    size=13,
+                    color=ft.Colors.GREY_500,
+                    italic=True,
+                ),
+                alignment=ft.Alignment.CENTER,
+                height=80,
+            )
+        # Caller handles page.update()
+
+    def resume(self) -> None:
+        """
+        Restore the plot viewer.
+
+        If _last_img_bytes is available, restores instantly (no Kaleido call).
+        Otherwise schedules an async re-render.
+        """
+        if not self._is_suspended or self.current_figure is None:
+            return
+        self._is_suspended = False
+
+        if self._last_img_bytes is not None and self.preview_container is not None:
+            viewer = PlotlyViewer(
+                figure=self.current_figure,
+                width=_PLOT_WIDTH,
+                height=_PLOT_HEIGHT,
+                title=self.title,
+                show_interactive_button=False,
+                img_bytes=self._last_img_bytes,
+            )
+            self.preview_container.content = viewer
+        elif self.page and self.current_entity_id:
+            # No cached bytes — schedule async re-render
+            self.page.run_task(self._generate_and_display_plot)
+        # Caller handles page.update()
+
+    # ------------------------------------------------------------------
 
     async def load_data(self):
         await self._load_settings_from_project()

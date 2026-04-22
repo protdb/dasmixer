@@ -6,7 +6,7 @@ from .shared_state import SamplesTabState
 from .groups_section import GroupsSection
 from .tools_section import ToolsSection
 from .import_section import ImportSection
-from .samples_section import SamplesSection
+from .samples_summary_section import SamplesSummarySection
 from .import_handlers import ImportHandlers
 from .dialogs.import_mode_dialog import ImportModeDialog
 from .dialogs.import_pattern_dialog import ImportPatternDialog
@@ -69,9 +69,9 @@ class SamplesTab(ft.Container):
         sections['tools'] = ToolsSection(self.project, self.state, self)
         print("tools...")
         
-        # Samples section
-        sections['samples'] = SamplesSection(self.project, self.state, self)
-        print("samples...")
+        # Samples summary section (lightweight — no ExpansionPanelList)
+        sections['samples'] = SamplesSummarySection(self.project, self.state, self)
+        print("samples summary...")
         
         return sections
     
@@ -118,21 +118,24 @@ class SamplesTab(ft.Container):
     
     async def _load_initial_data(self):
         """Load all initial data for sections.
-        
-        Loads groups/tools/import sections first, then samples section last
-        (after other UI is rendered) as per STAGE11 spec.
+
+        groups / import / tools load in parallel; samples loads after them
+        (it may depend on their state, and is heavier due to per-sample queries).
         """
+        import asyncio
         print("Loading samples tab initial data...")
         try:
-            # Load non-samples sections first
+            # Phase 1: independent lightweight sections in parallel
             priority_sections = ['groups', 'import', 'tools']
-            for section_name in priority_sections:
-                section = self.sections.get(section_name)
-                if section and hasattr(section, 'load_data'):
-                    print(f"Loading data for {section_name}...")
-                    await section.load_data()
+            tasks = [
+                self.sections[name].load_data()
+                for name in priority_sections
+                if self.sections.get(name) and hasattr(self.sections[name], 'load_data')
+            ]
+            if tasks:
+                await asyncio.gather(*tasks)
 
-            # Load samples section last — after the rest of UI is rendered
+            # Phase 2: samples section (depends on groups/tools counts, heavier)
             samples_section = self.sections.get('samples')
             if samples_section and hasattr(samples_section, 'load_data'):
                 print("Loading data for samples...")
@@ -147,21 +150,19 @@ class SamplesTab(ft.Container):
     
     async def _on_import_complete(self):
         """Callback after import completes.
-        
-        After import:
-        - Reload counts in groups/tools/import sections (fast).
-        - Trigger full samples recalc (recomputes stats + writes cache).
-        """
-        # Reload counts in non-samples sections
-        for section_name in ['groups', 'import', 'tools']:
-            section = self.sections.get(section_name)
-            if section and hasattr(section, 'load_data'):
-                await section.load_data()
 
-        # Trigger full samples update (recalc + cache)
-        samples_section = self.sections.get('samples')
-        if samples_section and hasattr(samples_section, '_on_update_clicked'):
-            await samples_section._on_update_clicked()
+        Reload all sections including the lightweight summary.
+        The full panel list lives in ManageSamplesView and will be refreshed
+        on next open; here we only update the summary counters.
+        """
+        import asyncio
+        tasks = [
+            self.sections[name].load_data()
+            for name in ['groups', 'import', 'tools', 'samples']
+            if self.sections.get(name) and hasattr(self.sections[name], 'load_data')
+        ]
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
 
     async def refresh_all(self):
         """Refresh all sections (full reload)."""

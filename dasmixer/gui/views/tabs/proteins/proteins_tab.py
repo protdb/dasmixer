@@ -167,32 +167,39 @@ class ProteinsTab(ft.Container):
         self.page.run_task(self._load_initial_data)
     
     async def _load_initial_data(self):
-        """Load all initial data for sections."""
+        """Load all initial data for sections in parallel."""
+        import asyncio
         print("Loading proteins tab initial data...")
         try:
-            # Load data for each section that has load_data method
+            tasks = []
             for section_name, section in self.sections.items():
-                print(f"Loading data for {section_name}...")
                 if section_name == 'table_and_plot':
-                    # Special handling for table_and_plot
-                    print('!!!!!!!!!!!!await data load...')
-                    await self.identifications_table.load_data()
-                    await self.protein_plot.load_data()
+                    tasks.append(self.identifications_table.load_data())
+                    tasks.append(self.protein_plot.load_data())
                 elif hasattr(section, 'load_data'):
-                    await section.load_data()
-            
-            # Update counts in shared state
-            self.state.protein_identification_count = await self.project.get_protein_identification_count()
-            self.state.protein_quantification_count = await self.project.get_protein_quantification_count()
-            
-            print(f"Proteins tab initial data loaded successfully. "
+                    tasks.append(section.load_data())
+
+            # Counts run in parallel with section loads
+            tasks.append(self._update_counts())
+
+            if tasks:
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+                for i, r in enumerate(results):
+                    if isinstance(r, Exception):
+                        print(f"[ProteinsTab] load_data task {i} failed: {r}")
+
+            print(f"Proteins tab initial data loaded. "
                   f"IDs: {self.state.protein_identification_count}, "
                   f"Quant: {self.state.protein_quantification_count}")
-            
+
         except Exception as ex:
             print(f"Error loading initial data: {ex}")
             import traceback
             traceback.print_exc()
+
+    async def _update_counts(self):
+        self.state.protein_identification_count = await self.project.get_protein_identification_count()
+        self.state.protein_quantification_count = await self.project.get_protein_quantification_count()
     
     async def refresh_all(self):
         """Refresh all sections."""

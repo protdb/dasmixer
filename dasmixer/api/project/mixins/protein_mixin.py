@@ -347,6 +347,41 @@ class ProteinMixin:
         df = await self.execute_query_df(query, params_tuple)
         return df
     
+    async def count_protein_results_joined(
+        self,
+        sample: str | None = None,
+        min_peptides: int = 0,
+        min_unique: int = 0,
+    ) -> int:
+        """
+        Count rows that would be returned by get_protein_results_joined
+        (with optional sample / min_peptides / min_unique filters).
+
+        Uses a lightweight COUNT(*) query — does NOT load all rows.
+        """
+        query = """
+            SELECT COUNT(*) AS cnt
+            FROM protein_identification_result pir
+            JOIN sample s ON pir.sample_id = s.id
+            WHERE 1=1
+        """
+        params: list = []
+
+        if sample is not None:
+            query += " AND s.name = ?"
+            params.append(sample)
+
+        if min_peptides > 0:
+            query += " AND pir.peptide_count >= ?"
+            params.append(min_peptides)
+
+        if min_unique > 0:
+            query += " AND pir.uq_evidence_count >= ?"
+            params.append(min_unique)
+
+        row = await self._fetchone(query, tuple(params) if params else None)
+        return int(row['cnt']) if row else 0
+
     async def get_protein_results_joined(
         self,
         sample: str | None = None,

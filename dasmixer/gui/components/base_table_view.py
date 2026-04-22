@@ -66,6 +66,9 @@ class BaseTableView(ft.Container):
         self._all_columns: list[str] = []
         self._visible_columns: set[str] = set()
 
+        # suspend/resume support
+        self._is_suspended: bool = False
+
         self.filters_panel: ft.ExpansionPanel | None = None
         self.data_panel: ft.ExpansionPanel | None = None
         self.data_container: ft.Container | None = None
@@ -672,6 +675,46 @@ class BaseTableView(ft.Container):
         if self.current_page < total_pages - 1:
             self.current_page += 1
             await self._load_table_data()
+
+    # ------------------------------------------------------------------
+    # Suspend / Resume  (called when parent tab becomes inactive/active)
+    # ------------------------------------------------------------------
+
+    def suspend(self) -> None:
+        """
+        Replace the rendered DataTable with a lightweight placeholder.
+
+        The data (self._last_df) is preserved in memory — resume() rebuilds
+        the table from it instantly without any DB query.
+        """
+        if self._is_suspended or not self.has_data:
+            return
+        self._is_suspended = True
+
+        if self.data_container is not None:
+            self.data_container.content = ft.Container(
+                content=ft.Text(
+                    "Table hidden (switch back to reload)",
+                    size=13,
+                    color=ft.Colors.GREY_500,
+                    italic=True,
+                ),
+                alignment=ft.Alignment.CENTER,
+                height=80,
+            )
+            # Deliberately do NOT call update() here — caller handles page.update()
+
+    def resume(self) -> None:
+        """
+        Restore the DataTable from the cached DataFrame without a DB query.
+        """
+        if not self._is_suspended:
+            return
+        self._is_suspended = False
+
+        if self._last_df is not None and not self._last_df.empty:
+            self._render_table(self._last_df)
+        # Caller handles page.update()
 
     # ------------------------------------------------------------------
     # Public load entry point

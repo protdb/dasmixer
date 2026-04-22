@@ -35,72 +35,78 @@ class ToolDialog:
         self.dialog = None
     
     async def show(self):
-        """Show the dialog."""
-        # Get available identification parsers
+        """Show dialog immediately, then load data and fill fields."""
+        dlg_title = "Edit Tool" if self.is_edit_mode else "Add Identification Tool"
+
+        # Open spinner dialog right away
+        self.dialog = ft.AlertDialog(
+            title=ft.Text(dlg_title),
+            content=ft.Container(
+                content=ft.ProgressRing(width=28, height=28, stroke_width=3),
+                alignment=ft.Alignment.CENTER,
+                width=400,
+                height=80,
+            ),
+            actions=[ft.TextButton("Cancel", on_click=self._close)],
+        )
+        self.page.overlay.append(self.dialog)
+        self.dialog.open = True
+        self.page.update()
+
+        # Load data
         parsers = registry.get_identification_parsers()
         parser_options = [
             ft.dropdown.Option(key=name, text=name)
             for name in parsers.keys()
         ]
-        
+
         if not parser_options:
+            self.dialog.open = False
+            self.page.update()
             show_snack(self.page, "No identification parsers available", ft.Colors.RED_400)
             self.page.update()
             return
-        
-        # Get default color for new tools
+
         if not self.is_edit_mode:
             tools = await self.project.get_tools()
             default_color = get_default_color(len(tools))
         else:
             default_color = self.tool.display_color or "#9333EA"
-        
-        # Remove # from color for display
+
         if default_color.startswith('#'):
             default_color = default_color[1:]
-        
-        # Create fields
+
+        # Build form fields
         self.name_field = ft.TextField(
             label="Tool Name",
             value=self.tool.name if self.is_edit_mode else "",
             hint_text="e.g., PowerNovo2, MaxQuant",
-            autofocus=True
+            autofocus=True,
         )
-        
-        # Tool type selector
         self.tool_type_group = ft.RadioGroup(
             content=ft.Column([
                 ft.Radio(value="Library", label="Library Search"),
-                ft.Radio(value="De Novo", label="De Novo Sequencing")
+                ft.Radio(value="De Novo", label="De Novo Sequencing"),
             ]),
-            value=self.tool.type if self.is_edit_mode else "Library"
+            value=self.tool.type if self.is_edit_mode else "Library",
         )
-        
-        # Parser dropdown
         self.parser_dropdown = ft.Dropdown(
             label="Parser / Format",
             options=parser_options,
             value=self.tool.parser if self.is_edit_mode else parser_options[0].key,
-            width=300
+            width=300,
         )
-        
         self.color_field = ft.TextField(
             label="Color (hex)",
             value=default_color,
             max_length=6,
-            hint_text="e.g., 9333EA for purple"
+            hint_text="e.g., 9333EA for purple",
         )
-        
-        # Color preview
         color_preview = ft.Container(
-            width=50,
-            height=50,
-            border_radius=5,
-            bgcolor=f"#{default_color}"
+            width=50, height=50, border_radius=5, bgcolor=f"#{default_color}"
         )
-        
+
         def update_color_preview(e):
-            """Update color preview when color field changes."""
             color_value = self.color_field.value
             if color_value:
                 if not color_value.startswith('#'):
@@ -108,45 +114,42 @@ class ToolDialog:
                 try:
                     color_preview.bgcolor = color_value
                     color_preview.update()
-                except:
+                except Exception:
                     pass
-        
+
         self.color_field.on_change = update_color_preview
-        
-        # Create dialog
-        self.dialog = ft.AlertDialog(
-            title=ft.Text("Edit Tool" if self.is_edit_mode else "Add Identification Tool"),
-            content=ft.Column([
+
+        # Replace spinner with real form
+        self.dialog.content = ft.Column(
+            [
                 self.name_field,
                 ft.Text("Tool Type:", weight=ft.FontWeight.W_500),
                 self.tool_type_group,
                 self.parser_dropdown,
-                ft.Row([
-                    self.color_field,
-                    color_preview
-                ], alignment=ft.MainAxisAlignment.START, spacing=10),
+                ft.Row(
+                    [self.color_field, color_preview],
+                    alignment=ft.MainAxisAlignment.START,
+                    spacing=10,
+                ),
                 ft.Container(height=5),
                 ft.Text(
                     "Tool represents an identification method (e.g., de novo, database search)",
                     size=11,
                     italic=True,
-                    color=ft.Colors.GREY_600
-                )
-            ], tight=True, width=400, scroll=ft.ScrollMode.AUTO),
-            actions=[
-                ft.TextButton(
-                    "Cancel",
-                    on_click=self._close
+                    color=ft.Colors.GREY_600,
                 ),
-                ft.ElevatedButton(
-                    "Save" if self.is_edit_mode else "Add",
-                    on_click=lambda e: self.page.run_task(self._save, e)
-                )
-            ]
+            ],
+            tight=True,
+            width=400,
+            scroll=ft.ScrollMode.AUTO,
         )
-        
-        self.page.overlay.append(self.dialog)
-        self.dialog.open = True
+        self.dialog.actions = [
+            ft.TextButton("Cancel", on_click=self._close),
+            ft.ElevatedButton(
+                "Save" if self.is_edit_mode else "Add",
+                on_click=lambda e: self.page.run_task(self._save, e),
+            ),
+        ]
         self.page.update()
     
     def _close(self, e=None):

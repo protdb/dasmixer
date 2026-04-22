@@ -191,43 +191,133 @@ class SampleMixin:
     async def get_sample_detail(self, sample_id: int) -> list[dict]:
         """
         Return detailed file tree for a sample panel body.
-        
+
+        Uses a single JOIN query instead of N+1 queries.
+
         Returns list of spectre_file dicts, each with 'ident_files' key:
             list of dicts: id, tool_id, tool_name, file_path, ident_count
         """
-        sf_query = """
-            SELECT id, path, format
-            FROM spectre_file
-            WHERE sample_id = ?
-            ORDER BY id
+        # One query: all spectra files + their identification files + counts
+        query = """
+            SELECT
+                sf.id          AS sf_id,
+                sf.path        AS sf_path,
+                sf.format      AS sf_format,
+                if2.id         AS if_id,
+                if2.tool_id    AS if_tool_id,
+                if2.file_path  AS if_file_path,
+                t.name         AS if_tool_name,
+                (SELECT COUNT(*) FROM identification WHERE ident_file_id = if2.id) AS ident_count
+            FROM spectre_file sf
+            LEFT JOIN identification_file if2 ON if2.spectre_file_id = sf.id
+            LEFT JOIN tool t ON if2.tool_id = t.id
+            WHERE sf.sample_id = ?
+            ORDER BY sf.id, if2.id
         """
-        sf_rows = await self._fetchall(sf_query, (int(sample_id),))
-        
-        result = []
-        for sf_row in sf_rows:
-            sf_id = sf_row['id']
-            if_query = """
-                SELECT if2.id, if2.tool_id, if2.file_path, t.name AS tool_name,
-                       (SELECT COUNT(*) FROM identification WHERE ident_file_id = if2.id) AS ident_count
-                FROM identification_file if2
-                JOIN tool t ON if2.tool_id = t.id
-                WHERE if2.spectre_file_id = ?
-                ORDER BY if2.id
-            """
-            if_rows = await self._fetchall(if_query, (int(sf_id),))
-            result.append({
-                'id': sf_row['id'],
-                'path': sf_row['path'],
-                'format': sf_row['format'],
-                'ident_files': [dict(r) for r in if_rows] if if_rows else [],
-            })
-        
-        return result
+        rows = await self._fetchall(query, (int(sample_id),))
+
+        # Group by spectra file
+        sf_map: dict[int, dict] = {}
+        for row in rows:
+            sf_id = int(row['sf_id'])
+            if sf_id not in sf_map:
+                sf_map[sf_id] = {
+                    'id': sf_id,
+                    'path': row['sf_path'],
+                    'format': row['sf_format'],
+                    'ident_files': [],
+                }
+            if row['if_id'] is not None:
+                sf_map[sf_id]['ident_files'].append({
+                    'id': int(row['if_id']),
+                    'tool_id': row['if_tool_id'],
+                    'file_path': row['if_file_path'],
+                    'tool_name': row['if_tool_name'],
+                    'ident_count': int(row['ident_count'] or 0),
+                })
+
+        return list(sf_map.values())
 
     async def get_tools_count(self) -> int:
         """Return total number of tools."""
         row = await self._fetchone("SELECT COUNT(*) AS count FROM tool")
         return int(row['count']) if row else 0
+
+    async def get_sample_status_summary(self, min_proteins: int = 30, min_idents: int = 1000) -> dict:
+        """
+        Return aggregate sample status counters derived from sample_status_cache.
+
+        Status rules (same as SamplesSection._build_sample_header):
+          - ERROR:   no spectra files  OR  has spectra but no ident files
+          - OK:      has spectra + ident files + idents >= min_idents
+                     + proteins ok (0 or >= min_proteins) + no empty ident files
+          - WARNING: everything else (has data but some threshold not met)
+
+        Returns dict:
+            total      - total number of samples
+            ok         - samples in OK state
+            warning    - samples in WARNING state
+            error      - samples in ERROR state
+            uncached   - samples with no cache entry yet
+        """
+        # Get all samples count
+        row_total = await self._fetchone("SELECT COUNT(*) AS cnt FROM sample")
+        total = int(row_total['cnt']) if row_total else 0
+
+        if total == 0:
+            return {'total': 0, 'ok': 0, 'warning': 0, 'error': 0, 'uncached': 0}
+
+        # Get tools count (needed for expected ident files check)
+        row_tools = await self._fetchone("SELECT COUNT(*) AS cnt FROM tool")
+        tools_count = int(row_tools['cnt']) if row_tools else 0
+
+        # Load all cached stats
+        rows = await self._fetchall("SELECT * FROM sample_status_cache")
+        cached_ids_count = len(rows)
+        uncached = total - cached_ids_count
+
+        ok = warning = error = 0
+        for row in rows:
+            sf = int(row['spectra_files_count'] or 0)
+            if_c = int(row['ident_files_count'] or 0)
+            idents = int(row['identifications_count'] or 0)
+            proteins = int(row['protein_ids_count'] or 0)
+            empty_if = int(row['empty_ident_files_count'] or 0)
+
+            has_spectra = sf > 0
+            has_ident = if_c > 0
+            expected_if = tools_count * sf if sf > 0 else 0
+            ident_files_ok = (expected_if == 0) or (if_c == expected_if)
+            idents_ok = idents >= min_idents
+            proteins_ok = (proteins == 0) or (proteins >= min_proteins)
+
+            if not has_spectra or (has_spectra and not has_ident):
+                error += 1
+            elif has_spectra and has_ident and ident_files_ok and idents_ok and proteins_ok and empty_if == 0:
+                ok += 1
+            else:
+                warning += 1
+
+        return {
+            'total': total,
+            'ok': ok,
+            'warning': warning,
+            'error': error,
+            'uncached': uncached,
+        }
+
+    async def get_sample_counts_by_subset(self) -> dict[int, int]:
+        """
+        Return sample counts grouped by subset_id.
+
+        Returns:
+            dict mapping subset_id (int) → sample count (int).
+            Subsets with no samples are not included.
+        """
+        rows = await self._fetchall(
+            "SELECT subset_id, COUNT(*) AS cnt FROM sample WHERE subset_id IS NOT NULL GROUP BY subset_id"
+        )
+        return {int(r['subset_id']): int(r['cnt']) for r in rows}
 
     # ------------------------------------------------------------------
     # sample_status_cache methods
