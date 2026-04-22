@@ -3,6 +3,8 @@
 import flet as ft
 from pathlib import Path
 
+from dasmixer.gui.utils import get_asset_path
+
 
 class StartView(ft.Container):
     """
@@ -42,7 +44,7 @@ class StartView(ft.Container):
     def _build_content(self):
         """Build the view content."""
         # Header — logo image + title text
-        logo_path = Path("assets/logo_header.png")
+        logo_path = get_asset_path("logo_header.png")
         breakpoints = {
             ft.ResponsiveRowBreakpoint.MD: 6,
             ft.ResponsiveRowBreakpoint.SM: 12
