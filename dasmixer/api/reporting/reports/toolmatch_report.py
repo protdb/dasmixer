@@ -4,7 +4,16 @@ import plotly.express as px
 from flet import Icons
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+
 from ..base import BaseReport
+from dasmixer.gui.components.report_form import ReportForm, ToolSelector, IntSelector
+
+
+class ToolMatchReportForm(ReportForm):
+    tool1 = ToolSelector(label="Tool 1 (Library)")
+    tool2 = ToolSelector(label="Tool 2 (De Novo)")
+    min_psm = IntSelector(default=1, label="Min PSM count")
+    min_unique_psm = IntSelector(default=1, label="Min unique PSM count")
 
 
 class ToolMatchReport(BaseReport):
@@ -12,23 +21,15 @@ class ToolMatchReport(BaseReport):
     description = "Shows increase in identifications between two selected tools"
     icon = Icons.PIE_CHART
     both_color = 'yellow'
+    parameters = ToolMatchReportForm
 
-    @staticmethod
-    def get_parameter_defaults() -> dict[str, tuple[type, str]]:
-        return {
-            'tool1': (str, 'Library'),
-            'tool2': (str, 'Denovo'),
-            'min_psm': (int, 1),
-        }
-
-
-    def _get_proteins_data(self, data: pd.DataFrame, tools: list[str], min_peptides: int, min_uq: int) -> tuple[pd.DataFrame, pd.DataFrame]:
+    def _get_proteins_data(self, data: pd.DataFrame, tools: list[str], min_peptides: int, min_uq: int, min_unique_psm: int = 1) -> tuple[pd.DataFrame, pd.DataFrame]:
         tool1, tool2 = tools
         all_proteins = data.query('is_preferred==1')[['protein_id', 'tool', 'unique_evidence']]
         all_proteins['occur'] = all_proteins.groupby('protein_id')['protein_id'].transform('size')
         all_proteins['uq_evidences'] = all_proteins.groupby('protein_id')['unique_evidence'].transform('sum')
         all_proteins = all_proteins[['protein_id', 'tool', 'occur', 'uq_evidences']].drop_duplicates().query(
-            "occur >= @min_peptides and uq_evidences >= @min_uq"
+            "occur >= @min_peptides and uq_evidences >= @min_uq and uq_evidences >= @min_unique_psm"
         )
 
         proteins_combined = pd.merge(
@@ -51,10 +52,10 @@ class ToolMatchReport(BaseReport):
 
         return proteins_combined, protein_count
 
-    def _get_peptides_data(self, data: pd.DataFrame, min_psm: int, tools: list[str]) -> tuple[pd.DataFrame, pd.DataFrame]:
+    def _get_peptides_data(self, data: pd.DataFrame, min_psm: int, min_unique_psm: int, tools: list[str]) -> tuple[pd.DataFrame, pd.DataFrame]:
         tool1, tool2 = tools
         all_peptides = data[
-            ['sample_id', 'seq_no', 'ppm', 'tool', 'identification_id', 'canonical_sequence', 'matched_sequence', 'is_preferred', 'identity']
+            ['sample_id', 'seq_no', 'ppm', 'tool', 'identification_id', 'canonical_sequence', 'matched_sequence', 'is_preferred', 'identity', 'unique_evidence']
         ].sort_values(by='identity').drop_duplicates(subset=[
             'identification_id', 'tool'
         ])
@@ -63,11 +64,12 @@ class ToolMatchReport(BaseReport):
         proteins_for_id = data.groupby(['identification_id'])['protein_id'].agg(agg_proteins_list).reset_index(name='proteins')
         print(proteins_for_id)
         all_peptides = pd.merge(all_peptides, proteins_for_id, on='identification_id', how='outer')
-        data_add = data[['sample', 'subset', 'sample_id', 'seq_no']]
-        t1_df = all_peptides.query('tool==@tool1')
+        t1_df = all_peptides.query('tool==@tool1').copy()
         t1_df['seq_occur'] = t1_df.groupby('matched_sequence')['matched_sequence'].transform('size')
-        t2_df = all_peptides.query('tool==@tool2')
+        t1_df['seq_uq_occur'] = t1_df.groupby('matched_sequence')['unique_evidence'].transform('sum')
+        t2_df = all_peptides.query('tool==@tool2').copy()
         t2_df['seq_occur'] = t2_df.groupby('matched_sequence')['matched_sequence'].transform('size')
+        t2_df['seq_uq_occur'] = t2_df.groupby('matched_sequence')['unique_evidence'].transform('sum')
         merged = pd.merge(
             t1_df,
             t2_df,
@@ -75,7 +77,9 @@ class ToolMatchReport(BaseReport):
             on=['sample_id', 'seq_no'],
             suffixes=('_t1', '_t2')
         ).query(
-            "(is_preferred_t1==1 or is_preferred_t2==1) and seq_occur_t1 >= @min_psm or seq_occur_t2 >= @min_psm"
+            "(is_preferred_t1==1 or is_preferred_t2==1) and "
+            "(seq_occur_t1 >= @min_psm or seq_occur_t2 >= @min_psm) and "
+            "(seq_uq_occur_t1 >= @min_unique_psm or seq_uq_occur_t2 >= @min_unique_psm)"
         ).copy()
         merged['sequences_match'] = merged['matched_sequence_t1'] == merged['matched_sequence_t2']
 
@@ -105,16 +109,16 @@ class ToolMatchReport(BaseReport):
         peptide_win = anls['tool'].value_counts().reset_index(name='cnt')
         return merged, peptide_win
 
-
-
     async def _generate_impl(
         self,
         params: dict
     ) -> tuple[list[tuple[str, go.Figure]], list[tuple[str, pd.DataFrame, bool]]]:
-        tool1 = params['tool1']
-        tool2 = params['tool2']
+        print(params)
+        tool1 = str(params['tool1'])
+        tool2 = str(params['tool2'])
         tools = [tool1, tool2]
-        min_psm = params['min_psm']
+        min_psm = int(params['min_psm'])
+        min_unique_psm = int(params['min_unique_psm'])
         print('loading data...')
         joined_data = await self.project.get_joined_peptide_data(
             sequence_identified=True,
@@ -123,8 +127,8 @@ class ToolMatchReport(BaseReport):
         min_peptides = int(await self.project.get_setting('proteins_min_peptides', '2'))
         min_uq = int(await self.project.get_setting('proteins_min_unique_evidence', '1'))
 
-        peptides, peptide_stats = self._get_peptides_data(joined_data, min_psm, tools)
-        proteins, protein_stats = self._get_proteins_data(joined_data, tools, min_peptides, min_uq)
+        peptides, peptide_stats = self._get_peptides_data(joined_data, min_psm, min_unique_psm, tools)
+        proteins, protein_stats = self._get_proteins_data(joined_data, tools, min_peptides, min_uq, min_unique_psm)
 
         chart = make_subplots(
             rows=1,

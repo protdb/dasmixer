@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 import pandas as pd
 import plotly.graph_objects as go
 import gzip
@@ -12,6 +12,9 @@ import base64
 from datetime import datetime
 from ..project import Project
 import flet as ft
+
+if TYPE_CHECKING:
+    from dasmixer.gui.components.report_form import ReportForm
 
 
 class BaseReport(ABC):
@@ -31,6 +34,10 @@ class BaseReport(ABC):
     name: str = "Base Report"
     description: str = "Base report class"
     icon: str = ft.Icons.REPORT  # flet.Icons name
+
+    # Typed parameter form class (set in subclasses to a ReportForm subclass).
+    # When set, ReportItem will render a Parameters dialog instead of TextArea.
+    parameters: "type[ReportForm] | None" = None
     
     def __init__(
         self,
@@ -144,25 +151,37 @@ class BaseReport(ABC):
     def _validate_parameters(self, params: dict) -> dict:
         """
         Validate and convert parameter types.
-        
+
+        For reports that declare a ``parameters`` ReportForm class, the dict
+        coming from the UI already contains correctly-typed Python values
+        (int, float, bool, list[str] …) — no further conversion needed.
+        In that case the method just passes ``params`` through unchanged.
+
+        For legacy reports that still rely on ``get_parameter_defaults()``
+        (returning {name: (type, default_str)}) the old string-conversion
+        path is used.
+
         Args:
-            params: Raw parameters (all values as strings)
-            
+            params: Parameters dict from UI
+
         Returns:
             dict: Validated parameters with correct types
-            
+
         Raises:
-            ValueError: If parameter cannot be converted
+            ValueError: If a legacy parameter cannot be converted
         """
+        # --- New path: report uses a typed ReportForm ---
+        if self.__class__.parameters is not None:
+            return dict(params)
+
+        # --- Legacy path: report uses get_parameter_defaults() ---
         defaults = self.get_parameter_defaults()
         validated = {}
-        
+
         for param_name, (param_type, default_value) in defaults.items():
-            # Get value from params or use default
             raw_value = params.get(param_name, default_value)
-            
+
             try:
-                # Type conversion
                 if param_type == int:
                     validated[param_name] = int(raw_value)
                 elif param_type == float:
@@ -175,9 +194,10 @@ class BaseReport(ABC):
                     validated[param_name] = raw_value
             except (ValueError, AttributeError) as e:
                 raise ValueError(
-                    f"Parameter '{param_name}': cannot convert '{raw_value}' to {param_type.__name__}"
+                    f"Parameter '{param_name}': cannot convert '{raw_value}'"
+                    f" to {param_type.__name__}"
                 ) from e
-        
+
         return validated
     
     async def _collect_project_settings(self) -> dict:

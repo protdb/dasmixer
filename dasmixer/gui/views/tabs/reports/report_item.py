@@ -1,5 +1,6 @@
 """Individual report item component."""
 
+import json
 import flet as ft
 from datetime import datetime
 from pathlib import Path
@@ -18,7 +19,7 @@ class ReportItem(ft.Container):
     Contains:
     - Name and description
     - "Include in batch" checkbox
-    - Parameters field
+    - Parameters button (opens dialog) or TextArea fallback
     - Control buttons
     """
     
@@ -35,30 +36,46 @@ class ReportItem(ft.Container):
         self.state = state
         print(f'Report {report_class.__name__}.')
         
-        # Controls
+        # Include checkbox
         self.include_checkbox = ft.Checkbox(
             label="Generate with all",
             value=True,
             on_change=self._on_include_changed
         )
         print('checkbox Generate_all init...')
-        
-        # Default parameters
-        defaults = report_class.get_parameter_defaults()
-        default_params_text = "\n".join([
-            f"{key}={value}"
-            for key, (_, value) in defaults.items()
-        ])
-        
-        self.params_field = ft.TextField(
-            label="Parameters",
-            value=default_params_text,
-            multiline=True,
-            min_lines=3,
-            max_lines=6,
-            expand=True
-        )
-        print('params_field init...')
+
+        # Form instance (for reports with ReportForm)
+        self._form = None
+        self._params_dialog: ft.AlertDialog | None = None
+
+        # Decide UI mode
+        self._has_form = report_class.parameters is not None
+
+        if self._has_form:
+            # Parameters button — opens dialog
+            self.params_btn: ft.ElevatedButton | None = ft.ElevatedButton(
+                content=ft.Text("Parameters"),
+                icon=ft.Icons.SETTINGS,
+                on_click=self._on_open_params,
+            )
+            self.params_field: ft.TextField | None = None
+        else:
+            # Legacy TextArea fallback
+            self.params_btn = None
+            defaults = report_class.get_parameter_defaults()
+            default_params_text = "\n".join([
+                f"{key}={value}"
+                for key, (_, value) in defaults.items()
+            ])
+            self.params_field = ft.TextField(
+                label="Parameters",
+                value=default_params_text,
+                multiline=True,
+                min_lines=3,
+                max_lines=6,
+                expand=True
+            )
+        print('params widget init...')
         
         # Saved reports dropdown
         self.saved_reports_dropdown = ft.Dropdown(
@@ -107,6 +124,13 @@ class ReportItem(ft.Container):
     def _build_content(self) -> ft.Control:
         """Build content."""
         print('Building content...')
+
+        params_row_controls: list[ft.Control] = []
+        if self._has_form and self.params_btn is not None:
+            params_row_controls.append(self.params_btn)
+        elif not self._has_form and self.params_field is not None:
+            params_row_controls.append(self.params_field)
+
         res = ft.Column([
             # Header
             ft.Row([
@@ -128,8 +152,8 @@ class ReportItem(ft.Container):
             
             ft.Divider(),
 
-            # Parameters
-            self.params_field,
+            # Parameters area
+            ft.Row(params_row_controls, spacing=10),
 
             ft.Container(height=10),
 
@@ -143,13 +167,97 @@ class ReportItem(ft.Container):
         ])
         print('content inits...')
         return res
-    
+
+    # ------------------------------------------------------------------
+    # Form helpers
+    # ------------------------------------------------------------------
+
+    async def _init_form(self) -> None:
+        """Create and populate form instance from saved parameters."""
+        if not self._has_form or self.report_class.parameters is None:
+            return
+        saved = await self.project.get_report_parameters(self.report_class.name)
+        if saved:
+            try:
+                from dasmixer.gui.components.report_form import ReportForm
+                self._form = self.report_class.parameters.from_json_str(saved, self.project)
+            except Exception:
+                self._form = self.report_class.parameters(self.project)
+        else:
+            self._form = self.report_class.parameters(self.project)
+
+    async def _ensure_form_built(self) -> None:
+        """Make sure form is initialised and built."""
+        if self._form is None:
+            await self._init_form()
+        if self._form is not None and not self._form._built:
+            await self._form.build()
+
+    async def _on_open_params(self, e) -> None:
+        """Open parameters dialog."""
+        if not self.page:
+            return
+        await self._ensure_form_built()
+        if self._form is None:
+            return
+
+        form_ref = self._form  # capture non-None reference
+
+        def _close_dialog(_):
+            if self._params_dialog is not None:
+                self._params_dialog.open = False
+            if self.page:
+                self.page.update()
+
+        async def _save_and_close(_):
+            try:
+                await self.project.save_report_parameters(
+                    self.report_class.name,
+                    form_ref.to_json()
+                )
+            except Exception as ex:
+                print(f"Failed to save report parameters: {ex}")
+            if self._params_dialog is not None:
+                self._params_dialog.open = False
+            if self.page:
+                self.page.update()
+
+        container = form_ref.get_container()
+        container.width = 420
+
+        self._params_dialog = ft.AlertDialog(
+            modal=True,
+            title=ft.Text(f"{self.report_class.name} — Parameters"),
+            content=container,
+            actions=[
+                ft.TextButton("Cancel", on_click=_close_dialog),
+                ft.ElevatedButton(content=ft.Text("OK"), on_click=_save_and_close),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+        self.page.overlay.append(self._params_dialog)
+        self._params_dialog.open = True
+        self.page.update()
+
+    def _get_params_from_form(self) -> dict:
+        """Get current parameter values from form (if available)."""
+        if self._form is not None:
+            return self._form.get_values()
+        return {}
+
+    # ------------------------------------------------------------------
+    # Data loading
+    # ------------------------------------------------------------------
+
     async def load_data(self):
         """Load data (parameters and saved reports list)."""
-        # Load saved parameters
-        saved_params = await self.project.get_report_parameters(self.report_class.name)
-        if saved_params:
-            self.params_field.value = saved_params
+        if self._has_form:
+            await self._init_form()
+        else:
+            # Legacy: load saved parameters into TextArea
+            saved_params = await self.project.get_report_parameters(self.report_class.name)
+            if saved_params and self.params_field:
+                self.params_field.value = saved_params
         
         # Load saved reports list
         await self._load_saved_reports()
@@ -164,11 +272,10 @@ class ReportItem(ft.Container):
         options = []
         for report in reports:
             created_at = report['created_at']
-            # Format date
             try:
                 dt = datetime.fromisoformat(created_at)
                 formatted = dt.strftime("%Y-%m-%d %H:%M:%S")
-            except:
+            except Exception:
                 formatted = created_at
             
             options.append(
@@ -189,18 +296,27 @@ class ReportItem(ft.Container):
     
     async def _on_generate(self, e):
         """Generate report."""
-        # Show loading dialog
         loading_dialog = self._show_loading("Generating report...")
         
         try:
-            # Parse parameters
-            params = self._parse_parameters()
-            
-            # Save parameters
-            await self.project.save_report_parameters(
-                self.report_class.name,
-                self.params_field.value
-            )
+            # Collect parameters
+            if self._has_form:
+                await self._ensure_form_built()
+                params = self._get_params_from_form()
+                # Also save current form state
+                if self._form is not None:
+                    await self.project.save_report_parameters(
+                        self.report_class.name,
+                        self._form.to_json()
+                    )
+            else:
+                params = self._parse_text_parameters()
+                # Save legacy text params
+                if self.params_field:
+                    await self.project.save_report_parameters(
+                        self.report_class.name,
+                        self.params_field.value or ""
+                    )
             
             # Create report instance
             report = self.report_class(self.project)
@@ -222,25 +338,25 @@ class ReportItem(ft.Container):
             self._show_error(f"Generation failed: {ex}")
             import traceback
             traceback.print_exc()
-    
-    def _parse_parameters(self) -> dict:
+
+    def _parse_text_parameters(self) -> dict:
         """
-        Parse parameters from text field.
+        Parse parameters from legacy TextArea field.
         
         Returns:
             dict: {param_name: value_as_string}
         """
         params = {}
+        if self.params_field is None:
+            return params
         text = self.params_field.value or ""
-        
         for line in text.split('\n'):
             line = line.strip()
             if '=' in line:
                 key, value = line.split('=', 1)
                 params[key.strip()] = value.strip()
-        
         return params
-    
+
     async def _on_saved_report_selected(self, e):
         """Saved report selected."""
         if self.saved_reports_dropdown.value:
@@ -256,16 +372,11 @@ class ReportItem(ft.Container):
             return
         
         try:
-            # Load report from DB
             report = await self.report_class.load_from_db(
                 self.project,
                 self.current_report_id
             )
-            
-            # Render HTML
             html = report._render_html()
-            
-            # Show in pywebview
             ReportViewer.show_report(html, title=f"{self.report_class.name}")
             
         except Exception as ex:
@@ -278,28 +389,20 @@ class ReportItem(ft.Container):
         if not self.current_report_id:
             return
         
-        # Show loading dialog first
         loading_dialog = self._show_loading("Exporting report...")
         
         try:
-            # Use async FilePicker to get directory
             folder_path = await ft.FilePicker().get_directory_path(
                 dialog_title="Select Export Folder"
             )
             
             if folder_path:
-                # Load report
                 report = await self.report_class.load_from_db(
                     self.project,
                     self.current_report_id
                 )
-                
-                # Export
                 created_files = await report.export(Path(folder_path))
-                
                 self._close_loading(loading_dialog)
-                
-                # Show success with file list
                 files_list = "\n".join([f"- {path.name}" for path in created_files.values()])
                 self._show_success(f"Report exported:\n{files_list}")
             else:
@@ -310,12 +413,22 @@ class ReportItem(ft.Container):
             self._show_error(f"Export failed: {ex}")
             import traceback
             traceback.print_exc()
-    
+
+    async def _export_to_folder(self, folder_path: str):
+        """Export this report to a given folder (used by batch export)."""
+        if not self.current_report_id:
+            return
+        report = await self.report_class.load_from_db(self.project, self.current_report_id)
+        await report.export(Path(folder_path))
+
+    # ------------------------------------------------------------------
+    # UI helpers
+    # ------------------------------------------------------------------
+
     def _show_loading(self, message: str):
         """Show loading dialog."""
         if not self.page:
             return None
-        
         loading_dialog = ft.AlertDialog(
             modal=True,
             content=ft.Column([
@@ -323,11 +436,9 @@ class ReportItem(ft.Container):
                 ft.Text(message)
             ], tight=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
         )
-        
         self.page.overlay.append(loading_dialog)
         loading_dialog.open = True
         self.page.update()
-        
         return loading_dialog
     
     def _close_loading(self, dialog):

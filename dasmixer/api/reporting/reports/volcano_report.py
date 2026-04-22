@@ -3,26 +3,44 @@ import pandas as pd
 from flet import Icons
 import plotly.graph_objects as go
 from scipy.stats import false_discovery_control, mannwhitneyu, ttest_ind
+
 from ..base import BaseReport
+from dasmixer.gui.components.report_form import (
+    ReportForm,
+    SubsetSelector,
+    MultiSubsetSelector,
+    EnumSelector,
+    IntSelector,
+    FloatSelector,
+)
 from smart_round import format_dataframe
+
+
+class VolcanoReportForm(ReportForm):
+    control_subset = SubsetSelector(label="Control subset")
+    exptl_subsets = MultiSubsetSelector(label="Experimental subsets")
+    lfq_type = EnumSelector(
+        values=["emPAI", "iBAQ", "NSAF", "Top3"],
+        label="LFQ method",
+    )
+    stats_method = EnumSelector(
+        values=["Mann-Whitney", "T-test"],
+        label="Statistical method",
+    )
+    fdc = EnumSelector(
+        values=["BH", "BY", "Bonferroni"],
+        label="FDR correction",
+    )
+    percent_to_calculate = IntSelector(default=20, label="Min % samples with value")
+    fc_threshold = FloatSelector(default=1.5, label="FC threshold")
+    p_threshold = FloatSelector(default=0.05, label="p-value threshold")
+
 
 class VolcanoReport(BaseReport):
     name = "Volcano Report (not conected)"
     description = "Reporting FC/p-value changes and Volcano plots"
     icon = Icons.VOLCANO
-
-    @staticmethod
-    def get_parameter_defaults() -> dict[str, tuple[type, str]]:
-        return {
-            'control_subset': (str, 'Control'),
-            'exptl_subsets': (str, 'subset1,subset2'),
-            'lfq_type': (str, 'emPAI'),
-            'stats_method': (str, 'Mann-Whitney'),
-            'fdc': (str, 'BH'),
-            'percent_to_caculate': (int, 20),
-            'fc_threshold': (float, '1.5'),
-            'p_threshold': (float, '0.05'),
-        }
+    parameters = VolcanoReportForm
 
     async def get_data(self, lfq_type: str, subsets: list[str]) -> pd.DataFrame:
         return await self.project.get_protein_quantification_data(
@@ -36,44 +54,31 @@ class VolcanoReport(BaseReport):
         df.columns = ['protein_id', 'subset', 'p_value', 'fc', 'fc_log2']
         
         # Фильтруем невалидные данные
-        df = df[df['p_value'] > 0].copy()  # Убираем нулевые и отрицательные p-values
-        df = df[~df['p_value'].isna()].copy()  # Убираем NaN
-        df = df[~df['fc_log2'].isna()].copy()  # Убираем NaN в fc_log2
-        df = df[np.isfinite(df['fc_log2'])].copy()  # Убираем Inf в fc_log2
+        df = df[df['p_value'] > 0].copy()
+        df = df[~df['p_value'].isna()].copy()
+        df = df[~df['fc_log2'].isna()].copy()
+        df = df[np.isfinite(df['fc_log2'])].copy()
         
-        # Вычисляем -log10(p-value)
         df['neg_log10_pval'] = -np.log10(df['p_value'])
-        
-        # Убираем Inf значения (могут появиться если p-value очень маленькие)
         df = df[np.isfinite(df['neg_log10_pval'])].copy()
         
         fig = go.Figure()
         
-        # Отрисовываем точки для каждого subset
         for subset in df['subset'].unique():
             subset_data = df[df['subset'] == subset].copy()
-            
-            # Получаем цвет для текущего subset
             color = subset_colors.get(subset, '#808080')
-            
-            # Конвертируем в списки Python для лучшей совместимости
             x_data = subset_data['fc_log2'].tolist()
             y_data = subset_data['neg_log10_pval'].tolist()
             protein_ids = subset_data['protein_id'].tolist()
             fc_data = subset_data['fc'].tolist()
             pval_data = subset_data['p_value'].tolist()
             
-            # Добавляем scatter plot для этого subset
             fig.add_trace(go.Scatter(
                 x=x_data,
                 y=y_data,
                 mode='markers',
                 name=subset,
-                marker=dict(
-                    color=color,
-                    size=20,
-                    opacity=0.6
-                ),
+                marker=dict(color=color, size=20, opacity=0.6),
                 customdata=list(zip(protein_ids, fc_data, pval_data)),
                 hovertemplate=(
                     '<b>%{customdata[0]}</b><br>' +
@@ -85,7 +90,6 @@ class VolcanoReport(BaseReport):
                 )
             ))
         
-        # Добавляем горизонтальную линию для порога p-value
         neg_log10_p_threshold = -np.log10(p_threshold)
         fig.add_hline(
             y=neg_log10_p_threshold,
@@ -94,9 +98,6 @@ class VolcanoReport(BaseReport):
             annotation_text=f"p={p_threshold}",
             annotation_position="right"
         )
-        
-        # Добавляем вертикальные линии для порогов fold change
-        # Положительная линия (увеличение)
         fig.add_vline(
             x=fc_threshold_log2,
             line_dash="dash",
@@ -104,8 +105,6 @@ class VolcanoReport(BaseReport):
             annotation_text=f"FC={2**fc_threshold_log2:.2f}",
             annotation_position="top"
         )
-        
-        # Отрицательная линия (уменьшение)
         fig.add_vline(
             x=-fc_threshold_log2,
             line_dash="dash",
@@ -114,28 +113,11 @@ class VolcanoReport(BaseReport):
             annotation_position="top"
         )
         
-        # Настройка осей
-        fig.update_xaxes(
-            title_text="Log2 Fold Change",
-            zeroline=True,
-            zerolinewidth=1,
-            zerolinecolor='gray'
-        )
-        
-        fig.update_yaxes(
-            title_text="-Log10(P-value)",
-            zeroline=False
-        )
-        
-        # Настройка заголовка и легенды
-        fig.update_layout(
-            title="Volcano Plot",
-            showlegend=True,
-            hovermode='closest'
-        )
+        fig.update_xaxes(title_text="Log2 Fold Change", zeroline=True, zerolinewidth=1, zerolinecolor='gray')
+        fig.update_yaxes(title_text="-Log10(P-value)", zeroline=False)
+        fig.update_layout(title="Volcano Plot", showlegend=True, hovermode='closest')
         
         return fig
-
 
     @staticmethod
     def get_pval(value_list1, value_list2, criteria) -> float:
@@ -148,16 +130,20 @@ class VolcanoReport(BaseReport):
         self,
         params: dict
     ) -> tuple[list[tuple[str, go.Figure]], list[tuple[str, pd.DataFrame, bool]]]:
-        control_subset = params['control_subset']
-        exptl_subsets = params['exptl_subsets'].split(',')
+        control_subset = str(params['control_subset'])
+        # exptl_subsets is now list[str] (from MultiSubsetSelector)
+        exptl_subsets: list[str] = params['exptl_subsets']
+        if isinstance(exptl_subsets, str):
+            # Backward compatibility: old text format "subset1,subset2"
+            exptl_subsets = [s.strip() for s in exptl_subsets.split(',') if s.strip()]
         all_subsets = exptl_subsets + [control_subset]
 
-        calc_share = params['percent_to_caculate'] / 100
-        criteria = params['stats_method']
+        calc_share = int(params['percent_to_calculate']) / 100
+        criteria = str(params['stats_method'])
 
-        fc_threshold = params['fc_threshold']
+        fc_threshold = float(params['fc_threshold'])
         fc_threshold_log2 = np.log2(fc_threshold)
-        p_threshold = params['p_threshold']
+        p_threshold = float(params['p_threshold'])
 
         df = await self.get_data(params['lfq_type'], all_subsets)
         subset_lenghts_df = df[['subset', 'sample']].drop_duplicates(ignore_index=True).groupby('subset').count().reset_index(names='subset')
@@ -202,9 +188,7 @@ class VolcanoReport(BaseReport):
                     fc_values.append(exptl_values.median() / ctrl_values.median())
                     samples_no.append(len(exptl_values))
             p_vals_corr = list(false_discovery_control(p_values))
-            res = {
-                'protein_id': protein,
-            }
+            res = {'protein_id': protein}
             for idx in range(len(subsets)):
                 res[f'{subsets[idx]}_pval'] = p_vals_corr[idx]
                 res[f'{subsets[idx]}_fc'] = fc_values[idx]
@@ -222,6 +206,7 @@ class VolcanoReport(BaseReport):
                 })
             result.append(res)
         calculated = pd.json_normalize(result)
+
         def get_min_pval(row):
             try:
                 return min(row[x] for x in row.keys() if x.endswith('_pval'))
@@ -241,17 +226,14 @@ class VolcanoReport(BaseReport):
 
         pois = calculated.query('min_pval <= @p_threshold & max_fc >= @fc_threshold_log2')
         figure_df = pd.json_normalize(figure_data)
-        fig = await self.draw_plot(
-            figure_df,
-            params['p_threshold'],
-            fc_threshold_log2  # Исправлено: передаём log2 значение
-        )
+        fig = await self.draw_plot(figure_df, p_threshold, fc_threshold_log2)
         return [
             ('Volcano Plot', fig)
         ], [
             ('FC table', calculated, False),
             ('POI', format_dataframe(pois), False),
         ]
+
 
 from ..registry import registry
 registry.register(VolcanoReport)

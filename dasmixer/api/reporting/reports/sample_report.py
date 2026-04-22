@@ -2,10 +2,21 @@
 
 import pandas as pd
 import plotly.graph_objects as go
-from typing import Optional
 from flet import Icons
 
 from ..base import BaseReport
+from dasmixer.gui.components.report_form import (
+    ReportForm,
+    IntSelector,
+    BoolSelector,
+    EnumSelector,
+)
+
+
+class SampleReportForm(ReportForm):
+    max_samples = IntSelector(default=10, label="Max samples")
+    include_table = BoolSelector(default=True, label="Include table")
+    chart_type = EnumSelector(values=["bar", "scatter"], label="Chart type")
 
 
 class SampleReport(BaseReport):
@@ -18,24 +29,16 @@ class SampleReport(BaseReport):
     name = "Sample Report"
     description = "Demonstrates report system with sample data"
     icon = Icons.BAR_CHART
-    
-    @staticmethod
-    def get_parameter_defaults() -> dict[str, tuple[type, str]]:
-        """Report parameters."""
-        return {
-            'max_samples': (int, '10'),
-            'include_table': (str, 'Y'),
-            'chart_type': (str, 'bar')
-        }
-    
+    parameters = SampleReportForm
+
     async def _generate_impl(
         self,
         params: dict
     ) -> tuple[list[tuple[str, go.Figure]], list[tuple[str, pd.DataFrame, bool]]]:
         """Generate report."""
-        max_samples = params['max_samples']
-        include_table = params['include_table'].upper() == 'Y'
-        chart_type = params['chart_type']
+        max_samples = int(params['max_samples'])
+        include_table = bool(params['include_table'])
+        chart_type = str(params['chart_type'])
         
         # Get data from project
         samples = await self.project.get_samples()
