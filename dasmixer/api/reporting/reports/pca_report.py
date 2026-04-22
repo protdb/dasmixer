@@ -73,16 +73,19 @@ def _build_pca_figure(
     """
     fig = go.Figure()
     for subset in subset_labels.unique():
-        mask = subset_labels == subset
+        mask = (subset_labels == subset).values
+        x_vals = [float(v) for v in matrix.loc[mask, "PC1"]]
+        y_vals = [float(v) for v in matrix.loc[mask, "PC2"]]
+        text_vals = [str(v) for v in sample_labels.values[mask]]
         fig.add_trace(go.Scatter(
-            x=matrix.loc[mask, "PC1"],
-            y=matrix.loc[mask, "PC2"],
+            x=x_vals,
+            y=y_vals,
             mode="markers+text",
-            name=subset,
-            text=sample_labels[mask].tolist(),
+            name=str(subset),
+            text=text_vals,
             textposition="top center",
             textfont=dict(size=10),
-            marker=dict(size=12, color=colors.get(subset, "#888888"), opacity=0.85),
+            marker=dict(size=12, color=colors.get(str(subset), "#888888"), opacity=0.85),
         ))
 
     pct1 = explained[0] * 100
