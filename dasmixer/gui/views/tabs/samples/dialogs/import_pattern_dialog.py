@@ -69,7 +69,7 @@ class ImportPatternDialog:
             parsers = registry.get_spectra_parsers()
             parser_type_label = "Spectra Format"
             default_pattern = "*.mgf"
-            default_id_pattern = "{id}*.mgf"
+            default_id_pattern = "{id}.mgf"
 
             parser_options = [
                 ft.dropdown.Option(

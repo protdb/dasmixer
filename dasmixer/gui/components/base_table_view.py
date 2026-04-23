@@ -56,7 +56,7 @@ class BaseTableView(ft.Container):
         self.filter_controls: dict[str, ft.Control] = {}
 
         self.current_page = 0
-        self.page_size = 50
+        self.page_size = 20
         self.total_rows = 0
         self.has_data = False
         self.is_loading = False
@@ -180,12 +180,12 @@ class BaseTableView(ft.Container):
         self.page_size_dropdown = ft.Dropdown(
             label="Rows per page",
             options=[
-                ft.DropdownOption(key="25", text="25"),
+                ft.DropdownOption(key="20", text="20"),
                 ft.DropdownOption(key="50", text="50"),
                 ft.DropdownOption(key="100", text="100"),
                 ft.DropdownOption(key="200", text="200")
             ],
-            value="50",
+            value="20",
             width=150,
             on_text_change=self._on_page_size_change
         )

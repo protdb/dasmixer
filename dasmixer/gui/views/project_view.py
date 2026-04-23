@@ -10,6 +10,7 @@ _TAB_DEFS = [
     ("Peptides", ft.Icons.BIOTECH,       "dasmixer.gui.views.tabs.peptides", "PeptidesTab"),
     ("Proteins", ft.Icons.BUBBLE_CHART,  "dasmixer.gui.views.tabs.proteins", "ProteinsTab"),
     ("Reports",  ft.Icons.ASSESSMENT,    "dasmixer.gui.views.tabs.reports",  "ReportsTab"),
+    ("Plots",    ft.Icons.SHOW_CHART,    "dasmixer.gui.views.tabs.plots",    "PlotsTab"),
 ]
 
 # Tabs whose heavy table/plot widgets should be suspended on switch-away.

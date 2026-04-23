@@ -436,7 +436,8 @@ class PeptideMixin:
         # Add conditions to query
         if conditions:
             query += " AND " + " AND ".join(conditions)
-        
+        print(query)
+        print(params)
         # Execute query
         row = await self._fetchone(query, tuple(params) if params else None)
         return row['count'] if row else 0
@@ -591,6 +592,8 @@ class PeptideMixin:
             params.append(limit)
             params.append(offset)
 
+        print(query)
+        print(params)
         # Execute query
         return await self.execute_query_df(query, tuple(params) if params else None)
 

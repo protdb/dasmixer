@@ -175,8 +175,15 @@ class PeptideIonTableView(BaseTableView):
     async def _update_filters_from_ui(self):
         self.filter['sample_id'] = self.sample_dropdown.value
         self.filter['tool_id'] = self.tool_dropdown.value
-        self.filter['min_score'] = float(self.min_score_field.value or 0)
-        self.filter['max_ppm'] = float(self.max_ppm_field.value or 1000)
+        try:
+            self.filter['min_score'] = float(self.min_score_field.value)
+        except ValueError:
+            self.filter['min_score'] = None
+        try:
+            self.filter['max_ppm'] = float(self.max_ppm_field.value)
+        except ValueError:
+            self.filter['max_ppm'] = None
+
         self.filter['sequence'] = self.sequence_field.value
         self.filter['canonical_sequence'] = self.canonical_sequence_field.value
         self.filter['is_preferred'] = self.is_preferred_field.value
@@ -209,6 +216,8 @@ class PeptideIonTableView(BaseTableView):
             self.tool_dropdown.update()
 
     def _build_filter_kwargs(self) -> dict:
+        print(self.filter)
+
         kwargs = {}
 
         if self.filter['sample_id'] != 'all':
@@ -226,7 +235,7 @@ class PeptideIonTableView(BaseTableView):
         if self.filter['is_preferred'] != 'None':
             kwargs['is_preferred'] = self.filter['is_preferred'] == 'True'
 
-        if self.filter['protein_identified'] != 'All':
+        if self.filter['protein_identified'] != 'None':
             kwargs['protein_identified'] = self.filter['protein_identified'] == 'True'
 
         if self.filter.get('identification_id'):
@@ -265,6 +274,7 @@ class PeptideIonTableView(BaseTableView):
         if self.filter.get('gene'):
             kwargs['gene'] = self.filter['gene']
 
+        print(kwargs)
         return kwargs
 
     async def get_data(self, limit: int = 100, offset: int = 0) -> tuple[pd.DataFrame, pd.DataFrame | None]:
@@ -278,16 +288,6 @@ class PeptideIonTableView(BaseTableView):
 
         if df.empty:
             return df, None
-
-        # Apply score and ppm filters in pandas
-        if self.filter['min_score'] > 0 and 'score' in df.columns:
-            df = df[df['score'].fillna(0) >= self.filter['min_score']]
-
-        max_ppm = self.filter.get('max_ppm')
-        if max_ppm and float(max_ppm) < 1000 and 'ppm' in df.columns:
-            df = df[df['ppm'].fillna(1000).abs() <= float(max_ppm)]
-
-        df = df.copy()
 
         # Format is_preferred
         if 'is_preferred' in df.columns:
