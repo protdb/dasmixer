@@ -13,6 +13,8 @@ This document provides essential context for AI coding agents working on the DAS
 - **Package name:** `dasmixer`
 - **Entry point:** `dasmixer/main.py` → `dasmixer` CLI command
 
+
+**MOST IMPORTANT DOCUMENT WITH DETAILS:** `docs/project/MASTER_SPEC_NEW.md`
 ---
 
 ## Technology Stack
