@@ -174,7 +174,7 @@ class ToolSettingsSection(BaseSection):
             # ── Max PTM combinations ───────────────────────────────────────
             'max_ptm': ft.TextField(
                 label="Max PTM combinations",
-                value=str(settings.get('max_ptm', 5)),
+                value=str(settings.get('max_ptm', 3)),
                 width=180,
                 keyboard_type=ft.KeyboardType.NUMBER,
                 tooltip="Maximum number of simultaneous PTMs to try per sequence",

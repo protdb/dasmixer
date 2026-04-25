@@ -62,14 +62,14 @@ class FastaSection(BaseSection):
         # Protein mapping settings
         self.blast_max_accepts_field = ft.TextField(
             label="BLAST Max Accepts",
-            value="16",
+            value="5",
             width=150,
             keyboard_type=ft.KeyboardType.NUMBER
         )
         
         self.blast_max_rejects_field = ft.TextField(
             label="BLAST Max Rejects",
-            value="5",
+            value="16",
             width=150,
             keyboard_type=ft.KeyboardType.NUMBER
         )
