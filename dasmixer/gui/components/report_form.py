@@ -351,7 +351,7 @@ class ReportForm(metaclass=ReportFormMeta):
         for field in self._fields.values():
             rows.append(field._control)
         return ft.Container(
-            content=ft.Column(rows, spacing=12),
+            content=ft.Column(rows),
             padding=ft.padding.all(10),
         )
 

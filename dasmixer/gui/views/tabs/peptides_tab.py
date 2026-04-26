@@ -11,6 +11,7 @@ from dasmixer.api.calculations.peptides.matching import select_preferred_identif
 from dasmixer.api.calculations.peptides.protein_map import map_proteins
 from dasmixer.api.calculations.spectra.plot_matches import plot_ion_match
 from dasmixer.api.calculations.spectra.ion_match import IonMatchParameters, match_predictions
+from dasmixer.api.config import config as _config
 from dasmixer.utils.ppm import calculate_ppm
 import plotly.io as pio
 from dasmixer.gui.utils import show_snack
@@ -216,7 +217,9 @@ class PeptidesTab(ft.Container):
             progress_bar.update()
             
             total = 0
-            async for batch in parser.parse_batch(batch_size=100):
+            # Get batch size from config
+            batch_size = _config.protein_mapping_batch_size
+            async for batch in parser.parse_batch(batch_size=batch_size):
                 if self.fasta_enrich_uniprot_cb.value:
                     batch = await parser.enrich_with_uniprot(batch)
                 await self.project.add_proteins_batch(batch)
@@ -300,11 +303,13 @@ class PeptidesTab(ft.Container):
             
             total_matches = 0
             
+            # Get batch size from config
+            batch_size = _config.protein_mapping_batch_size
             async for matches_df, count, tool_id in map_proteins(
                 self.project,
                 tool_settings,
                 only_prefered=self.match_preferred_only_cb.value,
-                batch_size=1000
+                batch_size=batch_size
             ):
                 await self.project.add_peptide_matches_batch(matches_df)
                 total_matches += count

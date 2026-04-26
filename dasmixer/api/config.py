@@ -43,6 +43,9 @@ class AppConfig(BaseSettings):
     identification_batch_size: int = 5000
     identification_processing_batch_size: int = 5000
     protein_mapping_batch_size: int = 5000
+    
+    # CPU threads for multiprocessing (None = auto: cpu_count - 1)
+    max_cpu_threads: int | None = None
 
     # Default color palette (shared pool for tools and subsets)
     default_colors: list[str] = [
@@ -55,6 +58,12 @@ class AppConfig(BaseSettings):
         "#F97316",  # orange
         "#EC4899",  # pink
     ]
+
+    # Logging settings
+    log_to_file: bool = False
+    log_level: str = "INFO"           # DEBUG | INFO | WARNING | ERROR
+    log_folder: str | None = None     # None = ~/.cache/dasmixer/logs/
+    log_separate_workers: bool = False  # If True, workers write separate per-PID files
 
     # Plugin states: {plugin_id: enabled}
     plugin_states: dict[str, bool] = {}

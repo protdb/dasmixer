@@ -21,26 +21,67 @@ _worker_logger: logging.Logger | None = None
 
 
 def _get_worker_logger() -> logging.Logger:
-    """Return (and lazily create) the per-process file logger."""
+    """
+    Return (and lazily create) the per-process logger.
+
+    Behaviour depends on AppConfig:
+    - log_to_file=False: returns the root logger (all worker output goes to
+      the main app log or is discarded if no handlers are configured).
+    - log_to_file=True, log_separate_workers=True: each worker writes its own
+      per-PID file under log_folder (or the default cache dir).
+    - log_to_file=True, log_separate_workers=False: propagates to root logger
+      so all output is merged into the single dasmixer log file.
+    """
     global _worker_logger
     if _worker_logger is not None:
         return _worker_logger
 
-    log_dir = Path.home() / ".cache" / "dasmixer" / "worker_logs"
-    log_dir.mkdir(parents=True, exist_ok=True)
+    # Try to read config; fall back to standalone per-PID file on any error
+    try:
+        from dasmixer.api.config import config as _cfg
+        log_to_file: bool = bool(_cfg.log_to_file)
+        separate_workers: bool = bool(_cfg.log_separate_workers)
+        log_level_name: str = _cfg.log_level or "DEBUG"
+        log_folder_str: str | None = _cfg.log_folder
+    except Exception:
+        log_to_file = True
+        separate_workers = True
+        log_level_name = "DEBUG"
+        log_folder_str = None
 
+    level = getattr(logging, log_level_name, logging.DEBUG)
     pid = os.getpid()
-    log_path = log_dir / f"worker_{pid}.log"
+    logger_name = f"dasmixer.worker.{pid}"
 
-    logger = logging.getLogger(f"dasmixer.worker.{pid}")
-    logger.setLevel(logging.DEBUG)
-    logger.propagate = False  # don't pollute the root logger
+    if not log_to_file:
+        # Logging disabled globally — return a no-op logger
+        logger = logging.getLogger(logger_name)
+        logger.setLevel(logging.CRITICAL + 1)
+        logger.propagate = False
+        _worker_logger = logger
+        return logger
 
-    if not logger.handlers:
-        fh = logging.FileHandler(log_path, mode="a", encoding="utf-8")
-        fh.setLevel(logging.DEBUG)
-        fh.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
-        logger.addHandler(fh)
+    logger = logging.getLogger(logger_name)
+    logger.setLevel(level)
+
+    if separate_workers:
+        # Write to a dedicated per-PID file
+        logger.propagate = False
+        if not logger.handlers:
+            log_dir = (
+                Path(log_folder_str) / "workers"
+                if log_folder_str
+                else Path.home() / ".cache" / "dasmixer" / "worker_logs"
+            )
+            log_dir.mkdir(parents=True, exist_ok=True)
+            log_path = log_dir / f"worker_{pid}.log"
+            fh = logging.FileHandler(log_path, mode="a", encoding="utf-8")
+            fh.setLevel(level)
+            fh.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+            logger.addHandler(fh)
+    else:
+        # Propagate to root logger (merged with main app log)
+        logger.propagate = True
 
     _worker_logger = logger
     return logger

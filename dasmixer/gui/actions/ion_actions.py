@@ -8,15 +8,13 @@ from concurrent.futures import ProcessPoolExecutor
 import flet as ft
 
 from dasmixer.api.project.project import Project
+from dasmixer.api.config import config as _config
 from dasmixer.api.calculations.spectra.ion_match import IonMatchParameters
 from dasmixer.api.calculations.spectra.coverage_worker import process_peptide_match_batch
 from dasmixer.api.calculations.spectra.identification_processor import process_identificatons_batch
 from dasmixer.api.calculations.peptides.matching import calculate_preferred_identifications_for_file
 from dasmixer.gui.views.tabs.peptides.shared_state import PeptidesTabState
 from .base import BaseAction
-
-_WORKER_COUNT = max(1, (os.cpu_count() or 2) - 1)
-_BATCH_SIZE = 20000
 
 
 class IonCoverageAction(BaseAction):
@@ -44,6 +42,10 @@ class IonCoverageAction(BaseAction):
             recalc_all: If True, recalculate all; otherwise only missing.
             sample_id: If provided, only process identifications for this sample.
         """
+        # Get batch size and worker count from config
+        batch_size = _config.identification_processing_batch_size
+        worker_count = _config.max_cpu_threads or max(1, (os.cpu_count() or 2) - 1)
+        
         # Persist current ion settings
         if self.page and hasattr(self.page, 'peptides_tab'):
             ion_section = self.page.peptides_tab.sections.get('ion_settings')
@@ -120,7 +122,7 @@ class IonCoverageAction(BaseAction):
             )
 
         total_processed = 0
-        chunk_size = max(1, math.ceil(_BATCH_SIZE / _WORKER_COUNT))
+        chunk_size = max(1, math.ceil(batch_size / worker_count))
         stopped_early = False
 
         async def _compute_batch(
@@ -160,7 +162,7 @@ class IonCoverageAction(BaseAction):
 
         try:
             loop = asyncio.get_event_loop()
-            with ProcessPoolExecutor(max_workers=_WORKER_COUNT) as executor:
+            with ProcessPoolExecutor(max_workers=worker_count) as executor:
                 for tool_id in tool_ids:
                     if stopped_early:
                         break
@@ -175,7 +177,7 @@ class IonCoverageAction(BaseAction):
                     batch_objects = await self.project.get_identifications_with_spectra_batch(
                         tool_id=tool_id,
                         offset=offset,
-                        limit=_BATCH_SIZE,
+                        limit=batch_size,
                         only_missing=only_missing,
                         spectra_file_ids=spectra_file_ids,
                     )
@@ -185,7 +187,7 @@ class IonCoverageAction(BaseAction):
 
                     worker_batch = [obj.to_worker_dict() for obj in batch_objects]
                     del batch_objects  # free spectrum arrays from memory
-                    offset += _BATCH_SIZE
+                    offset += batch_size
 
                     pending_results = await _compute_batch(
                         loop, executor, worker_batch, ptm_list, max_ptm
@@ -198,7 +200,7 @@ class IonCoverageAction(BaseAction):
                             self.project.get_identifications_with_spectra_batch(
                                 tool_id=tool_id,
                                 offset=offset,
-                                limit=_BATCH_SIZE,
+                                limit=batch_size,
                                 only_missing=only_missing,
                                 spectra_file_ids=spectra_file_ids,
                             )
@@ -212,7 +214,7 @@ class IonCoverageAction(BaseAction):
 
                         total_processed += len(pending_results)
                         del pending_results
-                        offset += _BATCH_SIZE
+                        offset += batch_size
 
                         progress_value = (total_processed / total_count) if total_count > 0 else None
                         dialog.update_progress(

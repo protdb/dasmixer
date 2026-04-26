@@ -215,7 +215,7 @@ def _compute_roc(
 # ---------------------------------------------------------------------------
 
 class PCAReport(BaseReport):
-    name = "PCA / ROC-AUC"
+    name = "PCA ROC-AUC"
     description = "PCA scatter plot and ROC/AUC curves colored by comparison group"
     icon = Icons.SCATTER_PLOT
     parameters = PCAReportForm

@@ -577,6 +577,10 @@ class BaseTableView(ft.Container):
             if self.page:
                 self.page.update()
 
+            from dasmixer.gui.views.tabs.peptides.dialogs.progress_dialog import ProgressDialog
+            progress = ProgressDialog(self.page, "Exporting Table")
+            progress.show()
+
             fmt = format_radio.value or "csv"
             use_tech = tech_headers_cb.value
 
@@ -586,6 +590,8 @@ class BaseTableView(ft.Container):
 
                 if not use_tech and self.header_name_mapping:
                     df = df.rename(columns=self.header_name_mapping)
+
+                progress.update_progress(None, "Saving file...", "")
 
                 file_result = await ft.FilePicker().save_file(
                     file_name=f"{self.table_view_name}_export.{fmt}",
@@ -598,11 +604,16 @@ class BaseTableView(ft.Container):
                     else:
                         df.to_excel(file_result, index=False)
 
-                    if self.page:
-                        show_snack(self.page, f"Exported to {file_result}", ft.Colors.GREEN_400)
-                        self.page.update()
+                    from pathlib import Path as _Path
+                    progress.complete(f"Exported: {_Path(file_result).name}")
+                    import asyncio
+                    await asyncio.sleep(1)
+                    progress.close()
+                else:
+                    progress.close()
 
             except Exception as ex:
+                progress.close()
                 if self.page:
                     show_snack(self.page, f"Export error: {ex}", ft.Colors.RED_400)
                     self.page.update()

@@ -127,20 +127,33 @@ class ReportsTab(ft.Container):
             traceback.print_exc()
     
     async def _export_all_to_folder(self, folder_path: str):
-        """
-        Export all selected reports to folder.
+        from dasmixer.gui.views.tabs.peptides.dialogs.progress_dialog import ProgressDialog
         
-        TODO: Implement combined export (one Word, one Excel)
-        """
-        # Stub - export each separately for now
         selected = [
             item for item in self.report_items
             if item.report_class.name in self.state.selected_reports
         ]
         
-        for item in selected:
+        if not selected:
+            return
+        
+        dialog = ProgressDialog(self.page, "Exporting Reports")
+        dialog.show()
+        
+        total = len(selected)
+        for i, item in enumerate(selected):
             if item.current_report_id:
                 try:
+                    dialog.update_progress(
+                        i / total,
+                        f"Exporting {item.report_class.name}...",
+                        f"{i+1} / {total}"
+                    )
                     await item._export_to_folder(folder_path)
                 except Exception as ex:
                     print(f"Failed to export {item.report_class.name}: {ex}")
+        
+        dialog.complete(f"Exported {total} reports")
+        import asyncio
+        await asyncio.sleep(1)
+        dialog.close()

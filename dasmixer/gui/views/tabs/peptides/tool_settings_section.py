@@ -12,14 +12,18 @@ _ALL_PTM_CODES: list[str] = [ptm.code for ptm in PTMS]
 class ToolSettingsSection(BaseSection):
     """Tool-specific settings configuration."""
 
+    def __init__(self, project, state):
+        super().__init__(project, state)
+        self._tool_settings_suspended = False
+        
     def _build_content(self) -> ft.Control:
         """Build tool settings UI."""
         self.tools_container = ft.ResponsiveRow(spacing=10)
-
-        return ft.Column([
+        self._tool_settings_column = ft.Column([
             ft.Text("Tool Settings", size=18, weight=ft.FontWeight.BOLD),
-            self.tools_container
+            self.tools_container,
         ], spacing=10)
+        return self._tool_settings_column
 
     async def load_data(self):
         """Load tools and their settings."""
@@ -512,3 +516,54 @@ class ToolSettingsSection(BaseSection):
                 'save_aa_substitutions': controls['save_aa_substitutions'].value,
             }
         return tool_settings
+
+    # ------------------------------------------------------------------
+    # Suspend/resume support
+    # ------------------------------------------------------------------
+
+    def suspend(self) -> None:
+        """
+        Remove rendered tool cards from the Flet tree to free resources.
+        Saves current state (tools_container reference is kept for resume).
+        Tool settings values are NOT saved here — caller should call
+        save_all_tool_settings() before suspending if needed.
+        """
+        if self._tool_settings_suspended:
+            return
+        self._tool_settings_suspended = True
+
+        # Replace content with lightweight placeholder
+        # We keep self.tools_container reference for resume
+        if not hasattr(self, '_suspended_placeholder'):
+            self._suspended_placeholder = ft.Container(
+                content=ft.Text(
+                    "Tool Settings (suspended)",
+                    size=12,
+                    color=ft.Colors.GREY_400,
+                    italic=True,
+                ),
+                height=40,
+                alignment=ft.Alignment.CENTER_LEFT,
+                padding=ft.padding.only(left=10),
+            )
+
+        # Find the Column that wraps tools_container and replace its controls
+        # The structure is: self.content = ft.Column([ft.Text("Tool Settings"...), self.tools_container])
+        if hasattr(self, '_tool_settings_column') and self._tool_settings_column is not None:
+            self._tool_settings_column.controls = [self._suspended_placeholder]
+            # Do NOT call update() here — caller handles page.update()
+
+    def resume(self) -> None:
+        """
+        Restore the tool cards from cached state.controls without DB queries.
+        """
+        if not self._tool_settings_suspended:
+            return
+        self._tool_settings_suspended = False
+
+        if hasattr(self, '_tool_settings_column') and self._tool_settings_column is not None:
+            self._tool_settings_column.controls = [
+                ft.Text("Tool Settings", size=18, weight=ft.FontWeight.BOLD),
+                self.tools_container,
+            ]
+            # Do NOT call update() here — caller handles page.update()

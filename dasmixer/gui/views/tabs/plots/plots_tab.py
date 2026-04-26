@@ -139,6 +139,16 @@ class PlotsTab(ft.Container):
             [
                 ft.Text("Saved Plots", size=20, weight=ft.FontWeight.BOLD),
                 ft.Container(expand=True),
+                ft.ElevatedButton(
+                    content=ft.Text("Select All"),
+                    icon=ft.Icons.SELECT_ALL,
+                    on_click=lambda e: self._on_select_all(),
+                ),
+                ft.ElevatedButton(
+                    content=ft.Text("Deselect All"),
+                    icon=ft.Icons.DESELECT,
+                    on_click=lambda e: self._on_deselect_all(),
+                ),
                 self._export_button,
                 ft.IconButton(
                     icon=ft.Icons.REFRESH,
@@ -232,6 +242,27 @@ class PlotsTab(ft.Container):
             self.selected_ids.add(plot_id)
         else:
             self.selected_ids.discard(plot_id)
+
+    def _on_select_all(self):
+        """Select all plots."""
+        if not self.plots_list or not self.plots_list.controls:
+            return
+        for card in self.plots_list.controls:
+            if isinstance(card, PlotItemCard):
+                card.checkbox.value = True
+        # Add all plot IDs to selected_ids
+        self.selected_ids = {plot_info["id"] for plot_info in self.plot_items}
+        self.plots_list.update()
+
+    def _on_deselect_all(self):
+        """Deselect all plots."""
+        if not self.plots_list or not self.plots_list.controls:
+            return
+        for card in self.plots_list.controls:
+            if isinstance(card, PlotItemCard):
+                card.checkbox.value = False
+        self.selected_ids.clear()
+        self.plots_list.update()
 
     # ------------------------------------------------------------------
     # View plot
@@ -389,6 +420,9 @@ class PlotsTab(ft.Container):
         PNG rendering is offloaded to a thread pool via render_png_async so
         the event loop stays free during Kaleido calls.
         """
+        from dasmixer.gui.views.tabs.peptides.dialogs.progress_dialog import ProgressDialog
+        
+        dialog = None
         try:
             from docx import Document
             from docx.shared import Inches
@@ -400,14 +434,11 @@ class PlotsTab(ft.Container):
             with open(template_path, "r", encoding="utf-8") as f:
                 template = Template(f.read())
 
-            # Show progress snack
+            # Show progress dialog instead of snack
             if self.page:
-                show_snack(
-                    self.page,
-                    f"Exporting {len(plot_ids)} plot(s)...",
-                    ft.Colors.BLUE_400,
-                )
-                self.page.update()
+                dialog = ProgressDialog(self.page, "Exporting Plots to Word")
+                dialog.show()
+                # Убрано: show_snack(self.page, f"Exporting {len(plot_ids)} plot(s)...", ft.Colors.BLUE_400)
 
             # Render all figures concurrently in thread pool
             plot_info_map = {p["id"]: p for p in self.plot_items}
@@ -438,10 +469,16 @@ class PlotsTab(ft.Container):
             plots_data = [r for r in results if r is not None]
 
             if not plots_data:
+                if dialog:
+                    dialog.close()
                 if self.page:
                     show_snack(self.page, "No plots to export", ft.Colors.ORANGE_400)
                     self.page.update()
                 return
+
+            # Update progress after gathering
+            if dialog:
+                dialog.update_progress(0.5, "Building document...", f"Prepared {len(plots_data)} plots")
 
             # Build Word document
             doc = Document()
@@ -497,15 +534,14 @@ class PlotsTab(ft.Container):
             )
             doc.save(str(output_file))
 
-            if self.page:
-                show_snack(
-                    self.page,
-                    f"Exported to {output_file.name}",
-                    ft.Colors.GREEN_400,
-                )
-                self.page.update()
+            if dialog:
+                dialog.complete(f"Saved: {output_file.name}")
+                await asyncio.sleep(1)
+                dialog.close()
 
         except Exception as ex:
+            if dialog:
+                dialog.close()
             print(f"Error in export: {ex}")
             import traceback
             traceback.print_exc()

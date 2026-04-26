@@ -36,16 +36,16 @@ This document provides essential context for AI coding agents working on the DAS
 
 Flet 0.80.5 introduced breaking API changes. Always use the new API:
 
-| Old (broken) | New (correct) |
-|---|---|
-| `ft.DropdownOption(...)` | `ft.Dropdown.Option(...)` |
-| `ft.alignment.center` | `ft.Alignment.CENTER` |
-| `ft.alignment.top_left` | `ft.Alignment.TOP_LEFT` |
-| `ft.colors.RED` | `ft.Colors.RED` |
-| `ft.icons.ADD` | `ft.Icons.ADD` |
-| `page.go("/route")` | Manual `_route_change()` — `page.go()` is async, avoid in `__init__` |
+| Old (broken)               | New (correct) |
+|----------------------------|---|
+| `ft.dropdown.Option(...)`  | `ft.DropdownOption(...)` |
+| `ft.alignment.center`      | `ft.Alignment.CENTER` |
+| `ft.alignment.top_left`    | `ft.Alignment.TOP_LEFT` |
+| `ft.colors.RED`            | `ft.Colors.RED` |
+| `ft.icons.ADD`             | `ft.Icons.ADD` |
+| `page.go("/route")`        | Manual `_route_change()` — `page.go()` is async, avoid in `__init__` |
 | `ft.FilePicker` as overlay | Use `await ft.FilePicker().pick_files(...)` directly (no page overlay needed) |
-| `page.window_width` | `page.window.width` |
+| `page.window_width`        | `page.window.width` |
 
 **FilePicker pattern (correct for 0.80.5):**
 ```python

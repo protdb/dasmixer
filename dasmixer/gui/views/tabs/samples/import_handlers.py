@@ -5,6 +5,7 @@ import pandas as pd
 from pathlib import Path
 from dasmixer.api.project.project import Project
 from dasmixer.api.inputs.registry import registry
+from dasmixer.api.config import config as _config
 from dasmixer.gui.utils import show_snack
 
 
@@ -97,9 +98,10 @@ class ImportHandlers:
                     return
                 
                 # Import spectra in batches
+                batch_size = _config.spectra_batch_size
                 batch_count = 0
                 file_spectra_count = 0
-                async for batch in parser.parse_batch(batch_size=1000):
+                async for batch in parser.parse_batch(batch_size=batch_size):
                     await self.project.add_spectra_batch(spectra_file_id, batch)
                     batch_count += 1
                     file_spectra_count += len(batch)
@@ -242,9 +244,10 @@ class ImportHandlers:
                 print(spectra_mapping)
                 
                 # Import identifications in batches
+                batch_size = _config.identification_batch_size
                 batch_count = 0
                 file_ident_count = 0
-                async for batch_tuple in parser.parse_batch(batch_size=1000):
+                async for batch_tuple in parser.parse_batch(batch_size=batch_size):
                     print(batch_tuple)
                     print(spectra_mapping)
                     batch = pd.merge(

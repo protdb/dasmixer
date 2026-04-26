@@ -1,6 +1,7 @@
 """Mixin for protein operations, identification results, and quantification."""
 
 import pandas as pd
+from oauthlib.uri_validate import query
 
 from ..dataclasses import Protein
 from dasmixer.utils.logger import logger
@@ -101,6 +102,24 @@ class ProteinMixin:
             name=row.get('name'),
             uniprot_data=uniprot_data
         )
+
+    async def update_protein(self, protein: Protein) -> None:
+        query = """
+        UPDATE protein
+        SET is_uniprot = ?, fasta_name = ?, sequence = ?, gene = ?, name = ? uniprot_data = ?
+        where id = ?
+        """
+        params = (
+            protein.is_uniprot,
+            protein.fasta_name,
+            protein.sequence,
+            protein.gene,
+            protein.name,
+            self._serialize_pickle_gzip(protein.uniprot_data),
+        )
+        await self._execute(query, params)
+        await self.save()
+
     
     async def get_proteins(self, is_uniprot: bool | None = None) -> list[Protein]:
         """Get proteins, optionally filtered."""
@@ -238,6 +257,16 @@ class ProteinMixin:
         if len(result) == 0:
             return 0
         return int(result.iloc[0]['count'])
+
+    async def get_identified_proteins(self, sample_id: int | None = None) -> list[str]:
+        query = "select distinct protein_id from protein_identification_result"
+        params = None
+        if sample_id is not None:
+            query += " WHERE sample_id = ?"
+            params = (int(sample_id),)
+        res = await self.execute_query_df(query, params)
+        return res['protein_id'].tolist()
+
     
     # Protein quantification results operations
     
@@ -627,17 +656,20 @@ class ProteinMixin:
         WITH protein_stats AS (
             SELECT
                 p.id as protein_id,
+				p.name,
                 p.gene,
-                SUBSTR(COALESCE(p.fasta_name, ''), 1, 30) as fasta_name,
+                p.fasta_name,
                 COUNT(DISTINCT pir.sample_id) as samples,
                 COUNT(DISTINCT s.subset_id) as subsets,
-                COUNT(DISTINCT pm.id) as PSMs,
-                SUM(CASE WHEN pm.unique_evidence = 1 THEN 1 ELSE 0 END) as unique_evidence
-            FROM protein p
+                SUM(pir.peptide_count) as PSMs,
+				CAST(ROUND(AVG(pir.peptide_count)) AS INTEGER) as mean_psm,
+                SUM(pir.uq_evidence_count) as unique_evidence,
+				CAST(ROUND(AVG(pir.uq_evidence_count)) AS INTEGER) as mean_unique
+            FROM
+			(select distinct protein_id from protein_identification_result) as pl
+			LEFT JOIN protein p ON p.id = pl.protein_id
             LEFT JOIN protein_identification_result pir ON p.id = pir.protein_id
             LEFT JOIN sample s ON pir.sample_id = s.id
-            LEFT JOIN peptide_match pm ON p.id = pm.protein_id
-            WHERE {where_clause}
             GROUP BY p.id, p.gene, p.fasta_name
         )
         SELECT * FROM protein_stats

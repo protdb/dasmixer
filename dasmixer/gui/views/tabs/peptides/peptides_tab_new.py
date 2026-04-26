@@ -9,7 +9,6 @@ from .fasta_section import FastaSection
 from .tool_settings_section import ToolSettingsSection
 from .ion_settings_section import IonSettingsSection
 from .actions_section import ActionsSection
-from .matching_section import MatchingSection
 from .peptide_ion_table_view import PeptideIonTableView
 from .peptide_ion_plot_view import PeptideIonPlotView
 from .ion_calculations import IonCalculations
@@ -53,7 +52,6 @@ class PeptidesTab(ft.Container):
         sections = {'fasta': FastaSection(self.project, self.state),
                     'tool_settings': ToolSettingsSection(self.project, self.state),
                     'ion_settings': IonSettingsSection(self.project, self.state),
-                    'matching': MatchingSection(self.project, self.state),
                     'actions': ActionsSection(self.project, self.state, self)}
         # FASTA section - protein library loading
 
@@ -89,14 +87,14 @@ class PeptidesTab(ft.Container):
         resp_sections = ['ion_settings', 'fasta']
         default_col = {
             ft.ResponsiveRowBreakpoint.XL: 6,
-            ft.ResponsiveRowBreakpoint.LG: 5,
-            ft.ResponsiveRowBreakpoint.MD: 8,
-            ft.ResponsiveRowBreakpoint.SM: 16
+            ft.ResponsiveRowBreakpoint.LG: 6,
+            ft.ResponsiveRowBreakpoint.MD: 6,
+            ft.ResponsiveRowBreakpoint.SM: 12
         }
         for k in resp_sections:
             self.sections[k].col = default_col
             self.sections[k].expand = True
-            self.sections[k].height = 500
+            self.sections[k].height = 565
 
         new_tab_layout = ft.Column(
             [
@@ -104,24 +102,17 @@ class PeptidesTab(ft.Container):
                     ft.Column(
                         [
                             self.sections['actions'],
-                            self.sections['matching'],
+                            ft.Container(content=self.sections['fasta'], expand=True),
                         ],
-                        col = {
-                            ft.ResponsiveRowBreakpoint.XL: 4,
-                            ft.ResponsiveRowBreakpoint.LG: 6,
-                            ft.ResponsiveRowBreakpoint.MD: 8,
-                            ft.ResponsiveRowBreakpoint.SM: 16
-
-                        },
+                        col = default_col,
                         expand = True,
-                        height = 500
+                        height = 565
                     ),
                     ft.Container(content=self.sections['ion_settings'], expand = True, col = default_col),
-                    ft.Container(content=self.sections['fasta'], expand = True, col = default_col),
                     # self.sections['ion_settings'],
                     # self.sections['fasta'],
                     ],
-                    columns = 16
+                    columns = 12
                 ),
                 ft.Container(height=10),
                 self.sections['tool_settings'],

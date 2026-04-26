@@ -55,16 +55,13 @@ class IonSettingsSection(BaseSection):
             width=200, keyboard_type=ft.KeyboardType.NUMBER
         )
 
-        # Sequence selection criteria
-        self.seq_criteria_dropdown = ft.Dropdown(
-            label="Sequence selection criteria",
-            width=220,
-            value="coverage",
-            options=[
-                ft.DropdownOption(key="intensity_percent", text="Coverage"),
-                ft.DropdownOption(key="max_ion_matches", text="Peaks"),
-                ft.DropdownOption(key="top10_intensity_matches", text="Top Peaks"),
-            ],
+        # Selection Criterion (moved from MatchingSection)
+        self.selection_criterion_group = ft.RadioGroup(
+            content=ft.Column([
+                ft.Radio(value="ppm", label="PPM error"),
+                ft.Radio(value="intensity", label="Intensity coverage"),
+            ]),
+            value="intensity",
         )
 
         return ft.Column([
@@ -91,9 +88,9 @@ class IonSettingsSection(BaseSection):
                 self.force_isotope_offset_cb,
                 self.max_isotope_offset_field,
             ], spacing=10),
-            ft.Row([
-                self.seq_criteria_dropdown,
-            ], spacing=10),
+            ft.Divider(),
+            ft.Text("Selection Criterion:", weight=ft.FontWeight.W_500),
+            self.selection_criterion_group,
         ], spacing=10)
 
     async def load_data(self):
@@ -131,8 +128,8 @@ class IonSettingsSection(BaseSection):
             self.max_isotope_offset_field.value = await self.project.get_setting(
                 'max_isotope_offset', '2'
             )
-            self.seq_criteria_dropdown.value = await self.project.get_setting(
-                'seq_criteria', 'coverage'
+            self.selection_criterion_group.value = await self.project.get_setting(
+                'seq_criteria', 'intensity'
             )
 
             self._sync_to_state()
@@ -175,7 +172,7 @@ class IonSettingsSection(BaseSection):
             'max_isotope_offset', self.max_isotope_offset_field.value
         )
         await self.project.set_setting(
-            'seq_criteria', self.seq_criteria_dropdown.value or 'coverage'
+            'seq_criteria', self.selection_criterion_group.value or 'intensity'
         )
 
         self._sync_to_state()
@@ -206,7 +203,7 @@ class IonSettingsSection(BaseSection):
         self.state.max_precursor_charge = int(self.max_precursor_charge_field.value or 4)
         self.state.force_isotope_offset = bool(self.force_isotope_offset_cb.value)
         self.state.max_isotope_offset = int(self.max_isotope_offset_field.value or 2)
-        self.state.seq_criteria = self.seq_criteria_dropdown.value or 'coverage'
+        self.state.seq_criteria = self.selection_criterion_group.value or 'intensity'
 
     def get_ion_match_parameters(self) -> IonMatchParameters:
         """Create IonMatchParameters from current settings."""
@@ -219,6 +216,10 @@ class IonSettingsSection(BaseSection):
             ammonia_loss=self.state.nh3_loss,
             charges=self.state.fragment_charges
         )
+
+    def get_selection_criterion(self) -> str:
+        """Return currently selected identification criterion."""
+        return self.selection_criterion_group.value or "intensity"
 
     def get_charge_parameters(self) -> dict:
         """Return precursor charge and isotope parameters for identification_processor."""

@@ -33,15 +33,28 @@ def _make_placeholder() -> ft.Control:
 
 def _collect_suspendable(control) -> list:
     """
-    Recursively collect all BaseTableView / BasePlotView instances
-    in a control subtree.
+    Recursively collect all suspendable instances in a control subtree.
+    A control is suspendable if it has both suspend() and resume() methods
+    and custom marker attribute.
     """
     from dasmixer.gui.components.base_table_view import BaseTableView
     from dasmixer.gui.components.base_plot_view import BasePlotView
 
     found = []
-    if isinstance(control, (BaseTableView, BasePlotView)):
+    
+    # Check if this control is our custom suspendable widget
+    # A control is our custom suspendable if it has our marker attribute
+    is_custom_suspendable = (
+        hasattr(control, '_is_suspended') or
+        hasattr(control, '_tool_settings_suspended')
+    )
+    if is_custom_suspendable and hasattr(control, 'suspend') and hasattr(control, 'resume'):
         found.append(control)
+        # Skip BaseTableView/BasePlotView check if already added
+    else:
+        # Also keep original BaseTableView/BasePlotView detection for backward compatibility
+        if isinstance(control, (BaseTableView, BasePlotView)):
+            found.append(control)
 
     # Traverse known container attributes
     for attr in ('controls', 'content'):
@@ -184,6 +197,21 @@ class ProjectView(ft.Container):
         # Suspend heavy widgets in the tab we're leaving
         if old_index in _SUSPENDABLE_TAB_INDICES and self._built.get(old_index):
             old_control = self._tab_controls[old_index]
+            
+            # For PeptidesTab: save tool settings before suspend
+            if old_index == 1:  # Peptides tab index = 1
+                tool_section = getattr(old_control, 'sections', {}).get('tool_settings')
+                if tool_section and hasattr(tool_section, 'save_all_tool_settings'):
+                    # Schedule async save (fire and forget)
+                    # Use page.run_task() if available, otherwise ignore
+                    # Tool settings will be saved on next explicit save action
+                    try:
+                        if self.page and hasattr(self.page, 'run_task'):
+                            self.page.run_task(tool_section.save_all_tool_settings)
+                    except (AttributeError, TypeError):
+                        # page might not have run_task or might be None
+                        pass
+            
             for widget in _collect_suspendable(old_control):
                 widget.suspend()
 
