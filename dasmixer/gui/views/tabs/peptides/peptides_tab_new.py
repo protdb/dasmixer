@@ -88,7 +88,7 @@ class PeptidesTab(ft.Container):
         default_col = {
             ft.ResponsiveRowBreakpoint.XL: 6,
             ft.ResponsiveRowBreakpoint.LG: 6,
-            ft.ResponsiveRowBreakpoint.MD: 6,
+            ft.ResponsiveRowBreakpoint.MD: 12,
             ft.ResponsiveRowBreakpoint.SM: 12
         }
         for k in resp_sections:

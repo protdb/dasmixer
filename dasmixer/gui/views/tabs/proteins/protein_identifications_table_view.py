@@ -193,7 +193,8 @@ class ProteinIdentificationsTableView(BaseTableView):
             df = await self.project.get_protein_results_joined(**kwargs, limit=999999, offset=0)
         else:
             df = await self.project.get_protein_results_joined(**kwargs, limit=limit, offset=offset)
-
+        tooltip_df = df[['fasta_name']]
+        df['fasta_name'] = df['fasta_name'].apply(lambda x: x if len(x) <= 32 else x[:30]+'…')
         return df, None
 
     async def get_total_count(self) -> int:

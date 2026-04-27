@@ -37,3 +37,5 @@ class EnrichmentSection(BaseSection):
             ft.Row([self.update_fasta_checkbox, self.force_update_checkbox]),
             self.calculate_btn,
         ], spacing=10)
+
+        return control

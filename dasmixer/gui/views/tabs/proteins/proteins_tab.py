@@ -6,6 +6,7 @@ from dasmixer.api.project.project import Project
 from .shared_state import ProteinsTabState
 from .detection_section import DetectionSection
 from .lfq_section import LFQSection
+from .enrichment_section import EnrichmentSection
 from .protein_identifications_table_view import ProteinIdentificationsTableView
 from .protein_statistics_table_view import ProteinStatisticsTableView
 from .protein_concentration_plot_view import ProteinConcentrationPlotView
@@ -52,6 +53,9 @@ class ProteinsTab(ft.Container):
         # Detection section
         sections['detection'] = DetectionSection(self.project, self.state, self)
         print("detection...")
+
+        sections['enrich'] = EnrichmentSection(self.project, self.state, self)
+        print("enrich...")
         
         # LFQ section
         sections['lfq'] = LFQSection(self.project, self.state, self)
@@ -139,13 +143,23 @@ class ProteinsTab(ft.Container):
     
     def _build_content(self) -> ft.Control:
         """Build tab layout."""
+        default_col = {
+            ft.ResponsiveRowBreakpoint.XL: 6,
+            ft.ResponsiveRowBreakpoint.LG: 6,
+            ft.ResponsiveRowBreakpoint.MD: 12,
+            ft.ResponsiveRowBreakpoint.SM: 12
+        }
         return ft.Column([
-            # Detection
-            self.sections['detection'],
-            ft.Container(height=10),
-            
-            # LFQ
-            self.sections['lfq'],
+            ft.ResponsiveRow([
+                ft.Column([
+                    self.sections['detection'],
+                    self.sections['enrich']
+                ], spacing=10, col=default_col, height=380),
+                ft.Column([
+                    self.sections['lfq']
+                ], spacing=10, col=default_col, height=380)
+            ]),
+
             ft.Container(height=10),
             
             # Table and Plot
