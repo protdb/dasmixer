@@ -11,6 +11,7 @@ _TAB_DEFS = [
     ("Proteins", ft.Icons.BUBBLE_CHART,  "dasmixer.gui.views.tabs.proteins", "ProteinsTab"),
     ("Reports",  ft.Icons.ASSESSMENT,    "dasmixer.gui.views.tabs.reports",  "ReportsTab"),
     ("Plots",    ft.Icons.SHOW_CHART,    "dasmixer.gui.views.tabs.plots",    "PlotsTab"),
+    ("Export",   ft.Icons.DOWNLOAD,      "dasmixer.gui.views.tabs.export.export_tab",  "ExportTab"),
 ]
 
 # Tabs whose heavy table/plot widgets should be suspended on switch-away.

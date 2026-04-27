@@ -50,19 +50,12 @@ class ProgressDialog(ft.AlertDialog):
         )
     
     def update_progress(self, value: float, status: str = ""):
-        """
-        Update progress bar and status text.
-        
-        Args:
-            value: Progress value from 0.0 to 1.0
-            status: Status message to display
-        """
         self.progress_bar.value = max(0.0, min(1.0, value))
         self.status_text.value = status
-        
-        # Update if dialog is part of page
-        if hasattr(self, 'page') and self.page:
+        try:
             self.update()
+        except Exception:
+            pass
     
     def is_cancelled(self) -> bool:
         """Check if user cancelled the operation."""
