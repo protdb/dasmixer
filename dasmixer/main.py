@@ -96,5 +96,9 @@ app.add_typer(import_data.app, name="import", help="Import data files")
 
 
 if __name__ == '__main__':
+    # Multiprocessing for builds support
     multiprocessing.freeze_support()
+    # Kaleido pre-install chrome
+    import kaleido
+    kaleido.get_chrome_sync()
     app()
