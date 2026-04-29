@@ -46,7 +46,7 @@ Developed at the **Laboratory of Structural Proteomics, IBMC, Moscow**.
 ### Plugin System
 - Install custom identification parsers (`.py` or `.zip` packages)
 - Install custom report modules
-- Manage plugins via GUI Plugins panel
+- Manage plugins via GUI Plugins panel.
 
 ---
 
