@@ -273,7 +273,7 @@ class ProteinMixin:
             params = (int(sample_id),)
         
         query += " ORDER BY id"
-        print(query, params)
+        logger.debug(f"{query} {params}")
         return await self.execute_query_df(query, params)
     
     async def get_protein_identification_count(self) -> int:

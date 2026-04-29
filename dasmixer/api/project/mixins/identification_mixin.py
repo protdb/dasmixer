@@ -25,7 +25,7 @@ class IdentificationMixin:
         file_path: str
     ) -> int:
         """Add identification file record."""
-        print(f"spectra_file_id: {spectra_file_id}, tool_id: {tool_id} file_path: {file_path}")
+        logger.debug(f"spectra_file_id: {spectra_file_id}, tool_id: {tool_id} file_path: {file_path}")
         cursor = await self._execute(
             "INSERT INTO identification_file (spectre_file_id, tool_id, file_path) VALUES (?, ?, ?)",
             (spectra_file_id, tool_id, file_path)

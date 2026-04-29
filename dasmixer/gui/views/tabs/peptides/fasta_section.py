@@ -3,6 +3,7 @@
 import flet as ft
 
 from .base_section import BaseSection
+from dasmixer.utils import logger
 
 
 class FastaSection(BaseSection):
@@ -75,7 +76,7 @@ class FastaSection(BaseSection):
             if self.protein_count_text.page:
                 self.protein_count_text.update()
         except Exception as ex:
-            print(f"Error updating protein count: {ex}")
+            logger.exception(f"Error updating protein count: {ex}")
 
     async def _open_load_dialog(self, e):
         """Open the FASTA load dialog."""
@@ -103,7 +104,7 @@ class FastaSection(BaseSection):
             self.blast_max_accepts_field.value = max_accepts
             self.blast_max_rejects_field.value = max_rejects
         except Exception as ex:
-            print(f"Error loading BLAST settings: {ex}")
+            logger.exception(f"Error loading BLAST settings: {ex}")
 
     async def save_blast_settings(self):
         """Save BLAST settings to project."""

@@ -6,6 +6,7 @@ from dasmixer.api.project.dataclasses import Tool
 from dasmixer.api.inputs.registry import registry
 from ..constants import get_default_color
 from dasmixer.gui.utils import show_snack
+from dasmixer.utils import logger
 
 
 class ToolDialog:
@@ -204,5 +205,6 @@ class ToolDialog:
                 await self.on_success_callback()
         
         except Exception as ex:
+            logger.exception(ex)
             show_snack(self.page, f"Error: {ex}", ft.Colors.RED_400)
             self.page.update()

@@ -5,6 +5,7 @@ import flet as ft
 from dasmixer.api.project.project import Project
 from .base_section import BaseSection
 from .shared_state import SamplesTabState
+from dasmixer.utils import logger
 from .dialogs.group_dialog import GroupDialog
 
 
@@ -33,7 +34,7 @@ class GroupsSection(BaseSection):
     
     async def load_data(self):
         """Load groups list using a single batch query for sample counts."""
-        print("Loading groups...")
+        logger.debug("Loading groups...")
         # Single query for groups + single query for counts — no per-group queries
         groups, counts_by_subset = await asyncio.gather(
             self.project.get_subsets(),
@@ -81,7 +82,7 @@ class GroupsSection(BaseSection):
                 ft.Text("No groups. Click 'Add Group' to create one.", italic=True)
             )
 
-        print(f"Groups loaded: {len(groups)}")
+        logger.debug(f"Groups loaded: {len(groups)}")
         self.state.groups_count = len(groups)
 
         if self.groups_list.page:
@@ -136,6 +137,7 @@ class GroupsSection(BaseSection):
                 
                 self.show_warning(f"Cannot delete: {str(ex)}")
             except Exception as ex:
+                logger.exception(ex)
                 confirm_dialog.open = False
                 self.page.update()
                 

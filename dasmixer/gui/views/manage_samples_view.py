@@ -14,6 +14,7 @@ import flet as ft
 from dasmixer.api.project.dataclasses import Sample
 from dasmixer.api.project.project import Project
 from dasmixer.gui.utils import show_snack
+from dasmixer.utils import logger
 
 
 class ManageSamplesView(ft.View):
@@ -238,11 +239,10 @@ class ManageSamplesView(ft.View):
                 if self._panels_list is not None and self._panels_list.page:
                     self._panels_list.update()
 
-        except Exception as ex:
-            import traceback
-            print(f"ManageSamplesView._on_update_clicked error: {traceback.format_exc()}")
+        except Exception:
+            logger.exception("ManageSamplesView._on_update_clicked error")
             if self.page:
-                show_snack(self.page, f"Error updating samples: {ex}", ft.Colors.RED_400)
+                show_snack(self.page, "Error updating samples", ft.Colors.RED_400)
                 self.page.update()
         finally:
             self._set_loader(False)

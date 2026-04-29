@@ -5,6 +5,7 @@ from typing import Any
 
 import flet as ft
 
+from dasmixer.utils import logger
 from dasmixer.api.project.project import Project
 from dasmixer.api.config import config as _config
 from dasmixer.api.calculations.peptides.protein_map import map_proteins
@@ -136,8 +137,7 @@ class MatchProteinsAction(BaseAction):
             self.show_success(f"Mapped {total_matches} matches")
 
         except Exception as ex:
-            import traceback
-            print(f"Error in MatchProteinsAction.run: {traceback.format_exc()}")
+            logger.exception(ex)
             try:
                 dialog.close()
             except Exception:

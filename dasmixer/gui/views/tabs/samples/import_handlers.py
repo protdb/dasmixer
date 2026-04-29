@@ -7,6 +7,7 @@ from dasmixer.api.project.project import Project
 from dasmixer.api.inputs.registry import registry
 from dasmixer.api.config import config as _config
 from dasmixer.gui.utils import show_snack
+from dasmixer.utils import logger
 
 
 class ImportHandlers:
@@ -25,14 +26,15 @@ class ImportHandlers:
         self.page = page
         self.on_complete_callback = on_complete_callback
     
-    async def import_spectra_files(self, file_list, subset_id, parser_name):
+    async def import_spectra_files(self, file_list, subset_id, parser_name, fixed_sample_name=None):
         """
         Import spectra files with progress indication.
         
         Args:
-            file_list: List of (file_path, sample_id) tuples
+            file_list: List of (file_path, sample_name) tuples
             subset_id: Group ID to assign samples
             parser_name: Name of parser to use (from registry)
+            fixed_sample_name: If set, overrides sample names from file_list (used in fixed-sample mode)
         """
         # Show progress dialog
         progress_text = ft.Text("Preparing import...")
@@ -70,10 +72,11 @@ class ImportHandlers:
                 progress_details.update()
                 
                 # Get or create sample
-                sample = await self.project.get_sample_by_name(sample_id)
+                effective_name = fixed_sample_name if fixed_sample_name else sample_id
+                sample = await self.project.get_sample_by_name(effective_name)
                 if not sample:
                     sample = await self.project.add_sample(
-                        name=sample_id,
+                        name=effective_name,
                         subset_id=subset_id
                     )
                 
@@ -133,9 +136,10 @@ class ImportHandlers:
                 await self.on_complete_callback()
             
         except Exception as ex:
+            logger.exception(ex)
             import traceback
             error_details = traceback.format_exc()
-            print(f"Import error: {error_details}")
+            logger.debug(f"Import error: {error_details}")
             
             progress_dialog.open = False
             self.page.update()
@@ -143,13 +147,14 @@ class ImportHandlers:
             show_snack(self.page, f"Import error: {str(ex)}", ft.Colors.RED_400)
             self.page.update()
     
-    async def import_identification_files(self, file_list, tool_id: int):
+    async def import_identification_files(self, file_list, tool_id: int, fixed_spectra_file_id: int = None):
         """
         Import identification files with progress indication.
         
         Args:
             file_list: List of (file_path, sample_id) tuples
             tool_id: Tool ID to use for identifications
+            fixed_spectra_file_id: If set, use this spectra file ID directly (bypasses sample lookup)
         """
         # Show progress dialog
         progress_text = ft.Text("Preparing import...")
@@ -191,28 +196,32 @@ class ImportHandlers:
                 progress_bar.update()
                 progress_details.update()
                 
-                # Get sample by name
-                sample = await self.project.get_sample_by_name(sample_id)
-                if not sample:
-                    progress_dialog.open = False
-                    self.page.update()
-                    
-                    show_snack(self.page, f"Sample '{sample_id}' not found. Import spectra first.", ft.Colors.RED_400)
-                    self.page.update()
-                    return
-                
-                # Get spectra files for this sample
-                spectra_files = await self.project.get_spectra_files(sample_id=sample.id)
-                if len(spectra_files) == 0:
-                    progress_dialog.open = False
-                    self.page.update()
-                    
-                    show_snack(self.page, f"No spectra files for sample '{sample_id}'", ft.Colors.RED_400)
-                    self.page.update()
-                    return
-                
-                # Use first spectra file
-                spectra_file_id = spectra_files.iloc[0]['id']
+                # Determine spectra_file_id
+                if fixed_spectra_file_id is not None:
+                    spectra_file_id = fixed_spectra_file_id
+                else:
+                    # Get sample by name
+                    sample = await self.project.get_sample_by_name(sample_id)
+                    if not sample:
+                        progress_dialog.open = False
+                        self.page.update()
+
+                        show_snack(self.page, f"Sample '{sample_id}' not found. Import spectra first.", ft.Colors.RED_400)
+                        self.page.update()
+                        return
+
+                    # Get spectra files for this sample
+                    spectra_files = await self.project.get_spectra_files(sample_id=sample.id)
+                    if len(spectra_files) == 0:
+                        progress_dialog.open = False
+                        self.page.update()
+
+                        show_snack(self.page, f"No spectra files for sample '{sample_id}'", ft.Colors.RED_400)
+                        self.page.update()
+                        return
+
+                    # Use first spectra file
+                    spectra_file_id = spectra_files.iloc[0]['id']
                 
                 # Add identification file record
                 ident_file_id = await self.project.add_identification_file(
@@ -223,11 +232,11 @@ class ImportHandlers:
                 
                 # Parse and import identifications
                 parser = parser_class(str(file_path))
-                print(f'Parser {type(parser)} init for {file_path}')
+                logger.debug(f'Parser {type(parser)} init for {file_path}')
                 
                 # Validate file
                 is_valid = await parser.validate()
-                print(f'validation result: {is_valid}')
+                logger.debug(f'validation result: {is_valid}')
                 if not is_valid:
                     progress_dialog.open = False
                     self.page.update()
@@ -241,15 +250,16 @@ class ImportHandlers:
                     spectra_file_id,
                     by=parser.spectra_id_field
                 )
-                print(spectra_mapping)
+                logger.info(f'Matching to spectra_file with id: {spectra_file_id} by {parser.spectra_id_field}')
+                logger.debug(spectra_mapping)
                 
                 # Import identifications in batches
                 batch_size = _config.identification_batch_size
                 batch_count = 0
                 file_ident_count = 0
                 async for batch_tuple in parser.parse_batch(batch_size=batch_size):
-                    print(batch_tuple)
-                    print(spectra_mapping)
+                    logger.warn(batch_tuple)
+                    logger.warn(spectra_mapping)
                     batch = pd.merge(
                         batch_tuple[0],
                         pd.json_normalize(spectra_mapping),
@@ -259,8 +269,8 @@ class ImportHandlers:
                     # Add tool_id, ident_file_id
                     batch['tool_id'] = tool.id
                     batch['ident_file_id'] = ident_file_id
-                    print(batch)
-                    print(batch.columns)
+                    logger.debug(batch)
+                    logger.debug(batch.columns)
                     
                     if len(batch) > 0:
                         await self.project.add_identifications_batch(batch)
@@ -294,9 +304,10 @@ class ImportHandlers:
                 await self.on_complete_callback()
             
         except Exception as ex:
+            logger.exception(ex)
             import traceback
             error_details = traceback.format_exc()
-            print(f"Import error: {error_details}")
+            logger.debug(f"Import error: {error_details}")
             
             progress_dialog.open = False
             self.page.update()

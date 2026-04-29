@@ -5,6 +5,7 @@ from pathlib import Path
 from dasmixer.api.project.project import Project
 from dasmixer.api.inputs.registry import registry
 from dasmixer.gui.utils import show_snack
+from dasmixer.utils import logger
 
 
 class ImportSingleDialog:
@@ -70,6 +71,7 @@ class ImportSingleDialog:
             await self._show_config_dialog(file_list)
 
         except Exception as ex:
+            logger.exception(ex)
             import traceback
             traceback.print_exc()
             show_snack(self.page, f"Error opening file picker: {ex}", ft.Colors.RED_400)
@@ -243,6 +245,7 @@ class ImportSingleDialog:
                             fixed_spectra_file_id=self.fixed_spectra_file_id,
                         )
             except Exception as ex:
+                logger.exception(ex)
                 show_snack(self.page, f"Import error: {ex}", ft.Colors.RED_400)
                 self.page.update()
 

@@ -4,6 +4,7 @@ import flet as ft
 
 from dasmixer.api.calculations.spectra.ion_match import IonMatchParameters
 from .base_section import BaseSection
+from dasmixer.utils import logger
 
 
 class IonSettingsSection(BaseSection):
@@ -135,7 +136,7 @@ class IonSettingsSection(BaseSection):
             self._sync_to_state()
 
         except Exception as ex:
-            print(f"Error loading ion settings: {ex}")
+            logger.exception(f"Error loading ion settings: {ex}")
             self.show_error(f"Error loading ion settings: {str(ex)}")
 
     async def save_settings(self):

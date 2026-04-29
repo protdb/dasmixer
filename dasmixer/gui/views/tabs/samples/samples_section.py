@@ -7,6 +7,7 @@ import flet as ft
 
 from dasmixer.api.project.dataclasses import Sample
 from dasmixer.api.project.project import Project
+from dasmixer.utils import logger
 from .base_section import BaseSection
 from .shared_state import SamplesTabState
 from .dialogs.sample_dialog import SampleDialog
@@ -99,7 +100,7 @@ class SamplesSection(BaseSection):
         Fast initial load: read stats from cache, render panels immediately.
         Then trigger background refresh for all uncached samples.
         """
-        print("SamplesSection.load_data() — fast path from cache")
+        logger.debug("SamplesSection.load_data() — fast path from cache")
         self._samples = await self.project.get_samples()
         self._tools_count = await self.project.get_tools_count()
 
@@ -213,8 +214,9 @@ class SamplesSection(BaseSection):
             self.state.samples_count = len(self._samples)
 
         except Exception as ex:
+            logger.exception(ex)
             import traceback
-            print(f"SamplesSection._on_update_clicked error: {traceback.format_exc()}")
+            logger.debug(f"SamplesSection._on_update_clicked error: {traceback.format_exc()}")
             self.show_error(f"Error updating samples: {ex}")
         finally:
             self._set_loader(False)
@@ -662,6 +664,7 @@ class SamplesSection(BaseSection):
             self.show_success("Spectra file deleted")
             await self.refresh_single_panel(sample.id)
         except Exception as ex:
+            logger.exception(ex)
             self.show_error(f"Error: {ex}")
 
     async def _delete_ident_file(self, if_id: int, sample: Sample):
@@ -675,9 +678,8 @@ class SamplesSection(BaseSection):
             self.show_success("Identification file deleted")
             await self.refresh_single_panel(sample.id)
         except Exception as ex:
+            logger.exception(ex)
             self.show_error(f"Error: {ex}")
-
-    async def _add_spectra_file(self, sample: Sample):
         from .dialogs.import_single_dialog import ImportSingleDialog
         from .import_handlers import ImportHandlers
 
@@ -784,6 +786,7 @@ class SamplesSection(BaseSection):
             await self.project.update_sample(sample)
             await self.refresh_single_panel(sample.id)
         except Exception as ex:
+            logger.exception(ex)
             self.show_error(f"Error: {ex}")
 
     async def _delete_sample(self, sample: Sample):
@@ -800,6 +803,7 @@ class SamplesSection(BaseSection):
             # Full rebuild of panel list (panel count changed)
             await self._rebuild_panels_from_cache()
         except Exception as ex:
+            logger.exception(ex)
             self.show_error(f"Error: {ex}")
 
     async def _rebuild_panels_from_cache(self):

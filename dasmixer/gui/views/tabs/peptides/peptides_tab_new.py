@@ -12,6 +12,7 @@ from .actions_section import ActionsSection
 from .peptide_ion_table_view import PeptideIonTableView
 from .peptide_ion_plot_view import PeptideIonPlotView
 from .ion_calculations import IonCalculations
+from dasmixer.utils import logger
 
 
 class PeptidesTab(ft.Container):
@@ -24,7 +25,7 @@ class PeptidesTab(ft.Container):
     
     def __init__(self, project: Project):
         super().__init__()
-        print("PeptidesTab init...")
+        logger.debug("PeptidesTab init...")
         self.project = project
         self.expand = False
         self.padding = 0
@@ -63,12 +64,12 @@ class PeptidesTab(ft.Container):
 
         # Actions section (needs reference to tab for accessing other sections)
 
-        print('old sections created...')
+        logger.debug('old sections created...')
 
         # Search section - REPLACED with BaseTableAndPlotView
         table_view = PeptideIonTableView(self.project)
 
-        print('table view created...')
+        logger.debug('table view created...')
 
         plot_view = PeptideIonPlotView(self.project, ion_settings_section=sections['ion_settings'])
         
@@ -78,7 +79,7 @@ class PeptidesTab(ft.Container):
             plot_view=plot_view,
             title="Search and View Identifications"
         )
-        print('Sections created...')
+        logger.debug('Sections created...')
         
         return sections
     
@@ -155,7 +156,7 @@ class PeptidesTab(ft.Container):
     
     def did_mount(self):
         """Load initial data when tab is mounted."""
-        print("PeptidesTab did_mount called")
+        logger.debug("PeptidesTab did_mount called")
         
         # Store reference to self in page for sections to access
         if self.page:
@@ -166,7 +167,7 @@ class PeptidesTab(ft.Container):
     async def _load_initial_data(self):
         """Load all initial data for sections in parallel."""
         import asyncio
-        print("Loading peptides tab initial data...")
+        logger.debug("Loading peptides tab initial data...")
         try:
             tasks = [
                 section.load_data()
@@ -180,12 +181,12 @@ class PeptidesTab(ft.Container):
                 results = await asyncio.gather(*tasks, return_exceptions=True)
                 for i, r in enumerate(results):
                     if isinstance(r, Exception):
-                        print(f"[PeptidesTab] load_data task {i} failed: {r}")
+                        logger.debug(f"[PeptidesTab] load_data task {i} failed: {r}")
 
-            print("Peptides tab initial data loaded successfully")
+            logger.debug("Peptides tab initial data loaded successfully")
 
         except Exception as ex:
-            print(f"Error loading initial data: {ex}")
+            logger.exception(f"Error loading initial data: {ex}")
             import traceback
             traceback.print_exc()
 

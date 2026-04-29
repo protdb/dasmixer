@@ -6,6 +6,8 @@ import typer
 import json
 from typing import Any
 
+from dasmixer.utils.logger import logger
+
 
 class AppConfig(BaseSettings):
     """
@@ -104,7 +106,7 @@ class AppConfig(BaseSettings):
                     data = json.load(f)
                 return cls(**data)
             except Exception as e:
-                print(f"Warning: Could not load config: {e}")
+                logger.exception(f"Could not load config: {e}")
                 return cls()
         return cls()
 
@@ -115,7 +117,7 @@ class AppConfig(BaseSettings):
             with open(config_path, 'w', encoding='utf-8') as f:
                 json.dump(self.model_dump(), f, indent=2)
         except Exception as e:
-            print(f"Warning: Could not save config: {e}")
+            logger.exception(f"Could not save config: {e}")
 
     def get_next_color(self, existing_colors: list[str]) -> str:
         """

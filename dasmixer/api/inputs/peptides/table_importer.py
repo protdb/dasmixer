@@ -9,6 +9,7 @@ import aiofiles
 import aiocsv
 
 from .base import IdentificationParser
+from dasmixer.utils.logger import logger
 
 
 class TableSheet:
@@ -192,9 +193,9 @@ class SimpleTableImporter(TableImporter):
         """
         r = asdict(self.renames)
         rename_cols = {v: k for k, v in r.items() if v is not None and v != ''}
-        print(f'rename cols: {rename_cols}')
+        logger.debug(f'rename cols: {rename_cols}')
         result = df.rename(columns=rename_cols)
-        print(result)
+        logger.debug(result)
         
         # Validate that at least one mapping column exists
         if 'scans' not in result.columns and 'seq_no' not in result.columns:
@@ -244,7 +245,7 @@ class SimpleTableImporter(TableImporter):
         
         # Transform and remap columns
         data = self.remap_columns(self.transform_df(sheet_df))
-        print(data)
+        logger.debug(data)
         
         # Yield in batches
         cursor = 0
@@ -270,7 +271,7 @@ class SimpleTableImporter(TableImporter):
             self.remap_columns(self.transform_df(sheet_df))
             return True
         except Exception as e:
-            print(e)
+            logger.exception(e)
             return False
 
     async def get_metadata(self) -> dict:

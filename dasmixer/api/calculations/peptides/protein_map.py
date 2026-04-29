@@ -16,6 +16,7 @@ import npysearch as npy
 import pandas as pd
 
 from dasmixer.api import Project
+from dasmixer.utils.logger import logger
 from dasmixer.api.calculations.ppm import SeqFixer, SeqMatchParams
 from dasmixer.api.calculations.ppm.dataclasses import SeqResults
 from dasmixer.api.calculations.spectra.ion_match import IonMatchParameters, match_predictions, MatchResult
@@ -251,7 +252,7 @@ async def map_proteins(
 
         counter = 0
         while True:
-            print('retrieving batch data...')
+            logger.debug('retrieving batch data...')
             batch_data = await project.get_identifications(
                 tool_id=tool_id,
                 max_abs_ppm=query_ppm,
@@ -261,7 +262,7 @@ async def map_proteins(
             )
             if len(batch_data) == 0:
                 break
-            print('batch data retrieved!')
+            logger.debug('batch data retrieved!')
             # ----------------------------------------------------------------
             # Build BLAST query dict
             # ----------------------------------------------------------------
@@ -271,13 +272,13 @@ async def map_proteins(
             ].iterrows():
                 canon = str(row['canonical_sequence'])
                 ident_id = int(row['id'])
-                print(ident_id, canon)
+                logger.debug(f"{ident_id} {canon}")
                 if leucine_combinatorics and ('I' in canon or 'L' in canon):
                     for idx, variant in enumerate(get_leucine_combinations(canon)):
                         query[f"{ident_id}_{int(idx) + 1}"] = variant
                 else:
                     query[str(ident_id)] = canon
-            print('performing blast...')
+            logger.debug('performing blast...')
             blast_df = pd.DataFrame(npy.blast(
                 query,
                 fasta,
@@ -315,7 +316,7 @@ async def map_proteins(
             )
             spectra_map: dict[int, dict] = {}
             if partial_ids:
-                print('reading spectra for', len(partial_ids))
+                logger.debug(f'reading spectra for {len(partial_ids)}')
                 spectra_map = await project.get_spectra_for_identification_ids(partial_ids)
 
             # ----------------------------------------------------------------
@@ -395,7 +396,7 @@ async def map_proteins(
                         isotope_offset=isotope_offset,
                     )
                 except Exception as exc:
-                    print(f"[protein_map] SeqFixer error ident_id={ident_id}: {exc}")
+                    logger.exception(f"[protein_map] SeqFixer error ident_id={ident_id}: {exc}")
                     continue
 
                 # Choose best SeqMatchParams + compute ion coverage

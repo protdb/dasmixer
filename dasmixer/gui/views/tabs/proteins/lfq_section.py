@@ -4,6 +4,7 @@ import flet as ft
 import asyncio
 
 from .base_section import BaseSection
+from dasmixer.utils import logger
 from dasmixer.gui.views.tabs.peptides.dialogs.progress_dialog import ProgressDialog
 from dasmixer.api.calculations.proteins.sempai import SUPPORTED_ENZYMES
 from dasmixer.api.calculations.proteins.lfq import calculate_lfq
@@ -36,28 +37,28 @@ class LFQSection(BaseSection):
             value=self.state.lfq_methods['emPAI'],
             on_change=lambda e: self._on_method_changed('emPAI', e)
         )
-        print('empai checkbox built...')
+        logger.debug('empai checkbox built...')
         
         self.ibaq_checkbox = ft.Checkbox(
             label="iBAQ",
             value=self.state.lfq_methods['iBAQ'],
             on_change=lambda e: self._on_method_changed('iBAQ', e)
         )
-        print('iBAQ checkbox built...')
+        logger.debug('iBAQ checkbox built...')
         
         self.nsaf_checkbox = ft.Checkbox(
             label="NSAF",
             value=self.state.lfq_methods['NSAF'],
             on_change=lambda e: self._on_method_changed('NSAF', e)
         )
-        print('NSAF checkbox built...')
+        logger.debug('NSAF checkbox built...')
         
         self.top3_checkbox = ft.Checkbox(
             label="Top3",
             value=self.state.lfq_methods['Top3'],
             on_change=lambda e: self._on_method_changed('Top3', e)
         )
-        print('Top3 checkbox built...')
+        logger.debug('Top3 checkbox built...')
         # emPAI base value
         self.empai_base_field = ft.TextField(
             label="emPAI base value",
@@ -66,7 +67,7 @@ class LFQSection(BaseSection):
             width=200,
             on_change=self._on_empai_base_changed
         )
-        print('empai base field built...')
+        logger.debug('empai base field built...')
         
         # Enzyme dropdown
         enzyme_options = [
@@ -81,7 +82,7 @@ class LFQSection(BaseSection):
             options=enzyme_options,
             on_text_change=self._on_enzyme_changed
         )
-        print('Enzyme dropdown built...')
+        logger.debug('Enzyme dropdown built...')
         # Peptide length fields
         self.min_length_field = ft.TextField(
             label="Min peptide length",
@@ -90,7 +91,7 @@ class LFQSection(BaseSection):
             width=150,
             on_change=self._on_min_length_changed
         )
-        print('Min peptide length field built...')
+        logger.debug('Min peptide length field built...')
         
         self.max_length_field = ft.TextField(
             label="Max peptide length",
@@ -99,7 +100,7 @@ class LFQSection(BaseSection):
             width=150,
             on_change=self._on_max_length_changed
         )
-        print('Max peptide length field built...')
+        logger.debug('Max peptide length field built...')
         
         # Max cleavage sites
         self.max_cleavage_field = ft.TextField(
@@ -109,7 +110,7 @@ class LFQSection(BaseSection):
             width=150,
             on_change=self._on_max_cleavage_changed
         )
-        print('Max cleavage sites field built...')
+        logger.debug('Max cleavage sites field built...')
         
         # Calculate button
         self.calculate_btn = ft.ElevatedButton(
@@ -121,7 +122,7 @@ class LFQSection(BaseSection):
                 color=ft.Colors.WHITE
             )
         )
-        print('Calculate button built...')
+        logger.debug('Calculate button built...')
         
         return ft.Column([
             ft.Text("Label-Free Quantification", size=18, weight=ft.FontWeight.BOLD),

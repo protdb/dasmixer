@@ -7,6 +7,7 @@ import multiprocessing
 
 from dasmixer.api.project.project import Project
 from dasmixer.gui.components.plotly_viewer import PlotlyViewer, show_webview, render_png_async
+from dasmixer.utils import logger
 from dasmixer.gui.utils import show_snack
 
 _PLOT_WIDTH = 1100
@@ -269,6 +270,7 @@ class BasePlotView(ft.Container):
             p.start()
         except Exception as ex:
             if self.page:
+                logger.exception(ex)
                 show_snack(self.page, f"Error launching interactive mode: {ex}", ft.Colors.RED_400)
                 self.page.update()
 
@@ -291,6 +293,7 @@ class BasePlotView(ft.Container):
                 self.page.update()
 
         except Exception as ex:
+            logger.exception(ex)
             if self.page:
                 show_snack(self.page, f"Error saving plot: {ex}", ft.Colors.RED_400)
                 self.page.update()
@@ -327,6 +330,7 @@ class BasePlotView(ft.Container):
 
             except Exception as ex:
                 if self.page:
+                    logger.exception(ex)
                     show_snack(self.page, f"Error exporting: {ex}", ft.Colors.RED_400)
                     self.page.update()
 

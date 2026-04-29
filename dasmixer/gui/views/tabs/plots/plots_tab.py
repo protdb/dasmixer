@@ -14,6 +14,7 @@ from jinja2 import Template
 from dasmixer.api.project.project import Project
 from dasmixer.gui.components.plotly_viewer import PlotlyViewer, render_png_async
 from dasmixer.gui.utils import show_snack
+from dasmixer.utils import logger
 
 
 class PlotItemCard(ft.Container):
@@ -225,9 +226,7 @@ class PlotsTab(ft.Container):
                 self.page.update()
 
         except Exception as ex:
-            print(f"Error loading plots: {ex}")
-            import traceback
-            traceback.print_exc()
+            logger.exception(ex)
             if self.page:
                 show_snack(self.page, f"Error loading plots: {ex}", ft.Colors.RED_400)
                 self.page.update()
@@ -328,6 +327,7 @@ class PlotsTab(ft.Container):
                 self.page.update()
 
         except Exception as ex:
+            logger.exception(ex)
             dialog.content = ft.Container(
                 content=ft.Text(f"Error loading plot: {ex}", color=ft.Colors.RED_400),
                 alignment=ft.Alignment.CENTER,
@@ -380,6 +380,7 @@ class PlotsTab(ft.Container):
                 show_snack(self.page, f"Plot #{plot_id} deleted", ft.Colors.GREEN_400)
             await self.load_data()
         except Exception as ex:
+            logger.exception(ex)
             if self.page:
                 show_snack(self.page, f"Error deleting plot: {ex}", ft.Colors.RED_400)
                 self.page.update()
@@ -408,11 +409,10 @@ class PlotsTab(ft.Container):
             await self._export_plots_to_word(list(self.selected_ids), output_dir)
 
         except Exception as ex:
+            logger.exception(ex)
             if self.page:
                 show_snack(self.page, f"Error exporting: {ex}", ft.Colors.RED_400)
                 self.page.update()
-            import traceback
-            traceback.print_exc()
 
     async def _export_plots_to_word(self, plot_ids: list[int], output_dir: Path):
         """Export plots to Word document.
@@ -460,7 +460,7 @@ class PlotsTab(ft.Container):
                         "_img_bytes": img_bytes,
                     }
                 except Exception as ex:
-                    print(f"  Warning: failed to render plot {plot_id}: {ex}")
+                    logger.exception(ex)
                     return None
 
             # Gather all renders (asyncio.gather keeps event loop responsive
@@ -542,9 +542,7 @@ class PlotsTab(ft.Container):
         except Exception as ex:
             if dialog:
                 dialog.close()
-            print(f"Error in export: {ex}")
-            import traceback
-            traceback.print_exc()
+            logger.exception(ex)
             if self.page:
                 show_snack(self.page, f"Export error: {ex}", ft.Colors.RED_400)
                 self.page.update()

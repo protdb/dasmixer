@@ -4,6 +4,7 @@ import asyncio
 
 import flet as ft
 
+from dasmixer.utils import logger
 from dasmixer.api.project.project import Project
 from dasmixer.api.calculations.proteins.lfq import calculate_lfq
 from dasmixer.gui.views.tabs.proteins.shared_state import ProteinsTabState
@@ -102,8 +103,7 @@ class LFQAction(BaseAction):
             return total_saved
 
         except Exception as ex:
-            import traceback
-            traceback.print_exc()
+            logger.exception(ex)
             try:
                 dialog.close()
             except Exception:

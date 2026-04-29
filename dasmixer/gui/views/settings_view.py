@@ -3,6 +3,7 @@
 import re
 import os
 import flet as ft
+from dasmixer.utils import logger
 from dasmixer.api.config import config
 from dasmixer.gui.utils import show_snack
 
@@ -472,6 +473,7 @@ class SettingsView(ft.View):
                 self._log_folder_field.value = folder
                 self._log_folder_field.update()
         except Exception as ex:
+            logger.exception(ex)
             show_snack(self.page, f"Error: {ex}", ft.Colors.RED_400)
             self.page.update()
 

@@ -5,6 +5,7 @@ import pandas as pd
 
 from dasmixer.gui.components.base_table_view import BaseTableView
 from dasmixer.api.project.project import Project
+from dasmixer.utils import logger
 
 _MAX_SEQ_LEN = 31
 
@@ -216,7 +217,7 @@ class PeptideIonTableView(BaseTableView):
             self.tool_dropdown.update()
 
     def _build_filter_kwargs(self) -> dict:
-        print(self.filter)
+        logger.debug(f"filter: {self.filter}")
 
         kwargs = {}
 
@@ -274,7 +275,7 @@ class PeptideIonTableView(BaseTableView):
         if self.filter.get('gene'):
             kwargs['gene'] = self.filter['gene']
 
-        print(kwargs)
+        logger.debug(f"kwargs: {kwargs}")
         return kwargs
 
     async def get_data(self, limit: int = 100, offset: int = 0) -> tuple[pd.DataFrame, pd.DataFrame | None]:

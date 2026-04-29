@@ -5,6 +5,7 @@ import json
 from dasmixer.api.project.project import Project
 from dasmixer.api.project.dataclasses import Sample
 from dasmixer.gui.utils import show_snack
+from dasmixer.utils import logger
 
 
 class SampleDialog:
@@ -156,6 +157,7 @@ class SampleDialog:
                 await self.on_success_callback()
         
         except Exception as ex:
+            logger.exception(ex)
             import traceback
             traceback.print_exc()
             

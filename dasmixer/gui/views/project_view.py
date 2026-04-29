@@ -1,6 +1,7 @@
 """Project view - main workspace with tabs (lazy-loaded, suspend/resume on switch)."""
 
 import flet as ft
+from dasmixer.utils import logger
 from dasmixer.api.project.project import Project
 
 
@@ -161,7 +162,7 @@ class ProjectView(ft.Container):
             return
 
         label, _icon, module_path, class_name = _TAB_DEFS[index]
-        print(f"[ProjectView] building tab {index}: {label}")
+        logger.debug(f"[ProjectView] building tab {index}: {label}")
 
         import importlib
         module = importlib.import_module(module_path)

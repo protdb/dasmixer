@@ -3,6 +3,7 @@
 import flet as ft
 import pandas as pd
 from typing import Callable
+from dasmixer.utils import logger
 from dasmixer.gui.utils import show_snack
 
 
@@ -313,6 +314,7 @@ class BaseTableView(ft.Container):
             self.has_data = False
             self._show_error(str(ex))
             if self.page:
+                logger.exception(ex)
                 show_snack(self.page, f"Error loading data: {ex}", ft.Colors.RED_400)
                 self.page.update()
         finally:
@@ -615,6 +617,7 @@ class BaseTableView(ft.Container):
             except Exception as ex:
                 progress.close()
                 if self.page:
+                    logger.exception(ex)
                     show_snack(self.page, f"Export error: {ex}", ft.Colors.RED_400)
                     self.page.update()
 

@@ -4,6 +4,7 @@ import asyncio
 import flet as ft
 
 from .base_section import BaseSection
+from dasmixer.utils import logger
 
 
 class ActionsSection(BaseSection):
@@ -173,7 +174,7 @@ class ActionsSection(BaseSection):
         3. Select preferred identifications
         """
         try:
-            print("Starting Calculate Peptides workflow...")
+            logger.debug("Starting Calculate Peptides workflow...")
 
             fasta_section = self.parent_tab.sections.get('fasta')
             if fasta_section and hasattr(fasta_section, 'match_proteins_internal'):

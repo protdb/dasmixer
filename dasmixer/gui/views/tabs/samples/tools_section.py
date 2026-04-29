@@ -4,6 +4,7 @@ import flet as ft
 from dasmixer.api.project.project import Project
 from .base_section import BaseSection
 from .shared_state import SamplesTabState
+from dasmixer.utils import logger
 from .dialogs.tool_dialog import ToolDialog
 
 
@@ -30,7 +31,7 @@ class ToolsSection(BaseSection):
     
     async def load_data(self):
         """Load tools list."""
-        print("Loading tools...")
+        logger.debug("Loading tools...")
         tools = await self.project.get_tools()
         
         self.tools_list.controls.clear()
@@ -77,7 +78,7 @@ class ToolsSection(BaseSection):
                 ft.Text("No tools. Click 'Add Tool' to create one.", italic=True)
             )
         
-        print(f"Tools loaded: {len(tools)}")
+        logger.debug(f"Tools loaded: {len(tools)}")
         self.state.tools_count = len(tools)
         
         if self.tools_list.page:
@@ -131,6 +132,7 @@ class ToolsSection(BaseSection):
                 
                 self.show_warning(f"Cannot delete: {str(ex)}")
             except Exception as ex:
+                logger.exception(ex)
                 confirm_dialog.open = False
                 self.page.update()
                 

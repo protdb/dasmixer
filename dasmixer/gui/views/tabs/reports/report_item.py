@@ -10,6 +10,7 @@ from dasmixer.api.reporting.base import BaseReport
 from dasmixer.api.reporting.viewer import ReportViewer
 from .shared_state import ReportsTabState
 from dasmixer.gui.utils import show_snack
+from dasmixer.utils import logger
 
 
 class ReportItem(ft.Container):
@@ -30,11 +31,11 @@ class ReportItem(ft.Container):
         state: ReportsTabState
     ):
         super().__init__()
-        print('report items init...')
+        logger.debug('report items init...')
         self.report_class = report_class
         self.project = project
         self.state = state
-        print(f'Report {report_class.__name__}.')
+        logger.debug(f'Report {report_class.__name__}.')
         
         # Include checkbox
         self.include_checkbox = ft.Checkbox(
@@ -42,7 +43,7 @@ class ReportItem(ft.Container):
             value=True,
             on_change=self._on_include_changed
         )
-        print('checkbox Generate_all init...')
+        logger.debug('checkbox Generate_all init...')
 
         # Form instance (for reports with ReportForm)
         self._form = None
@@ -64,7 +65,7 @@ class ReportItem(ft.Container):
             self.params_btn.tooltip = "This report has no configurable parameters"
         
         self.params_field: ft.TextField | None = None
-        print('params widget init...')
+        logger.debug('params widget init...')
         
         # Saved reports dropdown
         self.saved_reports_dropdown = ft.Dropdown(
@@ -74,7 +75,7 @@ class ReportItem(ft.Container):
             options=[ft.DropdownOption('New', 'New report')],
             on_text_change=self._on_saved_report_selected
         )
-        print('saved_reports_dropdown init...')
+        logger.debug('saved_reports_dropdown init...')
         
         # Buttons
         self.generate_btn = ft.ElevatedButton(
@@ -82,7 +83,7 @@ class ReportItem(ft.Container):
             icon=ft.Icons.PLAY_ARROW,
             on_click=self._on_generate
         )
-        print('generate_btn...')
+        logger.debug('generate_btn...')
         
         self.view_btn = ft.ElevatedButton(
             content="View",
@@ -90,21 +91,21 @@ class ReportItem(ft.Container):
             on_click=self._on_view,
             disabled=True
         )
-        print('view_btn...')
+        logger.debug('view_btn...')
         self.export_btn = ft.ElevatedButton(
             content="Export",
             icon=ft.Icons.FILE_DOWNLOAD,
             on_click=self._on_export,
             disabled=True
         )
-        print('export_btn...')
+        logger.debug('export_btn...')
         
         # Current selected report_id
         self.current_report_id: int | None = None
         
         # Build UI
         self.content = self._build_content()
-        print('content built...')
+        logger.debug('content built...')
         self.padding = 15
         self.border = ft.border.all(1, ft.Colors.BLUE_200)
         self.border_radius = 8
@@ -112,7 +113,7 @@ class ReportItem(ft.Container):
     
     def _build_content(self) -> ft.Control:
         """Build content."""
-        print('Building content...')
+        logger.debug('Building content...')
 
         res = ft.Column([
             # Header
@@ -148,7 +149,7 @@ class ReportItem(ft.Container):
                 self.export_btn
             ], spacing=10)
         ])
-        print('content inits...')
+        logger.debug('content inits...')
         return res
 
     # ------------------------------------------------------------------
@@ -199,7 +200,7 @@ class ReportItem(ft.Container):
                     form_ref.to_json()
                 )
             except Exception as ex:
-                print(f"Failed to save report parameters: {ex}")
+                logger.exception(f"Failed to save report parameters: {ex}")
             if self._params_dialog is not None:
                 self._params_dialog.open = False
             if self.page:
@@ -320,6 +321,7 @@ class ReportItem(ft.Container):
         except Exception as ex:
             self._close_loading(loading_dialog)
             self._show_error(f"Generation failed: {ex}")
+            logger.exception(f"Generation failed: {ex}")
             import traceback
             traceback.print_exc()
 
@@ -349,6 +351,7 @@ class ReportItem(ft.Container):
             
         except Exception as ex:
             self._show_error(f"Failed to view report: {ex}")
+            logger.exception(f"Failed to view report: {ex}")
             import traceback
             traceback.print_exc()
     
@@ -388,6 +391,7 @@ class ReportItem(ft.Container):
         except Exception as ex:
             dialog.close()
             self._show_error(f"Export failed: {ex}")
+            logger.exception(f"Export failed: {ex}")
             import traceback
             traceback.print_exc()
 

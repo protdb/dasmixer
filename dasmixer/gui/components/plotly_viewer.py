@@ -8,6 +8,7 @@ from functools import partial
 import flet as ft
 import plotly.graph_objects as go
 
+from dasmixer.utils import logger
 from dasmixer.gui.utils import show_snack
 
 
@@ -157,5 +158,6 @@ class PlotlyViewer(ft.Container):
             process.start()
         except Exception as ex:
             if self.page:
+                logger.exception(ex)
                 show_snack(self.page, f"Error launching interactive mode: {ex}", ft.Colors.RED_400)
                 self.page.update()

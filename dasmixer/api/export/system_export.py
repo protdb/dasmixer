@@ -7,6 +7,8 @@ from typing import Callable, Awaitable
 import aiocsv
 import aiofiles
 
+from dasmixer.utils.logger import logger
+
 
 # SQL queries per flag — BLOB columns excluded explicitly
 TABLE_QUERIES: dict[str, str] = {
@@ -195,7 +197,7 @@ async def export_system_data(
             created_files.append(file_path)
         except Exception as e:
             # Логируем, но продолжаем — не прерываем весь экспорт из-за одной таблицы
-            print(f"Warning: failed to export '{table_name}': {e}")
+            logger.exception(f"Failed to export '{table_name}': {e}")
 
         await progress_callback((i + 1) / total, f"Exported {table_name}")
 

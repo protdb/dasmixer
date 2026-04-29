@@ -140,8 +140,8 @@ async def calculate_preferred_identifications_for_file(
             ions_matched=min_ions,
             top_peaks_covered=top_peaks_count,
         )
-        print(idents)
-        print(tool_id, spectra_file_id)
+        logger.debug(idents)
+        logger.debug(f"{tool_id} {spectra_file_id}")
         if denovo_correction:
             idents['min_ppm'] = idents.apply(
                 lambda row: min(abs(row['ppm']), abs(row['matched_ppm'])), axis=1

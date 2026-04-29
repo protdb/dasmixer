@@ -4,6 +4,7 @@ import asyncio
 
 import flet as ft
 
+from dasmixer.utils import logger
 from dasmixer.api.project.project import Project
 from dasmixer.api.calculations.proteins.map_identifications import find_protein_identifications
 from .base import BaseAction
@@ -103,8 +104,7 @@ class ProteinIdentificationsAction(BaseAction):
             return total_saved
 
         except Exception as ex:
-            import traceback
-            traceback.print_exc()
+            logger.exception(ex)
             try:
                 dialog.close()
             except Exception:

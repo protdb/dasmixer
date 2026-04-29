@@ -19,6 +19,10 @@ async def enrich_protein(project: Project, protein_id: str, force_update: bool =
         stored_data.gene = uniprot_data.gene
     if not stored_data.name or overwrite_fasta:
         stored_data.name = uniprot_data.name
+    if not stored_data.organism_name or overwrite_fasta:
+        stored_data.organism_name = uniprot_data.organism.scientific_name
+    if not stored_data.taxon_id or overwrite_fasta:
+        stored_data.taxon_id = uniprot_data.organism.taxon_id
     await project.update_protein(stored_data)
 
 async def enrich_proteins(project: Project, force_update: bool = False, overwrite_fasta: bool = True) -> AsyncIterator[tuple[str, int]]:

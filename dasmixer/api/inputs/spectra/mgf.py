@@ -8,7 +8,16 @@ import numpy as np
 from pyteomics.mgf import MGF
 from pyteomics.auxiliary.structures import PyteomicsError
 
+from dasmixer.utils import logger
 from .base import SpectralDataParser
+
+
+# Workaround to support float charges from PLGS, see https://github.com/levitsky/pyteomics/issues/185#issuecomment-3643486942
+# Should be refactored after Pyteomics version update
+class MGFFixFloatSpectra(MGF):
+    @staticmethod
+    def parse_peak_charge(charge_text, list_only=False):
+        return int(float(charge_text))
 
 
 class MGFParser(SpectralDataParser):
@@ -27,7 +36,7 @@ class MGFParser(SpectralDataParser):
 
     mgf_file: MGF | None = None
     _file_position: int = 0
-    scan_regexp: re.Pattern
+    scan_regexp: re.Pattern = re.compile(r'scans?=(\d+)', re.IGNORECASE)
 
     def __init__(self, file_path: str, **kwargs):
         """
@@ -38,9 +47,8 @@ class MGFParser(SpectralDataParser):
             **kwargs: Additional arguments passed to parent
         """
         super().__init__(file_path, **kwargs)
-        self.mgf_file = MGF(str(self.file_path))
+        self.mgf_file = MGFFixFloatSpectra(str(self.file_path))
         # Regex to extract scan number from TITLE field
-        self.scan_regexp = re.compile(r'scans?=(\d+)', re.IGNORECASE)
         self._file_position = 0
 
     async def validate(self) -> bool:
@@ -53,9 +61,10 @@ class MGFParser(SpectralDataParser):
             True if file is valid MGF format
         """
         try:
-            MGF(str(self.file_path)).__next__()
+            MGFFixFloatSpectra(str(self.file_path)).__next__()
             return True
-        except (PyteomicsError, StopIteration):
+        except (PyteomicsError, StopIteration) as e:
+            logger.exception(e)
             return False
 
     async def parse_batch(
@@ -113,7 +122,10 @@ class MGFParser(SpectralDataParser):
                 if scans is None and title:
                     try:
                         scans = int(self.scan_regexp.findall(title.lower())[0])
-                    except (IndexError, ValueError):
+                    except (IndexError, ValueError) as e:
+                        logger.info(title)
+                        logger.info(self.scan_regexp.pattern)
+                        logger.exception(e)
                         scans = None
                 
                 # Extract PEPMASS (can be single value or tuple)

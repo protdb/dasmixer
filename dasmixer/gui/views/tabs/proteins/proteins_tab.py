@@ -3,6 +3,7 @@
 import flet as ft
 
 from dasmixer.api.project.project import Project
+from dasmixer.utils import logger
 from .shared_state import ProteinsTabState
 from .detection_section import DetectionSection
 from .lfq_section import LFQSection
@@ -26,7 +27,7 @@ class ProteinsTab(ft.Container):
     
     def __init__(self, project: Project):
         super().__init__()
-        print("ProteinsTab init...")
+        logger.debug("ProteinsTab init...")
         self.project = project
         self.expand = True
         self.padding = 0
@@ -48,22 +49,22 @@ class ProteinsTab(ft.Container):
             dict mapping section name to section instance
         """
         sections = {}
-        print("ProteinsTab create sections...")
+        logger.debug("ProteinsTab create sections...")
         
         # Detection section
         sections['detection'] = DetectionSection(self.project, self.state, self)
-        print("detection...")
+        logger.debug("detection...")
 
         sections['enrich'] = EnrichmentSection(self.project, self.state, self)
-        print("enrich...")
-        
+        logger.debug("enrich...")
+
         # LFQ section
         sections['lfq'] = LFQSection(self.project, self.state, self)
-        print("lfq...")
-        
+        logger.debug("lfq...")
+
         # Table and Plot section (replaces TableSection)
         sections['table_and_plot'] = self._create_table_and_plot_section()
-        print("table_and_plot...")
+        logger.debug("table_and_plot...")
         
         return sections
     
@@ -172,7 +173,7 @@ class ProteinsTab(ft.Container):
     
     def did_mount(self):
         """Load initial data when tab is mounted."""
-        print("ProteinsTab did_mount called")
+        logger.debug("ProteinsTab did_mount called")
         
         # Store reference to self in page for sections to access
         if self.page:
@@ -183,7 +184,7 @@ class ProteinsTab(ft.Container):
     async def _load_initial_data(self):
         """Load all initial data for sections in parallel."""
         import asyncio
-        print("Loading proteins tab initial data...")
+        logger.debug("Loading proteins tab initial data...")
         try:
             tasks = []
             for section_name, section in self.sections.items():
@@ -200,16 +201,14 @@ class ProteinsTab(ft.Container):
                 results = await asyncio.gather(*tasks, return_exceptions=True)
                 for i, r in enumerate(results):
                     if isinstance(r, Exception):
-                        print(f"[ProteinsTab] load_data task {i} failed: {r}")
+                        logger.debug(f"[ProteinsTab] load_data task {i} failed: {r}")
 
-            print(f"Proteins tab initial data loaded. "
-                  f"IDs: {self.state.protein_identification_count}, "
-                  f"Quant: {self.state.protein_quantification_count}")
+            logger.debug(f"Proteins tab initial data loaded. "
+                         f"IDs: {self.state.protein_identification_count}, "
+                         f"Quant: {self.state.protein_quantification_count}")
 
         except Exception as ex:
-            print(f"Error loading initial data: {ex}")
-            import traceback
-            traceback.print_exc()
+            logger.exception(f"Error loading initial data: {ex}")
 
     async def _update_counts(self):
         self.state.protein_identification_count = await self.project.get_protein_identification_count()

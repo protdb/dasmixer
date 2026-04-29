@@ -7,6 +7,7 @@ from concurrent.futures import ProcessPoolExecutor
 
 import flet as ft
 
+from dasmixer.utils import logger
 from dasmixer.api.project.project import Project
 from dasmixer.api.config import config as _config
 from dasmixer.api.calculations.spectra.ion_match import IonMatchParameters
@@ -252,8 +253,7 @@ class IonCoverageAction(BaseAction):
             self.show_success(f"Ion coverage calculated for {total_processed} identifications")
 
         except Exception as exc:
-            import traceback
-            print(f"Error in IonCoverageAction.run: {traceback.format_exc()}")
+            logger.exception(ex)
             try:
                 dialog.close()
             except Exception:
@@ -335,8 +335,7 @@ class SelectPreferredAction(BaseAction):
             self.show_success(f"Processed {processed_files} spectra files!")
 
         except Exception as ex:
-            import traceback
-            print(f"Error in SelectPreferredAction.run: {traceback.format_exc()}")
+            logger.exception(ex)
             try:
                 dialog.close()
             except Exception:

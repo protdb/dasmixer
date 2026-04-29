@@ -50,13 +50,22 @@ def register_parsers():
     try:
         from .peptides.PowerNovo2 import PowerNovo2Importer
         registry.add_identification_parser("PowerNovo2", PowerNovo2Importer)
-    except ImportError:
-        pass
+    except ImportError as e:
+        logger.exception(e)
+    pass
     
     try:
         from .peptides.MQ_Evidences import MaxQuantEvidenceParser
         registry.add_identification_parser("MaxQuant", MaxQuantEvidenceParser)
-    except ImportError:
+    except ImportError as e:
+        logger.exception(e)
+        pass
+
+    try:
+        from .peptides.PLGS import PLGSImporter
+        registry.add_identification_parser("PLGS", PLGSImporter)
+    except ImportError as e:
+        logger.exception(e)
         pass
 
 

@@ -1,6 +1,7 @@
 import pandas as pd
 from typing import Literal
 from dasmixer.api.project import Project
+from dasmixer.utils.logger import logger
 from .sempai import Protein, ProteomicSample, DigestionParams
 
 async def calculate_lfq(
@@ -29,7 +30,7 @@ async def calculate_lfq(
     Returns:
         DataFrame with columns: protein_identification_id, algorithm, rel_value
     """
-    print(f'Calculating LFQ for sample {sample_id}')
+    logger.debug(f'Calculating LFQ for sample {sample_id}')
     dp = DigestionParams(
         enzyme=enzyme,
         min_peptide_length=min_length,
@@ -39,8 +40,8 @@ async def calculate_lfq(
     
     # Get protein identifications for this sample
     idents = await project.get_protein_identifications(sample_id=sample_id)
-    print('collected idents...')
-    print(idents)
+    logger.debug('collected idents...')
+    logger.debug(idents)
     if len(idents) == 0:
         # Return empty DataFrame with correct structure
         return pd.DataFrame(columns=['protein_identification_id', 'algorithm', 'rel_value'])
@@ -51,7 +52,7 @@ async def calculate_lfq(
         protein_identified=True,
         sample_id=int(sample_id),
     )
-    print(all_peptides)
+    logger.debug(all_peptides)
     # Get protein sequences
     fasta = await project.get_protein_db_to_search()
     
@@ -74,7 +75,7 @@ async def calculate_lfq(
                 observable_parameters=dp
             )
         )
-    print(proteins)
+    logger.debug(proteins)
     if len(proteins) == 0:
         return pd.DataFrame(columns=['protein_identification_id', 'algorithm', 'rel_value'])
     
@@ -88,8 +89,8 @@ async def calculate_lfq(
         calculate_coverage=False,
         absolute_concentrations='none'
     )
-    print('!!!!!! RESULT_DF:')
-    print(result_df)
+    logger.debug('RESULT_DF:')
+    logger.debug(result_df)
     
     # Merge with identification IDs
     all_res = pd.merge(
@@ -99,9 +100,9 @@ async def calculate_lfq(
         right_on='protein_id',
         how='inner',
     )
-    print(all_res)
-    print('!!!!!! ALL_RES:')
-    print(all_res.columns)
+    logger.debug(all_res)
+    logger.debug('ALL_RES:')
+    logger.debug(all_res.columns)
     # Pivot results to long format
     final = []
     for method in methods:

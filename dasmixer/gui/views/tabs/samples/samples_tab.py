@@ -10,6 +10,7 @@ from .samples_summary_section import SamplesSummarySection
 from .import_handlers import ImportHandlers
 from .dialogs.import_mode_dialog import ImportModeDialog
 from .dialogs.import_pattern_dialog import ImportPatternDialog
+from dasmixer.utils import logger
 from .dialogs.import_single_dialog import ImportSingleDialog
 
 
@@ -30,7 +31,7 @@ class SamplesTab(ft.Container):
     
     def __init__(self, project: Project):
         super().__init__()
-        print("SamplesTab init...")
+        logger.debug("SamplesTab init...")
         self.project = project
         self.expand = True
         self.padding = 0
@@ -55,29 +56,29 @@ class SamplesTab(ft.Container):
             dict mapping section name to section instance
         """
         sections = {}
-        print("SamplesTab create sections...")
+        logger.debug("SamplesTab create sections...")
         
         # Groups section
         sections['groups'] = GroupsSection(self.project, self.state, self)
-        print("groups...")
+        logger.debug("groups...")
         
         # Import section
         sections['import'] = ImportSection(self.project, self.state, self)
-        print("import...")
+        logger.debug("import...")
         
         # Tools section
         sections['tools'] = ToolsSection(self.project, self.state, self)
-        print("tools...")
+        logger.debug("tools...")
         
         # Samples summary section (lightweight — no ExpansionPanelList)
         sections['samples'] = SamplesSummarySection(self.project, self.state, self)
-        print("samples summary...")
+        logger.debug("samples summary...")
         
         return sections
     
     def _build_content(self) -> ft.Control:
         """Build tab layout."""
-        print('building samples tab content')
+        logger.debug('building samples tab content')
         return ft.Column([
             # Groups
             self.sections['groups'],
@@ -101,7 +102,7 @@ class SamplesTab(ft.Container):
     
     def did_mount(self):
         """Load initial data when tab is mounted."""
-        print("SamplesTab did_mount called")
+        logger.debug("SamplesTab did_mount called")
         
         # Initialize import handlers
         self.import_handlers = ImportHandlers(
@@ -123,7 +124,7 @@ class SamplesTab(ft.Container):
         (it may depend on their state, and is heavier due to per-sample queries).
         """
         import asyncio
-        print("Loading samples tab initial data...")
+        logger.debug("Loading samples tab initial data...")
         try:
             # Phase 1: independent lightweight sections in parallel
             priority_sections = ['groups', 'import', 'tools']
@@ -138,15 +139,14 @@ class SamplesTab(ft.Container):
             # Phase 2: samples section (depends on groups/tools counts, heavier)
             samples_section = self.sections.get('samples')
             if samples_section and hasattr(samples_section, 'load_data'):
-                print("Loading data for samples...")
+                logger.debug("Loading data for samples...")
                 await samples_section.load_data()
 
-            print("Samples tab initial data loaded successfully.")
+            logger.debug("Samples tab initial data loaded successfully.")
 
         except Exception as ex:
-            print(f"Error loading initial data: {ex}")
-            import traceback
-            traceback.print_exc()
+            logger.exception(ex)
+            logger.debug(f"Error loading initial data: {ex}")
     
     async def _on_import_complete(self):
         """Callback after import completes.

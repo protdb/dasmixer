@@ -8,6 +8,7 @@ from dasmixer.api.project.project import Project
 from dasmixer.api.inputs.registry import registry
 from dasmixer.utils.seek_files import seek_files
 from dasmixer.gui.utils import show_snack
+from dasmixer.utils import logger
 
 
 @dataclass
@@ -275,6 +276,7 @@ class ImportPatternDialog:
                 self.folder_field.value = folder_path
                 self.folder_field.update()
         except Exception as ex:
+            logger.exception(ex)
             show_snack(self.page, f"Error selecting folder: {ex}", ft.Colors.RED_400)
             self.page.update()
 
@@ -351,6 +353,7 @@ class ImportPatternDialog:
             self.files_list.update()
 
         except Exception as ex:
+            logger.exception(ex)
             show_snack(self.page, f"Error: {ex}", ft.Colors.RED_400)
             self.page.update()
 

@@ -5,6 +5,7 @@ from dasmixer.api.project.project import Project
 from dasmixer.api.project.dataclasses import Subset
 from ..constants import get_default_color
 from dasmixer.gui.utils import show_snack
+from dasmixer.utils import logger
 
 
 class GroupDialog:
@@ -186,5 +187,6 @@ class GroupDialog:
                 await self.on_success_callback()
         
         except Exception as ex:
+            logger.exception(ex)
             show_snack(self.page, f"Error: {ex}", ft.Colors.RED_400)
             self.page.update()
