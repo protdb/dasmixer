@@ -1,5 +1,6 @@
 """Main GUI application entry point."""
 
+import asyncio
 import flet as ft
 from pathlib import Path
 from dasmixer.api.config import config
@@ -218,6 +219,147 @@ class DASMixerApp:
         self.page.route = route
         self._route_change()
 
+    # ------------------------------------------------------------------
+    # Project migration
+    # ------------------------------------------------------------------
+
+    async def _check_project_version(self):
+        """
+        Проверяет версию открытого проекта и предлагает миграцию или предупреждает
+        о несовместимости.
+        """
+        from dasmixer.api.project.migrations import MigrationError
+        from dasmixer.versions import PROJECT_VERSION
+
+        needs_migration = await self.current_project.needs_migration()
+        is_too_new = await self.current_project.is_version_too_new()
+        project_version = await self.current_project.get_project_version()
+
+        if is_too_new:
+            await self._show_version_warning_dialog(project_version)
+            return
+
+        if needs_migration:
+            user_confirmed = await self._show_migration_dialog(project_version)
+            if user_confirmed:
+                await self._run_migration()
+
+    async def _show_version_warning_dialog(self, project_version: str):
+        """Dialog for project version newer than current DASMixer."""
+        from dasmixer.versions import PROJECT_VERSION
+
+        async def on_ok(e):
+            dialog.open = False
+            event.set()
+            self.page.update()
+
+        event = asyncio.Event()
+
+        dialog = ft.AlertDialog(
+            modal=True,
+            title=ft.Text("Incompatible Project Version"),
+            content=ft.Text(
+                f"This project was created with a newer version of DASMixer "
+                f"(project version: {project_version}, current: {PROJECT_VERSION}).\n\n"
+                f"You may encounter errors or unexpected behavior.\n"
+                f"It is strongly recommended to update DASMixer before using this project."
+            ),
+            actions=[
+                ft.ElevatedButton(content=ft.Text("OK"), on_click=on_ok),
+            ],
+        )
+        self.page.overlay.append(dialog)
+        dialog.open = True
+        self.page.update()
+
+        await event.wait()
+        dialog.open = False
+        try:
+            self.page.overlay.remove(dialog)
+        except ValueError:
+            pass
+        self.page.update()
+
+    async def _show_migration_dialog(self, project_version: str) -> bool:
+        """Dialog offering project migration. Returns True if user clicked Update."""
+        from dasmixer.versions import PROJECT_VERSION
+
+        result = [False]
+
+        def on_update(e):
+            result[0] = True
+            dialog.open = False
+            event.set()
+            self.page.update()
+
+        def on_skip(e):
+            result[0] = False
+            dialog.open = False
+            event.set()
+            self.page.update()
+
+        event = asyncio.Event()
+
+        dialog = ft.AlertDialog(
+            modal=True,
+            title=ft.Text("Project Update Required"),
+            content=ft.Container(
+                content=ft.Column([
+                    ft.Text(
+                        f"This project uses an older format (version {project_version}).\n"
+                        f"Current DASMixer requires version {PROJECT_VERSION}.\n\n"
+                        f"Without updating, you may encounter errors.\n"
+                        f"After updating, the project may not open correctly in older versions of DASMixer.\n\n"
+                        f"⚠ Note: project files can be large (several GB). \n"
+                        f"We recommend making a backup copy before proceeding.",
+                    ),
+                ], tight=True),
+                width=400,
+            ),
+            actions=[
+                ft.ElevatedButton(content=ft.Text("Skip"), on_click=on_skip),
+                ft.ElevatedButton(content=ft.Text("Update"), on_click=on_update),
+            ],
+        )
+        self.page.overlay.append(dialog)
+        dialog.open = True
+        self.page.update()
+
+        await event.wait()
+        try:
+            self.page.overlay.remove(dialog)
+        except ValueError:
+            pass
+        self.page.update()
+        return result[0]
+
+    async def _run_migration(self):
+        """Запускает миграцию с отображением прогресса."""
+        from dasmixer.api.project.migrations import MigrationError
+        from dasmixer.gui.components.progress_dialog import ProgressDialog
+        from dasmixer.versions import PROJECT_VERSION
+        from dasmixer.gui.utils import show_snack
+
+        dialog = ProgressDialog("Updating project...")
+        self.page.overlay.append(dialog)
+        dialog.open = True
+        self.page.update()
+
+        try:
+            dialog.update_progress(0.1, "Applying migrations...")
+            await self.current_project.apply_migrations()
+            dialog.update_progress(1.0, "Done")
+        except MigrationError as e:
+            dialog.open = False
+            self.page.update()
+            self._show_error(f"Migration failed: {e}")
+            return
+        finally:
+            dialog.open = False
+            self.page.update()
+
+        show_snack(self.page, f"Project updated to {PROJECT_VERSION}", ft.Colors.GREEN_400)
+
     def show_start_view(self):
         """Navigate to start screen."""
         self.page.route = "/"
@@ -332,6 +474,9 @@ class DASMixerApp:
 
             self.current_project = Project(path=project_path, create_if_not_exists=False)
             await self.current_project.initialize()
+
+            # Check project version for migration
+            await self._check_project_version()
 
             config.add_recent_project(str(project_path))
             self.show_project_view()

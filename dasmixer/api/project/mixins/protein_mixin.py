@@ -1,7 +1,6 @@
 """Mixin for protein operations, identification results, and quantification."""
 
 import pandas as pd
-from oauthlib.uri_validate import query
 
 from ..dataclasses import Protein
 from dasmixer.utils.logger import logger
@@ -24,7 +23,9 @@ class ProteinMixin:
         fasta_name: str | None = None,
         gene: str | None = None,
         name: str | None = None,
-        uniprot_data=None  # UniprotData object
+        uniprot_data=None,  # UniprotData object
+        taxon_id: int | None = None,
+        organism_name: str | None = None
     ) -> None:
         """
         Add or update protein.
@@ -37,15 +38,17 @@ class ProteinMixin:
             gene: Gene name
             name: Short protein name
             uniprot_data: UniprotData object
+            taxon_id: NCBI Taxonomy ID
+            organism_name: Organism display name
         """
         # Serialize uniprot_data
         uniprot_blob = self._serialize_pickle_gzip(uniprot_data)
         
         await self._execute(
             """INSERT OR REPLACE INTO protein 
-               (id, is_uniprot, fasta_name, sequence, gene, name, uniprot_data)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (protein_id, 1 if is_uniprot else 0, fasta_name, sequence, gene, name, uniprot_blob)
+               (id, is_uniprot, fasta_name, sequence, gene, name, uniprot_data, taxon_id, organism_name)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (protein_id, 1 if is_uniprot else 0, fasta_name, sequence, gene, name, uniprot_blob, taxon_id, organism_name)
         )
         await self.save()
         logger.debug(f"Added/updated protein: {protein_id}")
@@ -67,14 +70,16 @@ class ProteinMixin:
                 row.get('sequence'),
                 row.get('gene'),
                 row.get('name'),
-                uniprot_blob
+                uniprot_blob,
+                row.get('taxon_id', None),
+                row.get('organism_name', None),
             ))
         
         if rows_to_insert:
             await self._executemany(
                 """INSERT OR REPLACE INTO protein 
-                   (id, is_uniprot, fasta_name, sequence, gene, name, uniprot_data)
-                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                   (id, is_uniprot, fasta_name, sequence, gene, name, uniprot_data, taxon_id, organism_name)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 rows_to_insert
             )
             await self.save()
@@ -100,22 +105,41 @@ class ProteinMixin:
             sequence=row.get('sequence'),
             gene=row.get('gene'),
             name=row.get('name'),
-            uniprot_data=uniprot_data
+            uniprot_data=uniprot_data,
+            taxon_id=row.get('taxon_id'),
+            organism_name=row.get('organism_name'),
         )
 
     async def update_protein(self, protein: Protein) -> None:
+        """
+        Обновляет все поля белка в БД.
+        
+        Args:
+            protein: Protein dataclass с обновлёнными полями
+        """
         query = """
-        UPDATE protein
-        SET is_uniprot = ?, fasta_name = ?, sequence = ?, gene = ?, name = ? uniprot_data = ?
-        where id = ?
+            UPDATE protein
+            SET
+                is_uniprot    = ?,
+                fasta_name    = ?,
+                sequence      = ?,
+                gene          = ?,
+                name          = ?,
+                uniprot_data  = ?,
+                taxon_id      = ?,
+                organism_name = ?
+            WHERE id = ?
         """
         params = (
-            protein.is_uniprot,
+            1 if protein.is_uniprot else 0,
             protein.fasta_name,
             protein.sequence,
             protein.gene,
             protein.name,
             self._serialize_pickle_gzip(protein.uniprot_data),
+            protein.taxon_id,
+            protein.organism_name,
+            protein.id,
         )
         await self._execute(query, params)
         await self.save()
@@ -143,7 +167,9 @@ class ProteinMixin:
                 sequence=row.get('sequence'),
                 gene=row.get('gene'),
                 name=row.get('name'),
-                uniprot_data=uniprot_data
+                uniprot_data=uniprot_data,
+                taxon_id=row.get('taxon_id'),
+                organism_name=row.get('organism_name'),
             ))
         
         return proteins
@@ -508,7 +534,11 @@ class ProteinMixin:
                 s.name AS sample,
                 sub.name AS subset,
                 p.gene,
+                p.name          AS name,
+                p.fasta_name,
                 p.sequence,
+                p.taxon_id,
+                p.organism_name,
                 pir.peptide_count,
                 pir.uq_evidence_count AS unique_evidence_count,
                 pir.coverage AS coverage_percent,
@@ -656,9 +686,11 @@ class ProteinMixin:
         WITH protein_stats AS (
             SELECT
                 p.id as protein_id,
-				p.name,
+                p.name as name,
                 p.gene,
                 p.fasta_name,
+                p.taxon_id,
+                p.organism_name,
                 COUNT(DISTINCT pir.sample_id) as samples,
                 COUNT(DISTINCT s.subset_id) as subsets,
                 SUM(pir.peptide_count) as PSMs,
@@ -670,7 +702,8 @@ class ProteinMixin:
 			LEFT JOIN protein p ON p.id = pl.protein_id
             LEFT JOIN protein_identification_result pir ON p.id = pir.protein_id
             LEFT JOIN sample s ON pir.sample_id = s.id
-            GROUP BY p.id, p.gene, p.fasta_name
+            WHERE {where_clause}
+            GROUP BY p.id, p.name, p.gene, p.fasta_name, p.taxon_id, p.organism_name
         )
         SELECT * FROM protein_stats
         WHERE samples >= ? AND subsets >= ?
@@ -688,8 +721,18 @@ class ProteinMixin:
         except Exception as e:
             logger.error(f"get_protein_statistics query failed: {e}")
             return pd.DataFrame(columns=[
-                'protein_id', 'gene', 'fasta_name', 'samples', 'subsets', 'PSMs', 'unique_evidence'
+                'protein_id', 'name', 'gene', 'fasta_name', 'taxon_id', 'organism_name',
+                'samples', 'subsets', 'PSMs', 'unique_evidence'
             ])
+        
+        # Загружаем uniprot_data для виртуальных полей
+        if not df.empty:
+            uniprot_list = []
+            for protein_id in df['protein_id']:
+                protein = await self.get_protein(protein_id)
+                uniprot_list.append(protein.uniprot_data if protein else None)
+            df['uniprot_data'] = uniprot_list
+        
         return df
 
     async def count_protein_statistics(

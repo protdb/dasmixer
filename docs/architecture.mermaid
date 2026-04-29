@@ -1,0 +1,43 @@
+graph TB
+    classDef layer fill:#f5f5f5,stroke:#666,stroke-width:2,color:#000
+    classDef comp fill:#e3f2fd,stroke:#1565c0,color:#000
+    classDef db fill:#fff3e0,stroke:#e65100,color:#000
+    classDef ext fill:#f3e5f5,stroke:#7b1fa2,color:#000
+
+    subgraph GUI["GUI Layer — Flet"]
+        DASMixerApp["DASMixerApp"]
+        Views["Views<br/>(Start · Project · Settings · Plugins)"]
+        Tabs["Tabs<br/>(Samples · Peptides · Proteins · Reports · Plots · Export)"]
+        Components["Components<br/>(Table · Plot · Progress · Forms)"]
+    end
+    class GUI layer
+
+    subgraph API["Application Layer"]
+        Project["Project<br/>(Base + Mixin structure)"]
+        Input["Input Parsers<br/>(Spectre, Identifications, Sequence Library)"]
+        Calculations["Calculations<br/>(Ion match · PPM fix · Preferred selection<br/>Protein map · LFQ)"]
+        Reports["Reports<br/>(PCA · Volcano/FC · UpSet · Coverage)"]
+        Config["Config<br/>(pydantic-settings)"]
+    end
+    class API layer
+
+    Storage[("SQLite .dasmix (WAL mode)")]
+    Ext["External<br/>Flet · Plotly · PyWebView<br/>Peptacular · npysearch · semPAI"]
+    Plugins["Plugins<br/>(parser · report)"]
+
+    class Storage db
+    class Ext,Plugins ext
+
+    DASMixerApp --> Views
+    Views --> Tabs
+    Tabs --> Components
+    Components --> |Actions bridge| Project
+    Project --> Storage
+    Calculations --> Project
+    Input --> Project
+    Reports --> Project
+    Config --> Storage
+    Plugins --> Input
+    Plugins --> Reports
+    Ext -.- Components
+    Ext -.- Calculations

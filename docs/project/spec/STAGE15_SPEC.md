@@ -485,8 +485,8 @@ rows_to_insert.append((
     row.get('gene'),
     row.get('name'),
     uniprot_blob,
-    row.get('taxon_id'),       # НОВОЕ
-    row.get('organism_name'),  # НОВОЕ
+    row.get('taxon_id', None),       # НОВОЕ
+    row.get('organism_name', None),  # НОВОЕ
 ))
 ```
 
@@ -557,11 +557,6 @@ async def _run_enrich(self, e=None):
     )
     self.page.update()
 ```
-
-### 6.3 Блокировка кнопки во время работы
-
-Перед запуском: `self.calculate_btn.disabled = True; self.calculate_btn.update()`  
-После завершения (в `finally`): `self.calculate_btn.disabled = False; self.calculate_btn.update()`
 
 ---
 

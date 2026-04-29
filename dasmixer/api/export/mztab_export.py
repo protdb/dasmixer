@@ -122,7 +122,9 @@ async def export_mztab(
                 pir.coverage,
                 pir.intensity_sum,
                 p.gene,
-                p.name AS protein_name
+                p.name           AS name,
+                p.taxon_id,
+                p.organism_name
             FROM protein_identification_result pir
             LEFT JOIN protein p ON pir.protein_id = p.id
             WHERE pir.sample_id IN ({})
@@ -221,9 +223,12 @@ async def export_mztab(
                 if pd.notna(max_val):
                     best_score = float(max_val)
 
+            taxid_val = first_row.get("taxon_id")
+            species_val = first_row.get("organism_name")
+
             doc.add_protein(
                 accession=str(protein_id),
-                description=first_row.get("protein_name") or None,
+                description=first_row.get("name") or None,
                 database="FASTA",
                 search_engine=DASMIXER_SOFTWARE,
                 best_search_engine_score=best_score,
@@ -235,6 +240,8 @@ async def export_mztab(
                 protein_abundance_study_variable=abundance_sv or None,
                 protein_abundance_stdev_study_variable=stdev_sv or None,
                 protein_abundance_std_error_study_variable=stderr_sv or None,
+                taxid=int(taxid_val) if taxid_val is not None else None,
+                species=species_val or None,
             )
 
     await progress_callback(0.75, "Building PSM rows...")

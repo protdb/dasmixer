@@ -1,0 +1,24 @@
+---
+title: DASMixer Analysis Workflow
+---
+
+graph LR
+    classDef step fill:#e3f2fd,stroke:#1565c0,color:#000
+    classDef protein fill:#f3e5f5,stroke:#7b1fa2,color:#000
+    classDef report fill:#fff3e0,stroke:#e65100,color:#000
+
+    A["Create Project<br/>+ subsets + tools"]
+    B["Import Spectra<br/>(MGF files)"]
+    C["Import Identifications<br/>(De novo / Library search)"]
+    D["Validate Identifications<br/>(PPM + ion coverage)"]
+    E["Select Best per Spectrum<br/>(preferred identification)"]
+    F["Map Peptides → Proteins<br/>(npysearch BLAST)"]
+    G["Compute LFQ<br/>(emPAI / iBAQ / NSAF / Top3)"]
+    H["Generate Reports<br/>(PCA · Volcano · UpSet · Coverage)"]
+
+    A --> B --> C --> D --> E --> F --> G --> H
+
+    class A,B,C step
+    class D,E step
+    class F,G protein
+    class H report

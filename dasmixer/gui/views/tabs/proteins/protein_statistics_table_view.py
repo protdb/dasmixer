@@ -5,6 +5,20 @@ import pandas as pd
 
 from dasmixer.gui.components.base_table_view import BaseTableView
 from dasmixer.api.project.project import Project
+from dasmixer.utils.show_pathways import (
+    get_pathways_from_uniprot,
+    get_mol_functions_from_uniprot,
+    get_biological_processes_from_uniprot,
+    get_locations_from_uniprot,
+)
+
+
+VIRTUAL_FIELD_FUNCS: dict[str, callable] = {
+    'pathways': get_pathways_from_uniprot,
+    'mol_functions': get_mol_functions_from_uniprot,
+    'bio_processes': get_biological_processes_from_uniprot,
+    'subcellular_locations': get_locations_from_uniprot,
+}
 
 
 class ProteinStatisticsTableView(BaseTableView):
@@ -21,11 +35,22 @@ class ProteinStatisticsTableView(BaseTableView):
         'subsets': 'Groups',
         'PSMs': 'PSMs',
         'unique_evidence': 'Unique Evidence',
+        'name': 'Protein Name',
+        'taxon_id': 'Taxon ID',
+        'organism_name': 'Organism',
+        'pathways': 'Pathways',
+        'mol_functions': 'Molecular Functions',
+        'bio_processes': 'Biological Processes',
+        'subcellular_locations': 'Subcellular Locations',
     }
 
     column_filter_mapping = {
         'protein_id': 'protein_id',
         'gene': 'gene',
+    }
+
+    default_columns = {
+        'protein_id', 'gene', 'name', 'samples', 'subsets', 'PSMs', 'unique_evidence', 'subcellular_locations',
     }
 
     def __init__(self, project: Project, plot_callback=None):
@@ -97,23 +122,43 @@ class ProteinStatisticsTableView(BaseTableView):
         kwargs = self._build_filter_kwargs()
         try:
             if limit == -1:
-                df = await self.project.get_protein_statistics(
-                    **kwargs,
-                    limit=-1,
-                    offset=0
-                )
+                df = await self.project.get_protein_statistics(**kwargs, limit=-1, offset=0)
             else:
-                df = await self.project.get_protein_statistics(
-                    **kwargs,
-                    limit=limit,
-                    offset=offset
-                )
-        except Exception as ex:
+                df = await self.project.get_protein_statistics(**kwargs, limit=limit, offset=offset)
+        except Exception:
             import traceback
             traceback.print_exc()
             return pd.DataFrame(columns=list(self.header_name_mapping.keys())), None
 
-        return df, None
+        # Вычисляем виртуальные поля из uniprot_data
+        tooltip_data = {
+            'fasta_name': df['fasta_name'].to_list()
+        }
+        for vfield, func in VIRTUAL_FIELD_FUNCS.items():
+            display_vals = []
+            tooltip_vals = []
+            for uniprot_obj in df.get('uniprot_data', pd.Series(dtype=object)):
+                if uniprot_obj is not None:
+                    disp, tip = func(uniprot_obj)
+                else:
+                    disp, tip = None, None
+                display_vals.append(disp)
+                tooltip_vals.append(tip)
+            df[vfield] = display_vals
+            tooltip_data[vfield] = tooltip_vals
+
+        # Убираем служебную колонку перед отображением
+        if 'uniprot_data' in df.columns:
+            df = df.drop(columns=['uniprot_data'])
+        df['fasta_name'] = df['fasta_name'].apply(lambda x: x if len(x) <= 32 else x[:30]+'…')
+
+        # Строим tooltip_df для виртуальных полей
+        if tooltip_data:
+            tooltip_df = pd.DataFrame(tooltip_data, index=df.index)
+        else:
+            tooltip_df = None
+
+        return df, tooltip_df
 
     async def get_total_count(self) -> int:
         kwargs = self._build_filter_kwargs()

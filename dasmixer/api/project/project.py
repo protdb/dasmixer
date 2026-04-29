@@ -1,6 +1,7 @@
 """Main Project class for DASMixer - composed from mixins."""
 
 from .core import ProjectLifecycle
+from .migrations import MigrationMixin
 from .mixins import (
     SubsetMixin,
     ToolMixin,
@@ -18,6 +19,7 @@ from .mixins import (
 class Project(
     # Lifecycle and base functionality
     ProjectLifecycle,
+    MigrationMixin,
     
     # Domain-specific mixins
     SubsetMixin,

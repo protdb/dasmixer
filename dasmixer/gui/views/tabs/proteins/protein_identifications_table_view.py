@@ -15,6 +15,9 @@ class ProteinIdentificationsTableView(BaseTableView):
 
     header_name_mapping = {
         'protein_id': 'Protein ID',
+        'name': 'Protein Name',
+        'taxon_id': 'Taxon ID',
+        'organism_name': 'Organism',
         'sample': 'Sample',
         'subset': 'Group',
         'gene': 'Gene',
@@ -27,6 +30,10 @@ class ProteinIdentificationsTableView(BaseTableView):
         'iBAQ': 'iBAQ',
         'NSAF': 'NSAF',
         'Top3': 'Top3',
+    }
+
+    default_columns = {
+        'protein_id', 'gene', 'name', 'sample', 'subset', 'peptide_count', 'unique_evidence_count', 'coverage_percent', 'emPAI', 'iBAQ', 'NSAF', 'Top3'
     }
 
     column_filter_mapping = {
@@ -195,7 +202,7 @@ class ProteinIdentificationsTableView(BaseTableView):
             df = await self.project.get_protein_results_joined(**kwargs, limit=limit, offset=offset)
         tooltip_df = df[['fasta_name']]
         df['fasta_name'] = df['fasta_name'].apply(lambda x: x if len(x) <= 32 else x[:30]+'…')
-        return df, None
+        return df, tooltip_df
 
     async def get_total_count(self) -> int:
         kwargs = self._build_filter_kwargs()
