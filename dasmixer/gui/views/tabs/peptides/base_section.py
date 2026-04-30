@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 from dasmixer.api.project.project import Project
 from .shared_state import PeptidesTabState
 from dasmixer.gui.utils import show_snack
+from dasmixer.utils import logger
 
 
 class BaseSection(ft.Container, ABC):
@@ -72,7 +73,7 @@ class BaseSection(ft.Container, ABC):
             page.update()
         except RuntimeError:
             # Fallback if not in Flet context
-            print(f"ERROR: {message}")
+            logger.exception(f"ERROR: {message}")
     
     def show_success(self, message: str):
         """Show success snackbar using context."""
@@ -81,7 +82,7 @@ class BaseSection(ft.Container, ABC):
             show_snack(page, message, ft.Colors.GREEN_400)
             page.update()
         except RuntimeError:
-            print(f"SUCCESS: {message}")
+            logger.debug(f"SUCCESS: {message}")
     
     def show_info(self, message: str):
         """Show info snackbar using context."""
@@ -90,7 +91,7 @@ class BaseSection(ft.Container, ABC):
             show_snack(page, message, ft.Colors.BLUE_400)
             page.update()
         except RuntimeError:
-            print(f"INFO: {message}")
+            logger.debug(f"INFO: {message}")
     
     def show_warning(self, message: str):
         """Show warning snackbar using context."""
@@ -99,4 +100,4 @@ class BaseSection(ft.Container, ABC):
             show_snack(page, message, ft.Colors.ORANGE_400)
             page.update()
         except RuntimeError:
-            print(f"WARNING: {message}")
+            logger.debug(f"WARNING: {message}")

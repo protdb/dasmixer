@@ -4,6 +4,7 @@ import flet as ft
 
 from dasmixer.api.inputs.registry import registry
 from dasmixer.gui.utils import show_snack
+from dasmixer.utils import logger
 
 
 class AddToolDialog:
@@ -108,6 +109,7 @@ class AddToolDialog:
                     await self.on_success_callback()
                 
             except Exception as ex:
+                logger.exception(ex)
                 show_snack(self.page, f"Error: {ex}", ft.Colors.RED_400)
                 self.page.update()
         

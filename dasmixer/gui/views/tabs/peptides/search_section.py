@@ -7,6 +7,7 @@ from dasmixer.api.calculations.spectra.plot_flow import make_full_spectrum_plot
 from dasmixer.api.calculations.spectra.ion_match import IonMatchParameters
 from dasmixer.gui.components.plotly_viewer import PlotlyViewer
 from .base_section import BaseSection
+from dasmixer.utils import logger
 
 
 class SearchSection(BaseSection):
@@ -123,7 +124,7 @@ class SearchSection(BaseSection):
             self.state.needs_filter_refresh = False
             
         except Exception as ex:
-            print(f"Error refreshing filters: {ex}")
+            logger.exception("Error refreshing filters")
     
     async def search_identifications(self, e):
         """
@@ -173,8 +174,7 @@ class SearchSection(BaseSection):
                 await self.view_identification(None, first_row)
             
         except Exception as ex:
-            import traceback
-            print(f"Error in search: {traceback.format_exc()}")
+            logger.exception("Error in search")
             self.show_error(f"Error: {str(ex)}")
     
     def _display_results(self, results_df: pd.DataFrame):
@@ -320,8 +320,7 @@ class SearchSection(BaseSection):
             self.state.selected_spectrum_id = spectrum_id
             
         except Exception as ex:
-            import traceback
-            print(f"Error viewing identification: {traceback.format_exc()}")
+            logger.exception("Error viewing identification")
             
             self.plot_container.content = ft.Column([
                 ft.Text("Error loading spectrum", color=ft.Colors.RED_600, weight=ft.FontWeight.BOLD),

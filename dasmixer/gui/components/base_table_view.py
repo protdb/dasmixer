@@ -3,6 +3,7 @@
 import flet as ft
 import pandas as pd
 from typing import Callable
+from dasmixer.utils import logger
 from dasmixer.gui.utils import show_snack
 
 
@@ -56,7 +57,7 @@ class BaseTableView(ft.Container):
         self.filter_controls: dict[str, ft.Control] = {}
 
         self.current_page = 0
-        self.page_size = 50
+        self.page_size = 20
         self.total_rows = 0
         self.has_data = False
         self.is_loading = False
@@ -65,6 +66,9 @@ class BaseTableView(ft.Container):
         self._last_tooltips_df: pd.DataFrame | None = None
         self._all_columns: list[str] = []
         self._visible_columns: set[str] = set()
+
+        # suspend/resume support
+        self._is_suspended: bool = False
 
         self.filters_panel: ft.ExpansionPanel | None = None
         self.data_panel: ft.ExpansionPanel | None = None
@@ -177,12 +181,12 @@ class BaseTableView(ft.Container):
         self.page_size_dropdown = ft.Dropdown(
             label="Rows per page",
             options=[
-                ft.DropdownOption(key="25", text="25"),
+                ft.DropdownOption(key="20", text="20"),
                 ft.DropdownOption(key="50", text="50"),
                 ft.DropdownOption(key="100", text="100"),
                 ft.DropdownOption(key="200", text="200")
             ],
-            value="50",
+            value="20",
             width=150,
             on_text_change=self._on_page_size_change
         )
@@ -310,6 +314,7 @@ class BaseTableView(ft.Container):
             self.has_data = False
             self._show_error(str(ex))
             if self.page:
+                logger.exception(ex)
                 show_snack(self.page, f"Error loading data: {ex}", ft.Colors.RED_400)
                 self.page.update()
         finally:
@@ -574,6 +579,10 @@ class BaseTableView(ft.Container):
             if self.page:
                 self.page.update()
 
+            from dasmixer.gui.views.tabs.peptides.dialogs.progress_dialog import ProgressDialog
+            progress = ProgressDialog(self.page, "Exporting Table")
+            progress.show()
+
             fmt = format_radio.value or "csv"
             use_tech = tech_headers_cb.value
 
@@ -583,6 +592,8 @@ class BaseTableView(ft.Container):
 
                 if not use_tech and self.header_name_mapping:
                     df = df.rename(columns=self.header_name_mapping)
+
+                progress.update_progress(None, "Saving file...", "")
 
                 file_result = await ft.FilePicker().save_file(
                     file_name=f"{self.table_view_name}_export.{fmt}",
@@ -595,12 +606,18 @@ class BaseTableView(ft.Container):
                     else:
                         df.to_excel(file_result, index=False)
 
-                    if self.page:
-                        show_snack(self.page, f"Exported to {file_result}", ft.Colors.GREEN_400)
-                        self.page.update()
+                    from pathlib import Path as _Path
+                    progress.complete(f"Exported: {_Path(file_result).name}")
+                    import asyncio
+                    await asyncio.sleep(1)
+                    progress.close()
+                else:
+                    progress.close()
 
             except Exception as ex:
+                progress.close()
                 if self.page:
+                    logger.exception(ex)
                     show_snack(self.page, f"Export error: {ex}", ft.Colors.RED_400)
                     self.page.update()
 
@@ -672,6 +689,46 @@ class BaseTableView(ft.Container):
         if self.current_page < total_pages - 1:
             self.current_page += 1
             await self._load_table_data()
+
+    # ------------------------------------------------------------------
+    # Suspend / Resume  (called when parent tab becomes inactive/active)
+    # ------------------------------------------------------------------
+
+    def suspend(self) -> None:
+        """
+        Replace the rendered DataTable with a lightweight placeholder.
+
+        The data (self._last_df) is preserved in memory — resume() rebuilds
+        the table from it instantly without any DB query.
+        """
+        if self._is_suspended or not self.has_data:
+            return
+        self._is_suspended = True
+
+        if self.data_container is not None:
+            self.data_container.content = ft.Container(
+                content=ft.Text(
+                    "Table hidden (switch back to reload)",
+                    size=13,
+                    color=ft.Colors.GREY_500,
+                    italic=True,
+                ),
+                alignment=ft.Alignment.CENTER,
+                height=80,
+            )
+            # Deliberately do NOT call update() here — caller handles page.update()
+
+    def resume(self) -> None:
+        """
+        Restore the DataTable from the cached DataFrame without a DB query.
+        """
+        if not self._is_suspended:
+            return
+        self._is_suspended = False
+
+        if self._last_df is not None and not self._last_df.empty:
+            self._render_table(self._last_df)
+        # Caller handles page.update()
 
     # ------------------------------------------------------------------
     # Public load entry point

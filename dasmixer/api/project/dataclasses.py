@@ -138,6 +138,8 @@ class Protein:
     gene: str | None = None
     name: str | None = None  # NEW: Short protein name
     uniprot_data: 'UniprotData | None' = field(default=None, repr=False)  # NEW: UniprotData object
+    taxon_id: int | None = None            # NCBI Taxonomy ID
+    organism_name: str | None = None       # Organism display name
     
     # Enrichment data (loaded optionally) - kept for future use
     protein_atlas_data: dict | None = field(default=None, repr=False)
@@ -150,7 +152,9 @@ class Protein:
             'fasta_name': self.fasta_name,
             'sequence': self.sequence,
             'gene': self.gene,
-            'name': self.name
+            'name': self.name,
+            'taxon_id': self.taxon_id,
+            'organism_name': self.organism_name
         }
     
     @classmethod
@@ -163,6 +167,8 @@ class Protein:
             sequence=data.get('sequence'),
             gene=data.get('gene'),
             name=data.get('name'),
+            taxon_id=data.get('taxon_id'),
+            organism_name=data.get('organism_name'),
             uniprot_data=None,  # Will be loaded separately if needed
             protein_atlas_data=None  # Not stored in main table
         )

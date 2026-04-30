@@ -9,10 +9,10 @@ from .fasta_section import FastaSection
 from .tool_settings_section import ToolSettingsSection
 from .ion_settings_section import IonSettingsSection
 from .actions_section import ActionsSection
-from .matching_section import MatchingSection
 from .peptide_ion_table_view import PeptideIonTableView
 from .peptide_ion_plot_view import PeptideIonPlotView
 from .ion_calculations import IonCalculations
+from dasmixer.utils import logger
 
 
 class PeptidesTab(ft.Container):
@@ -25,7 +25,7 @@ class PeptidesTab(ft.Container):
     
     def __init__(self, project: Project):
         super().__init__()
-        print("PeptidesTab init...")
+        logger.debug("PeptidesTab init...")
         self.project = project
         self.expand = False
         self.padding = 0
@@ -53,7 +53,6 @@ class PeptidesTab(ft.Container):
         sections = {'fasta': FastaSection(self.project, self.state),
                     'tool_settings': ToolSettingsSection(self.project, self.state),
                     'ion_settings': IonSettingsSection(self.project, self.state),
-                    'matching': MatchingSection(self.project, self.state),
                     'actions': ActionsSection(self.project, self.state, self)}
         # FASTA section - protein library loading
 
@@ -65,12 +64,12 @@ class PeptidesTab(ft.Container):
 
         # Actions section (needs reference to tab for accessing other sections)
 
-        print('old sections created...')
+        logger.debug('old sections created...')
 
         # Search section - REPLACED with BaseTableAndPlotView
         table_view = PeptideIonTableView(self.project)
 
-        print('table view created...')
+        logger.debug('table view created...')
 
         plot_view = PeptideIonPlotView(self.project, ion_settings_section=sections['ion_settings'])
         
@@ -80,7 +79,7 @@ class PeptidesTab(ft.Container):
             plot_view=plot_view,
             title="Search and View Identifications"
         )
-        print('Sections created...')
+        logger.debug('Sections created...')
         
         return sections
     
@@ -89,14 +88,14 @@ class PeptidesTab(ft.Container):
         resp_sections = ['ion_settings', 'fasta']
         default_col = {
             ft.ResponsiveRowBreakpoint.XL: 6,
-            ft.ResponsiveRowBreakpoint.LG: 5,
-            ft.ResponsiveRowBreakpoint.MD: 8,
-            ft.ResponsiveRowBreakpoint.SM: 16
+            ft.ResponsiveRowBreakpoint.LG: 6,
+            ft.ResponsiveRowBreakpoint.MD: 12,
+            ft.ResponsiveRowBreakpoint.SM: 12
         }
         for k in resp_sections:
             self.sections[k].col = default_col
             self.sections[k].expand = True
-            self.sections[k].height = 500
+            self.sections[k].height = 565
 
         new_tab_layout = ft.Column(
             [
@@ -104,24 +103,17 @@ class PeptidesTab(ft.Container):
                     ft.Column(
                         [
                             self.sections['actions'],
-                            self.sections['matching'],
+                            ft.Container(content=self.sections['fasta'], expand=True),
                         ],
-                        col = {
-                            ft.ResponsiveRowBreakpoint.XL: 4,
-                            ft.ResponsiveRowBreakpoint.LG: 6,
-                            ft.ResponsiveRowBreakpoint.MD: 8,
-                            ft.ResponsiveRowBreakpoint.SM: 16
-
-                        },
+                        col = default_col,
                         expand = True,
-                        height = 500
+                        height = 565
                     ),
                     ft.Container(content=self.sections['ion_settings'], expand = True, col = default_col),
-                    ft.Container(content=self.sections['fasta'], expand = True, col = default_col),
                     # self.sections['ion_settings'],
                     # self.sections['fasta'],
                     ],
-                    columns = 16
+                    columns = 12
                 ),
                 ft.Container(height=10),
                 self.sections['tool_settings'],
@@ -164,7 +156,7 @@ class PeptidesTab(ft.Container):
     
     def did_mount(self):
         """Load initial data when tab is mounted."""
-        print("PeptidesTab did_mount called")
+        logger.debug("PeptidesTab did_mount called")
         
         # Store reference to self in page for sections to access
         if self.page:
@@ -173,24 +165,33 @@ class PeptidesTab(ft.Container):
         self.page.run_task(self._load_initial_data)
     
     async def _load_initial_data(self):
-        """Load all initial data for sections."""
-        print("Loading peptides tab initial data...")
+        """Load all initial data for sections in parallel."""
+        import asyncio
+        logger.debug("Loading peptides tab initial data...")
         try:
-            # Load data for each section that has load_data method
-            for section_name, section in self.sections.items():
-                print(f"Loading data for {section_name}...")
-                if hasattr(section, 'load_data'):
-                    await section.load_data()
-            
-            # Update protein count in shared state
-            self.state.protein_count = await self.project.get_protein_count()
-            
-            print("Peptides tab initial data loaded successfully")
-            
+            tasks = [
+                section.load_data()
+                for section in self.sections.values()
+                if hasattr(section, 'load_data')
+            ]
+            # Protein count runs alongside section loads
+            tasks.append(self._update_protein_count())
+
+            if tasks:
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+                for i, r in enumerate(results):
+                    if isinstance(r, Exception):
+                        logger.debug(f"[PeptidesTab] load_data task {i} failed: {r}")
+
+            logger.debug("Peptides tab initial data loaded successfully")
+
         except Exception as ex:
-            print(f"Error loading initial data: {ex}")
+            logger.exception(f"Error loading initial data: {ex}")
             import traceback
             traceback.print_exc()
+
+    async def _update_protein_count(self):
+        self.state.protein_count = await self.project.get_protein_count()
     
     async def refresh_all(self):
         """Refresh all sections."""

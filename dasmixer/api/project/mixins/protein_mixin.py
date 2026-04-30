@@ -23,7 +23,9 @@ class ProteinMixin:
         fasta_name: str | None = None,
         gene: str | None = None,
         name: str | None = None,
-        uniprot_data=None  # UniprotData object
+        uniprot_data=None,  # UniprotData object
+        taxon_id: int | None = None,
+        organism_name: str | None = None
     ) -> None:
         """
         Add or update protein.
@@ -36,15 +38,17 @@ class ProteinMixin:
             gene: Gene name
             name: Short protein name
             uniprot_data: UniprotData object
+            taxon_id: NCBI Taxonomy ID
+            organism_name: Organism display name
         """
         # Serialize uniprot_data
         uniprot_blob = self._serialize_pickle_gzip(uniprot_data)
         
         await self._execute(
             """INSERT OR REPLACE INTO protein 
-               (id, is_uniprot, fasta_name, sequence, gene, name, uniprot_data)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (protein_id, 1 if is_uniprot else 0, fasta_name, sequence, gene, name, uniprot_blob)
+               (id, is_uniprot, fasta_name, sequence, gene, name, uniprot_data, taxon_id, organism_name)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (protein_id, 1 if is_uniprot else 0, fasta_name, sequence, gene, name, uniprot_blob, taxon_id, organism_name)
         )
         await self.save()
         logger.debug(f"Added/updated protein: {protein_id}")
@@ -66,14 +70,16 @@ class ProteinMixin:
                 row.get('sequence'),
                 row.get('gene'),
                 row.get('name'),
-                uniprot_blob
+                uniprot_blob,
+                row.get('taxon_id', None),
+                row.get('organism_name', None),
             ))
         
         if rows_to_insert:
             await self._executemany(
                 """INSERT OR REPLACE INTO protein 
-                   (id, is_uniprot, fasta_name, sequence, gene, name, uniprot_data)
-                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                   (id, is_uniprot, fasta_name, sequence, gene, name, uniprot_data, taxon_id, organism_name)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 rows_to_insert
             )
             await self.save()
@@ -99,8 +105,45 @@ class ProteinMixin:
             sequence=row.get('sequence'),
             gene=row.get('gene'),
             name=row.get('name'),
-            uniprot_data=uniprot_data
+            uniprot_data=uniprot_data,
+            taxon_id=row.get('taxon_id'),
+            organism_name=row.get('organism_name'),
         )
+
+    async def update_protein(self, protein: Protein) -> None:
+        """
+        Обновляет все поля белка в БД.
+        
+        Args:
+            protein: Protein dataclass с обновлёнными полями
+        """
+        query = """
+            UPDATE protein
+            SET
+                is_uniprot    = ?,
+                fasta_name    = ?,
+                sequence      = ?,
+                gene          = ?,
+                name          = ?,
+                uniprot_data  = ?,
+                taxon_id      = ?,
+                organism_name = ?
+            WHERE id = ?
+        """
+        params = (
+            1 if protein.is_uniprot else 0,
+            protein.fasta_name,
+            protein.sequence,
+            protein.gene,
+            protein.name,
+            self._serialize_pickle_gzip(protein.uniprot_data),
+            protein.taxon_id,
+            protein.organism_name,
+            protein.id,
+        )
+        await self._execute(query, params)
+        await self.save()
+
     
     async def get_proteins(self, is_uniprot: bool | None = None) -> list[Protein]:
         """Get proteins, optionally filtered."""
@@ -124,7 +167,9 @@ class ProteinMixin:
                 sequence=row.get('sequence'),
                 gene=row.get('gene'),
                 name=row.get('name'),
-                uniprot_data=uniprot_data
+                uniprot_data=uniprot_data,
+                taxon_id=row.get('taxon_id'),
+                organism_name=row.get('organism_name'),
             ))
         
         return proteins
@@ -228,7 +273,7 @@ class ProteinMixin:
             params = (int(sample_id),)
         
         query += " ORDER BY id"
-        print(query, params)
+        logger.debug(f"{query} {params}")
         return await self.execute_query_df(query, params)
     
     async def get_protein_identification_count(self) -> int:
@@ -238,6 +283,16 @@ class ProteinMixin:
         if len(result) == 0:
             return 0
         return int(result.iloc[0]['count'])
+
+    async def get_identified_proteins(self, sample_id: int | None = None) -> list[str]:
+        query = "select distinct protein_id from protein_identification_result"
+        params = None
+        if sample_id is not None:
+            query += " WHERE sample_id = ?"
+            params = (int(sample_id),)
+        res = await self.execute_query_df(query, params)
+        return res['protein_id'].tolist()
+
     
     # Protein quantification results operations
     
@@ -347,9 +402,90 @@ class ProteinMixin:
         df = await self.execute_query_df(query, params_tuple)
         return df
     
+    async def count_protein_results_joined(
+        self,
+        sample: str | None = None,
+        subset: str | None = None,
+        min_peptides: int = 0,
+        min_unique: int = 0,
+        protein_id: str | None = None,
+        gene: str | None = None,
+        min_coverage: float | None = None,
+        max_coverage: float | None = None,
+        min_intensity: float | None = None,
+        max_intensity: float | None = None,
+    ) -> int:
+        """
+        Count rows that would be returned by get_protein_results_joined
+        (with optional filters).
+
+        Uses a lightweight COUNT(*) query — does NOT load all rows.
+        """
+        query = """
+            SELECT COUNT(*) AS cnt
+            FROM protein_identification_result pir
+            JOIN sample s ON pir.sample_id = s.id
+            LEFT JOIN subset sub ON s.subset_id = sub.id
+            LEFT JOIN protein p ON pir.protein_id = p.id
+            WHERE 1=1
+        """
+        params: list = []
+
+        if sample is not None:
+            query += " AND s.name = ?"
+            params.append(sample)
+
+        if subset is not None:
+            query += " AND sub.name = ?"
+            params.append(subset)
+
+        if protein_id:
+            query += " AND pir.protein_id LIKE ?"
+            params.append(f"%{protein_id}%")
+
+        if gene:
+            query += " AND p.gene LIKE ?"
+            params.append(f"%{gene}%")
+
+        if min_peptides > 0:
+            query += " AND pir.peptide_count >= ?"
+            params.append(min_peptides)
+
+        if min_unique > 0:
+            query += " AND pir.uq_evidence_count >= ?"
+            params.append(min_unique)
+
+        if min_coverage is not None:
+            query += " AND pir.coverage >= ?"
+            params.append(min_coverage)
+
+        if max_coverage is not None:
+            query += " AND pir.coverage <= ?"
+            params.append(max_coverage)
+
+        if min_intensity is not None:
+            query += " AND pir.intensity_sum >= ?"
+            params.append(min_intensity)
+
+        if max_intensity is not None:
+            query += " AND pir.intensity_sum <= ?"
+            params.append(max_intensity)
+
+        row = await self._fetchone(query, tuple(params) if params else None)
+        return int(row['cnt']) if row else 0
+
     async def get_protein_results_joined(
         self,
         sample: str | None = None,
+        subset: str | None = None,
+        protein_id: str | None = None,
+        gene: str | None = None,
+        min_peptides: int = 0,
+        min_unique: int = 0,
+        min_coverage: float | None = None,
+        max_coverage: float | None = None,
+        min_intensity: float | None = None,
+        max_intensity: float | None = None,
         limit: int = 100,
         offset: int = 0
     ) -> pd.DataFrame:
@@ -361,6 +497,15 @@ class ProteinMixin:
         
         Args:
             sample: Optional filter by sample name
+            subset: Optional filter by subset/group name
+            protein_id: Optional LIKE filter on protein ID
+            gene: Optional LIKE filter on gene name
+            min_peptides: Minimum peptide count
+            min_unique: Minimum unique evidence count
+            min_coverage: Minimum sequence coverage (%)
+            max_coverage: Maximum sequence coverage (%)
+            min_intensity: Minimum intensity sum
+            max_intensity: Maximum intensity sum
             limit: Maximum number of rows to return
             offset: Offset for pagination
         
@@ -389,7 +534,11 @@ class ProteinMixin:
                 s.name AS sample,
                 sub.name AS subset,
                 p.gene,
+                p.name          AS name,
+                p.fasta_name,
                 p.sequence,
+                p.taxon_id,
+                p.organism_name,
                 pir.peptide_count,
                 pir.uq_evidence_count AS unique_evidence_count,
                 pir.coverage AS coverage_percent,
@@ -410,19 +559,56 @@ class ProteinMixin:
                 ON pir.id = pqr_nsaf.protein_identification_id AND pqr_nsaf.algorithm = 'NSAF'
             LEFT JOIN protein_quantification_result pqr_top3 
                 ON pir.id = pqr_top3.protein_identification_id AND pqr_top3.algorithm = 'Top3'
+            WHERE 1=1
         """
         
-        params = None
-        
+        params: list = []
+
         if sample is not None:
-            query += " WHERE s.name = ?"
-            params = (sample, )
-        
+            query += " AND s.name = ?"
+            params.append(sample)
+
+        if subset is not None:
+            query += " AND sub.name = ?"
+            params.append(subset)
+
+        if protein_id:
+            query += " AND pir.protein_id LIKE ?"
+            params.append(f"%{protein_id}%")
+
+        if gene:
+            query += " AND p.gene LIKE ?"
+            params.append(f"%{gene}%")
+
+        if min_peptides > 0:
+            query += " AND pir.peptide_count >= ?"
+            params.append(min_peptides)
+
+        if min_unique > 0:
+            query += " AND pir.uq_evidence_count >= ?"
+            params.append(min_unique)
+
+        if min_coverage is not None:
+            query += " AND pir.coverage >= ?"
+            params.append(min_coverage)
+
+        if max_coverage is not None:
+            query += " AND pir.coverage <= ?"
+            params.append(max_coverage)
+
+        if min_intensity is not None:
+            query += " AND pir.intensity_sum >= ?"
+            params.append(min_intensity)
+
+        if max_intensity is not None:
+            query += " AND pir.intensity_sum <= ?"
+            params.append(max_intensity)
+
         query += " ORDER BY s.name, pir.protein_id"
         if limit != -1:
             query += f" LIMIT {limit} OFFSET {offset}"
         
-        df = await self.execute_query_df(query, params)
+        df = await self.execute_query_df(query, tuple(params) if params else None)
         
         # Calculate weight from sequence
         if len(df) > 0 and 'sequence' in df.columns:
@@ -447,6 +633,7 @@ class ProteinMixin:
         fasta_name: str = '',
         min_samples: int = 0,
         min_subsets: int = 0,
+        only_identified: bool = True,
         limit: int = 100,
         offset: int = 0
     ) -> pd.DataFrame:
@@ -457,9 +644,10 @@ class ProteinMixin:
             protein_id: Filter protein ID (LIKE)
             gene: Filter gene name (LIKE)
             fasta_name: Filter FASTA name (LIKE)
-            min_samples: Minimum number of samples
-            min_subsets: Minimum number of subsets
-            limit: Maximum rows to return
+            min_samples: Minimum number of samples (default 0 = include all identified)
+            min_subsets: Minimum number of subsets (default 0)
+            only_identified: If True (default), only return proteins with at least 1 sample
+            limit: Maximum rows to return (-1 = no limit)
             offset: Pagination offset
         
         Returns:
@@ -470,11 +658,11 @@ class ProteinMixin:
                 - samples: int (count of samples)
                 - subsets: int (count of subsets)
                 - PSMs: int (count of peptide matches)
-                - unique: int (count of unique evidence)
+                - unique_evidence: int (count of unique evidence)
         """
-        # Build WHERE conditions
+        # Build WHERE conditions for protein table filter
         where_parts = ["1=1"]
-        params = []
+        params: list = []
         
         if protein_id:
             where_parts.append("p.id LIKE ?")
@@ -489,39 +677,129 @@ class ProteinMixin:
             params.append(f"%{fasta_name}%")
         
         where_clause = " AND ".join(where_parts)
+
+        # Effective min_samples for HAVING clause
+        effective_min_samples = max(min_samples, 1) if only_identified else min_samples
         
         # Main query with aggregation
         query = f"""
         WITH protein_stats AS (
             SELECT
                 p.id as protein_id,
+                p.name as name,
                 p.gene,
-                SUBSTR(p.fasta_name, 1, 30) as fasta_name,
-                COUNT(DISTINCT s.id) as samples,
-                COUNT(DISTINCT sub.id) as subsets,
-                COUNT(pm.id) as PSMs,
-                SUM(CASE WHEN pm.unique_evidence = 1 THEN 1 ELSE 0 END) as unique_evidence
-            FROM protein p
+                p.fasta_name,
+                p.taxon_id,
+                p.organism_name,
+                COUNT(DISTINCT pir.sample_id) as samples,
+                COUNT(DISTINCT s.subset_id) as subsets,
+                SUM(pir.peptide_count) as PSMs,
+				CAST(ROUND(AVG(pir.peptide_count)) AS INTEGER) as mean_psm,
+                SUM(pir.uq_evidence_count) as unique_evidence,
+				CAST(ROUND(AVG(pir.uq_evidence_count)) AS INTEGER) as mean_unique
+            FROM
+			(select distinct protein_id from protein_identification_result) as pl
+			LEFT JOIN protein p ON p.id = pl.protein_id
             LEFT JOIN protein_identification_result pir ON p.id = pir.protein_id
             LEFT JOIN sample s ON pir.sample_id = s.id
-            LEFT JOIN subset sub ON s.subset_id = sub.id
-            LEFT JOIN peptide_match pm ON p.id = pm.protein_id
             WHERE {where_clause}
-            GROUP BY p.id, p.gene, p.fasta_name
+            GROUP BY p.id, p.name, p.gene, p.fasta_name, p.taxon_id, p.organism_name
         )
         SELECT * FROM protein_stats
         WHERE samples >= ? AND subsets >= ?
-        ORDER BY protein_id
+        ORDER BY samples DESC, protein_id
         LIMIT ? OFFSET ?
         """
         
         if limit == -1:
-            params.extend([min_samples, min_subsets, 999999999, 0])
+            params.extend([effective_min_samples, min_subsets, 999999999, 0])
         else:
-            params.extend([min_samples, min_subsets, limit, offset])
+            params.extend([effective_min_samples, min_subsets, limit, offset])
 
-        df = await self.execute_query_df(query, tuple(params))
+        try:
+            df = await self.execute_query_df(query, tuple(params))
+        except Exception as e:
+            logger.error(f"get_protein_statistics query failed: {e}")
+            return pd.DataFrame(columns=[
+                'protein_id', 'name', 'gene', 'fasta_name', 'taxon_id', 'organism_name',
+                'samples', 'subsets', 'PSMs', 'unique_evidence'
+            ])
+        
+        # Загружаем uniprot_data для виртуальных полей
+        if not df.empty:
+            uniprot_list = []
+            for protein_id in df['protein_id']:
+                protein = await self.get_protein(protein_id)
+                uniprot_list.append(protein.uniprot_data if protein else None)
+            df['uniprot_data'] = uniprot_list
+        
         return df
+
+    async def count_protein_statistics(
+        self,
+        protein_id: str = '',
+        gene: str = '',
+        fasta_name: str = '',
+        min_samples: int = 0,
+        min_subsets: int = 0,
+        only_identified: bool = True,
+    ) -> int:
+        """
+        Count rows for get_protein_statistics without loading all data.
+        
+        Args:
+            protein_id: Filter protein ID (LIKE)
+            gene: Filter gene name (LIKE)
+            fasta_name: Filter FASTA name (LIKE)
+            min_samples: Minimum number of samples
+            min_subsets: Minimum number of subsets
+            only_identified: If True (default), only count proteins with at least 1 sample
+        
+        Returns:
+            int: Row count
+        """
+        where_parts = ["1=1"]
+        params: list = []
+
+        if protein_id:
+            where_parts.append("p.id LIKE ?")
+            params.append(f"%{protein_id}%")
+
+        if gene:
+            where_parts.append("p.gene LIKE ?")
+            params.append(f"%{gene}%")
+
+        if fasta_name:
+            where_parts.append("p.fasta_name LIKE ?")
+            params.append(f"%{fasta_name}%")
+
+        where_clause = " AND ".join(where_parts)
+        effective_min_samples = max(min_samples, 1) if only_identified else min_samples
+
+        query = f"""
+        WITH protein_stats AS (
+            SELECT
+                p.id as protein_id,
+                COUNT(DISTINCT pir.sample_id) as samples,
+                COUNT(DISTINCT s.subset_id) as subsets
+            FROM protein p
+            LEFT JOIN protein_identification_result pir ON p.id = pir.protein_id
+            LEFT JOIN sample s ON pir.sample_id = s.id
+            WHERE {where_clause}
+            GROUP BY p.id
+        )
+        SELECT COUNT(*) AS cnt FROM protein_stats
+        WHERE samples >= ? AND subsets >= ?
+        """
+
+        params.extend([effective_min_samples, min_subsets])
+
+        try:
+            row = await self._fetchone(query, tuple(params))
+            return int(row['cnt']) if row else 0
+        except Exception as e:
+            logger.error(f"count_protein_statistics query failed: {e}")
+            return 0
 
     async def clear_protein_identifications_for_sample(self, sample_id: int) -> None:
         """

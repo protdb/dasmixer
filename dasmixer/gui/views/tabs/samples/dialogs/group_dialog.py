@@ -5,6 +5,7 @@ from dasmixer.api.project.project import Project
 from dasmixer.api.project.dataclasses import Subset
 from ..constants import get_default_color
 from dasmixer.gui.utils import show_snack
+from dasmixer.utils import logger
 
 
 class GroupDialog:
@@ -33,50 +34,75 @@ class GroupDialog:
         self.dialog = None
     
     async def show(self):
-        """Show the dialog."""
-        # Get default color for new groups
-        if not self.is_edit_mode:
+        """Show the dialog immediately, then populate fields."""
+        dlg_title = "Edit Group" if self.is_edit_mode else "Add Comparison Group"
+
+        # For edit mode, all data is already available — no await needed.
+        # For create mode we need get_subsets() to pick a default color.
+        if self.is_edit_mode:
+            default_color = self.group.display_color or "#3B82F6"
+            await self._show_with_color(dlg_title, default_color)
+        else:
+            # Show spinner immediately, load color in background
+            self._spinner_col = ft.Column(
+                [ft.ProgressRing(width=28, height=28, stroke_width=3)],
+                tight=True,
+                width=400,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            )
+            self.dialog = ft.AlertDialog(
+                title=ft.Text(dlg_title),
+                content=self._spinner_col,
+                actions=[ft.TextButton("Cancel", on_click=self._close)],
+            )
+            self.page.overlay.append(self.dialog)
+            self.dialog.open = True
+            self.page.update()
+
             groups = await self.project.get_subsets()
             default_color = get_default_color(len(groups))
-        else:
-            default_color = self.group.display_color or "#3B82F6"
-        
-        # Remove # from color for display
+            await self._fill_dialog(dlg_title, default_color)
+
+    async def _show_with_color(self, dlg_title: str, default_color: str):
+        """Build and open dialog immediately (edit mode — no async needed)."""
+        self.dialog = ft.AlertDialog(
+            title=ft.Text(dlg_title),
+            content=ft.ProgressRing(width=28, height=28, stroke_width=3),
+            actions=[ft.TextButton("Cancel", on_click=self._close)],
+        )
+        self.page.overlay.append(self.dialog)
+        self.dialog.open = True
+        self.page.update()
+        await self._fill_dialog(dlg_title, default_color)
+
+    async def _fill_dialog(self, dlg_title: str, default_color: str):
+        """Replace dialog content with the actual form."""
         if default_color.startswith('#'):
             default_color = default_color[1:]
-        
-        # Create fields
+
         self.name_field = ft.TextField(
             label="Group Name",
             value=self.group.name if self.is_edit_mode else "",
-            autofocus=True
+            autofocus=True,
         )
-        
         self.details_field = ft.TextField(
             label="Description (optional)",
             value=self.group.details if self.is_edit_mode and self.group.details else "",
             multiline=True,
             min_lines=2,
-            max_lines=4
+            max_lines=4,
         )
-        
         self.color_field = ft.TextField(
             label="Color (hex)",
             value=default_color,
             max_length=6,
-            hint_text="e.g., FF0000 for red"
+            hint_text="e.g., FF0000 for red",
         )
-        
-        # Color preview
         color_preview = ft.Container(
-            width=50,
-            height=50,
-            border_radius=5,
-            bgcolor=f"#{default_color}"
+            width=50, height=50, border_radius=5, bgcolor=f"#{default_color}"
         )
-        
+
         def update_color_preview(e):
-            """Update color preview when color field changes."""
             color_value = self.color_field.value
             if color_value:
                 if not color_value.startswith('#'):
@@ -84,36 +110,31 @@ class GroupDialog:
                 try:
                     color_preview.bgcolor = color_value
                     color_preview.update()
-                except:
+                except Exception:
                     pass
-        
+
         self.color_field.on_change = update_color_preview
-        
-        # Create dialog
-        self.dialog = ft.AlertDialog(
-            title=ft.Text("Edit Group" if self.is_edit_mode else "Add Comparison Group"),
-            content=ft.Column([
+
+        self.dialog.content = ft.Column(
+            [
                 self.name_field,
                 self.details_field,
-                ft.Row([
-                    self.color_field,
-                    color_preview
-                ], alignment=ft.MainAxisAlignment.START, spacing=10)
-            ], tight=True, width=400),
-            actions=[
-                ft.TextButton(
-                    "Cancel",
-                    on_click=self._close
+                ft.Row(
+                    [self.color_field, color_preview],
+                    alignment=ft.MainAxisAlignment.START,
+                    spacing=10,
                 ),
-                ft.ElevatedButton(
-                    "Save" if self.is_edit_mode else "Add",
-                    on_click=lambda e: self.page.run_task(self._save, e)
-                )
-            ]
+            ],
+            tight=True,
+            width=400,
         )
-        
-        self.page.overlay.append(self.dialog)
-        self.dialog.open = True
+        self.dialog.actions = [
+            ft.TextButton("Cancel", on_click=self._close),
+            ft.ElevatedButton(
+                "Save" if self.is_edit_mode else "Add",
+                on_click=lambda e: self.page.run_task(self._save, e),
+            ),
+        ]
         self.page.update()
     
     def _close(self, e=None):
@@ -166,5 +187,6 @@ class GroupDialog:
                 await self.on_success_callback()
         
         except Exception as ex:
+            logger.exception(ex)
             show_snack(self.page, f"Error: {ex}", ft.Colors.RED_400)
             self.page.update()

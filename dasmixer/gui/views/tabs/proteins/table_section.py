@@ -4,6 +4,7 @@ import flet as ft
 import pandas as pd
 
 from .base_section import BaseSection
+from dasmixer.utils import logger
 
 
 class TableSection(BaseSection):
@@ -111,7 +112,7 @@ class TableSection(BaseSection):
             rows = []
             if len(df) > 0:
                 for _, row in df.iterrows():
-                    print('appending row to table...')
+                    logger.debug('appending row to table...')
                     rows.append(
                         ft.DataRow(
                             cells=[
@@ -137,10 +138,9 @@ class TableSection(BaseSection):
             if self.page:
                 self.update()
         
-        except Exception as ex:
-            import traceback
-            traceback.print_exc()
-            self.show_error(f"Error loading data: {str(ex)}")
+        except Exception:
+            logger.exception("Error loading data")
+            self.show_error("Error loading data")
     
     def _on_sample_filter_changed(self, e):
         """Handle sample filter change."""

@@ -7,6 +7,7 @@ safely used inside a multiprocessing.Pool without pickling issues.
 
 from dasmixer.api.calculations.spectra.ion_match import IonMatchParameters, match_predictions
 from dasmixer.utils.ppm import calculate_ppm_and_charge, calculate_theor_mass
+from dasmixer.utils.logger import logger
 
 
 def process_identification_batch(
@@ -99,7 +100,7 @@ def process_identification_batch(
             })
 
         except Exception as exc:
-            print(f"[coverage_worker] Error on id={ident_id}: {exc}")
+            logger.exception(f"[coverage_worker] Error on id={ident_id}: {exc}")
             results.append({
                 'id': ident_id,
                 'ppm': None,
@@ -184,7 +185,7 @@ def process_peptide_match_batch(
             })
 
         except Exception as exc:
-            print(f"[coverage_worker] Error on match_id={match_id}: {exc}")
+            logger.exception(f"[coverage_worker] Error on match_id={match_id}: {exc}")
             results.append({
                 'id': match_id,
                 'matched_ppm': None,

@@ -1,9 +1,11 @@
 """Groups section - manage comparison groups."""
 
+import asyncio
 import flet as ft
 from dasmixer.api.project.project import Project
 from .base_section import BaseSection
 from .shared_state import SamplesTabState
+from dasmixer.utils import logger
 from .dialogs.group_dialog import GroupDialog
 
 
@@ -31,52 +33,58 @@ class GroupsSection(BaseSection):
         ], spacing=10)
     
     async def load_data(self):
-        """Load groups list."""
-        print("Loading groups...")
-        groups = await self.project.get_subsets()
-        
+        """Load groups list using a single batch query for sample counts."""
+        logger.debug("Loading groups...")
+        # Single query for groups + single query for counts — no per-group queries
+        groups, counts_by_subset = await asyncio.gather(
+            self.project.get_subsets(),
+            self.project.get_sample_counts_by_subset(),
+        )
+
         self.groups_list.controls.clear()
-        
+
         for group in groups:
-            # Count samples in group
-            samples = await self.project.get_samples(subset_id=group.id)
-            
+            count = counts_by_subset.get(group.id, 0)
             self.groups_list.controls.append(
                 ft.ListTile(
                     leading=ft.Container(
                         content=ft.Icon(ft.Icons.FOLDER, color=group.display_color or ft.Colors.PRIMARY),
-                        width=40
+                        width=40,
                     ),
                     title=ft.Text(group.name, weight=ft.FontWeight.BOLD),
                     subtitle=ft.Text(
-                        f"{len(samples)} samples" + (f" • {group.details}" if group.details else "")
+                        f"{count} samples" + (f" • {group.details}" if group.details else "")
                     ),
-                    trailing=ft.Row([
-                        ft.IconButton(
-                            icon=ft.Icons.EDIT_OUTLINED,
-                            icon_color=ft.Colors.BLUE_400,
-                            tooltip="Edit group",
-                            on_click=lambda e, g=group: self.page.run_task(self._show_edit_group_dialog, e, g)
-                        ),
-                        ft.IconButton(
-                            icon=ft.Icons.DELETE_OUTLINE,
-                            icon_color=ft.Colors.RED_400,
-                            tooltip="Delete group",
-                            on_click=lambda e, g=group: self.page.run_task(self._delete_group, e, g)
-                        )
-                    ], tight=True, spacing=0),
-                    data=group.id
+                    trailing=ft.Row(
+                        [
+                            ft.IconButton(
+                                icon=ft.Icons.EDIT_OUTLINED,
+                                icon_color=ft.Colors.BLUE_400,
+                                tooltip="Edit group",
+                                on_click=lambda e, g=group: self.page.run_task(self._show_edit_group_dialog, e, g),
+                            ),
+                            ft.IconButton(
+                                icon=ft.Icons.DELETE_OUTLINE,
+                                icon_color=ft.Colors.RED_400,
+                                tooltip="Delete group",
+                                on_click=lambda e, g=group: self.page.run_task(self._delete_group, e, g),
+                            ),
+                        ],
+                        tight=True,
+                        spacing=0,
+                    ),
+                    data=group.id,
                 )
             )
-        
+
         if not groups:
             self.groups_list.controls.append(
                 ft.Text("No groups. Click 'Add Group' to create one.", italic=True)
             )
-        
-        print(f"Groups loaded: {len(groups)}")
+
+        logger.debug(f"Groups loaded: {len(groups)}")
         self.state.groups_count = len(groups)
-        
+
         if self.groups_list.page:
             self.groups_list.update()
     
@@ -129,6 +137,7 @@ class GroupsSection(BaseSection):
                 
                 self.show_warning(f"Cannot delete: {str(ex)}")
             except Exception as ex:
+                logger.exception(ex)
                 confirm_dialog.open = False
                 self.page.update()
                 

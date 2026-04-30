@@ -1,4 +1,5 @@
 """SQL schema for DASMixer project database."""
+from dasmixer.versions import PROJECT_VERSION
 
 # Complete SQL schema for SQLite database
 # Note: SQLite doesn't have native JSON type, using TEXT for JSON fields
@@ -131,7 +132,9 @@ CREATE TABLE IF NOT EXISTS protein (
     sequence TEXT,
     gene TEXT,
     name TEXT,  -- Short protein name
-    uniprot_data BLOB  -- Serialized UniprotData object (pickle + gzip)
+    uniprot_data BLOB,  -- Serialized UniprotData object (pickle + gzip)
+    taxon_id INTEGER,           -- NCBI Taxonomy ID (nullable)
+    organism_name TEXT          -- Organism display name (nullable)
 );
 
 CREATE INDEX IF NOT EXISTS idx_protein_uniprot ON protein(is_uniprot);
@@ -246,7 +249,7 @@ CREATE INDEX IF NOT EXISTS idx_saved_plots_created ON saved_plots(created_at);
 
 # Default project metadata
 DEFAULT_METADATA = {
-    'version': '0.1.0',
+    'version': PROJECT_VERSION,
     'created_at': None,  # Will be set on creation
     'modified_at': None  # Will be updated on each save
 }

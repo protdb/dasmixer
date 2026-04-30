@@ -14,13 +14,11 @@ from dasmixer.api.calculations.spectra.ion_match import IonMatchParameters
 from dasmixer.api.calculations.spectra.coverage_worker import process_peptide_match_batch
 from dasmixer.api.calculations.spectra.identification_processor import process_identificatons_batch
 from dasmixer.api.project.project import Project
+from dasmixer.api.config import config as _config
 from .shared_state import PeptidesTabState
 from .dialogs.progress_dialog import ProgressDialog
 from dasmixer.gui.utils import show_snack
-
-# Number of worker processes: leave one CPU free for the UI/async loop
-_WORKER_COUNT = max(1, (os.cpu_count() or 2) - 1)
-_BATCH_SIZE = 20000
+from dasmixer.utils import logger
 
 
 class IonCalculations:
@@ -46,7 +44,7 @@ class IonCalculations:
             show_snack(page, message, ft.Colors.RED_400)
             page.update()
         else:
-            print(f"ERROR: {message}")
+            logger.debug(f"ERROR: {message}")
 
     def show_success(self, message: str):
         page = self._get_page()
@@ -54,7 +52,7 @@ class IonCalculations:
             show_snack(page, message, ft.Colors.GREEN_400)
             page.update()
         else:
-            print(f"SUCCESS: {message}")
+            logger.debug(f"SUCCESS: {message}")
 
     def show_info(self, message: str):
         page = self._get_page()
@@ -62,7 +60,7 @@ class IonCalculations:
             show_snack(page, message, ft.Colors.BLUE_400)
             page.update()
         else:
-            print(f"INFO: {message}")
+            logger.debug(f"INFO: {message}")
 
     def show_warning(self, message: str):
         page = self._get_page()
@@ -70,7 +68,7 @@ class IonCalculations:
             show_snack(page, message, ft.Colors.ORANGE_400)
             page.update()
         else:
-            print(f"WARNING: {message}")
+            logger.debug(f"WARNING: {message}")
 
     # ------------------------------------------------------------------
     # Dialog trigger
@@ -179,12 +177,16 @@ class IonCalculations:
         total = len(matches_with_spectra)
         total_processed = 0
 
+        # Get batch size and worker count from config
+        batch_size = _config.identification_processing_batch_size
+        worker_count = _config.max_cpu_threads or max(1, (os.cpu_count() or 2) - 1)
+
         try:
             loop = asyncio.get_event_loop()
 
-            with ProcessPoolExecutor(max_workers=_WORKER_COUNT) as executor:
-                for batch_start in range(0, total, _BATCH_SIZE):
-                    batch = matches_with_spectra[batch_start: batch_start + _BATCH_SIZE]
+            with ProcessPoolExecutor(max_workers=worker_count) as executor:
+                for batch_start in range(0, total, batch_size):
+                    batch = matches_with_spectra[batch_start: batch_start + batch_size]
 
                     results = await loop.run_in_executor(
                         executor,
@@ -212,7 +214,7 @@ class IonCalculations:
 
         except Exception as exc:
             import traceback
-            print(f"Error in calculate_protein_metrics_internal: {traceback.format_exc()}")
+            logger.exception(f"Error in calculate_protein_metrics_internal: {traceback.format_exc()}")
             try:
                 dialog.close()
             except Exception:

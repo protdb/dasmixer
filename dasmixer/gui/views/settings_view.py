@@ -1,11 +1,45 @@
 """Settings view — application settings screen."""
 
 import re
+import os
 import flet as ft
+from dasmixer.utils import logger
 from dasmixer.api.config import config
 from dasmixer.gui.utils import show_snack
 
 _HEX_RE = re.compile(r'^#[0-9a-fA-F]{6}$')
+
+
+def _apply_logging_config(cfg) -> None:
+    """Configure root logger based on AppConfig settings."""
+    import logging
+    from datetime import datetime
+
+    root = logging.getLogger()
+
+    # Remove any existing file handlers to avoid duplicates on re-save
+    for h in list(root.handlers):
+        if isinstance(h, logging.FileHandler):
+            h.close()
+            root.removeHandler(h)
+
+    level = getattr(logging, cfg.log_level, logging.INFO)
+    root.setLevel(level)
+
+    if cfg.log_to_file:
+        log_dir = (
+            Path(cfg.log_folder)
+            if cfg.log_folder
+            else Path.home() / ".cache" / "dasmixer" / "logs"
+        )
+        log_dir.mkdir(parents=True, exist_ok=True)
+        log_file = log_dir / f"dasmixer_{datetime.now().strftime('%Y%m%d')}.log"
+        fh = logging.FileHandler(log_file, mode="a", encoding="utf-8")
+        fh.setLevel(level)
+        fh.setFormatter(logging.Formatter(
+            "%(asctime)s %(name)s %(levelname)s %(message)s"
+        ))
+        root.addHandler(fh)
 
 _LARGE_BATCH_THRESHOLD = 100_000
 _LARGE_BATCH_WARNING = (
@@ -106,6 +140,76 @@ class SettingsView(ft.View):
             ),
         )
 
+        # --- Max CPU Threads ---
+        cpu_auto = max(1, (os.cpu_count() or 2) - 1)
+        self._cpu_threads_field = ft.TextField(
+            label="Max CPU Threads",
+            value=str(config.max_cpu_threads) if config.max_cpu_threads is not None else "",
+            hint_text=f"Leave empty for auto ({cpu_auto} on this machine)",
+            width=280,
+            keyboard_type=ft.KeyboardType.NUMBER,
+        )
+
+        processing_section = self._section(
+            title="Processing",
+            subtitle="Number of parallel CPU threads used during batch calculations. Leave empty for automatic (cpu_count - 1).",
+            content=ft.Row([self._cpu_threads_field], spacing=10),
+        )
+
+        # --- Logging ---
+        self._log_to_file_cb = ft.Checkbox(
+            label="Log operations to file",
+            value=config.log_to_file,
+        )
+        self._log_level_dropdown = ft.Dropdown(
+            label="Log level",
+            width=180,
+            options=[
+                ft.DropdownOption(key="DEBUG", text="DEBUG"),
+                ft.DropdownOption(key="INFO", text="INFO"),
+                ft.DropdownOption(key="WARNING", text="WARNING"),
+                ft.DropdownOption(key="ERROR", text="ERROR"),
+            ],
+            value=config.log_level,
+        )
+        self._log_separate_workers_cb = ft.Checkbox(
+            label="Separate log files for worker threads",
+            value=config.log_separate_workers,
+        )
+        self._log_folder_field = ft.TextField(
+            label="Logs folder",
+            value=config.log_folder or "",
+            hint_text="Leave empty for default (~/.cache/dasmixer/logs/)",
+            expand=True,
+        )
+
+        logging_section = self._section(
+            title="Logging",
+            subtitle=(
+                "When 'Log to file' is enabled, application events are written to a daily log file. "
+                "If 'Separate log files for worker threads' is checked, each calculation worker "
+                "writes its own per-PID log; otherwise worker logs go to the main log."
+            ),
+            content=ft.Column(
+                [
+                    self._log_to_file_cb,
+                    ft.Row([self._log_level_dropdown, self._log_separate_workers_cb], spacing=20),
+                    ft.Row(
+                        [
+                            self._log_folder_field,
+                            ft.IconButton(
+                                icon=ft.Icons.FOLDER_OPEN,
+                                tooltip="Browse logs folder",
+                                on_click=lambda _: self.page.run_task(self._browse_log_folder),
+                            ),
+                        ],
+                        spacing=5,
+                    ),
+                ],
+                spacing=10,
+            ),
+        )
+
         # --- Color palette ---
         self._color_rows_column = ft.Column(spacing=6)
         for hex_color in config.default_colors:
@@ -140,6 +244,10 @@ class SettingsView(ft.View):
                         theme_section,
                         ft.Divider(),
                         batch_section,
+                        ft.Divider(),
+                        processing_section,
+                        ft.Divider(),
+                        logging_section,
                         ft.Divider(),
                         color_section,
                         ft.Container(height=20),
@@ -288,6 +396,23 @@ class SettingsView(ft.View):
                 tf.border_color = ft.Colors.RED
                 tf.update()
 
+        # CPU Threads
+        cpu_val = (self._cpu_threads_field.value or "").strip()
+        if cpu_val == "":
+            config.max_cpu_threads = None
+        else:
+            try:
+                cpu_int = int(cpu_val)
+                if cpu_int <= 0:
+                    raise ValueError("must be > 0")
+                config.max_cpu_threads = cpu_int
+                self._cpu_threads_field.border_color = None
+                self._cpu_threads_field.update()
+            except ValueError:
+                errors.append(f"'Max CPU Threads': must be a positive integer or empty")
+                self._cpu_threads_field.border_color = ft.Colors.RED
+                self._cpu_threads_field.update()
+
         # Colors
         new_colors: list[str] = []
         for row_data in self._color_rows:
@@ -312,12 +437,22 @@ class SettingsView(ft.View):
             if not confirmed:
                 return
 
+        # Logging settings
+        config.log_to_file = bool(self._log_to_file_cb.value)
+        config.log_level = self._log_level_dropdown.value or "INFO"
+        config.log_separate_workers = bool(self._log_separate_workers_cb.value)
+        log_folder_val = (self._log_folder_field.value or "").strip()
+        config.log_folder = log_folder_val if log_folder_val else None
+
         # Apply
         config.theme = new_theme
         for field_name, val in batch_values.items():
             setattr(config, field_name, val)
         config.default_colors = new_colors
         config.save()
+
+        # Re-configure logging if enabled
+        _apply_logging_config(config)
 
         # Apply theme immediately
         self.page.theme_mode = (
@@ -327,6 +462,20 @@ class SettingsView(ft.View):
 
         show_snack(self.page, "Settings saved", ft.Colors.GREEN_400)
         self.page.update()
+
+    async def _browse_log_folder(self):
+        """Browse for log folder."""
+        try:
+            folder = await ft.FilePicker().get_directory_path(
+                dialog_title="Select Logs Folder"
+            )
+            if folder:
+                self._log_folder_field.value = folder
+                self._log_folder_field.update()
+        except Exception as ex:
+            logger.exception(ex)
+            show_snack(self.page, f"Error: {ex}", ft.Colors.RED_400)
+            self.page.update()
 
     async def _confirm_large_batch(self, large_fields: list[str]) -> bool:
         """Show warning dialog for very large batch sizes. Returns True if confirmed."""

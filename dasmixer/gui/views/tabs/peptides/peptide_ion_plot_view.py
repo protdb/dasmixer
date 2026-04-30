@@ -7,6 +7,7 @@ from plotly.subplots import make_subplots
 from dasmixer.gui.components.base_plot_view import BasePlotView
 from dasmixer.api.project.project import Project
 from dasmixer.api.calculations.spectra.plot_flow import make_full_spectrum_plot
+from dasmixer.utils import logger
 
 
 class PeptideIonPlotView(BasePlotView):
@@ -67,7 +68,7 @@ class PeptideIonPlotView(BasePlotView):
             get_matched=show_protein_sequences
         )
 
-        print(plot_data)
+        logger.debug(f"plot_data: {plot_data}")
 
         params = self.ion_settings_section.get_ion_match_parameters()
 

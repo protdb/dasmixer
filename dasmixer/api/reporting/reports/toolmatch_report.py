@@ -7,6 +7,7 @@ from plotly.subplots import make_subplots
 
 from ..base import BaseReport
 from dasmixer.gui.components.report_form import ReportForm, ToolSelector, IntSelector, BoolSelector
+from dasmixer.utils.logger import logger
 
 
 class ToolMatchReportForm(ReportForm):
@@ -126,7 +127,7 @@ class ToolMatchReport(BaseReport):
         def agg_proteins_list(s: pd.Series) -> str:
             return ', '.join(s.tolist())
         proteins_for_id = data.groupby(['identification_id'])['protein_id'].agg(agg_proteins_list).reset_index(name='proteins')
-        print(proteins_for_id)
+        logger.debug(proteins_for_id)
         all_peptides = pd.merge(all_peptides, proteins_for_id, on='identification_id', how='outer')
         t1_df = all_peptides.query('tool==@tool1').copy()
         t1_df['seq_occur'] = t1_df.groupby('matched_sequence')['matched_sequence'].transform('size')
@@ -169,7 +170,7 @@ class ToolMatchReport(BaseReport):
         )
 
         anls = merged[['seq', 'tool']].drop_duplicates()
-        print(anls)
+        logger.debug(anls)
         peptide_win = anls['tool'].value_counts().reset_index(name='cnt')
         return merged, peptide_win
 
@@ -177,14 +178,14 @@ class ToolMatchReport(BaseReport):
         self,
         params: dict
     ) -> tuple[list[tuple[str, go.Figure]], list[tuple[str, pd.DataFrame, bool]]]:
-        print(params)
+        logger.debug(params)
         tool1 = str(params['tool1'])
         tool2 = str(params['tool2'])
         tools = [tool1, tool2]
         min_psm = int(params['min_psm'])
         min_unique_psm = int(params['min_unique_psm'])
         count_per_sample = bool(params.get('count_per_sample', False))
-        print('loading data...')
+        logger.debug('loading data...')
         joined_data = await self.project.get_joined_peptide_data(
             sequence_identified=True,
             protein_identified=True,

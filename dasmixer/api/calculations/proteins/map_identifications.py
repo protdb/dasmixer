@@ -2,13 +2,15 @@ from typing import AsyncIterator
 
 import pandas as pd
 
+from dasmixer.utils.logger import logger
+
 
 def get_coverage(seq: str, peptides: list[str]) -> tuple[float, float]:
     map_list = ['-' for _ in range(len(seq))]
     for peptide in peptides:
         start_position = seq.find(peptide)
         if start_position == -1:
-            print(f'incorrect peptide? {peptide} in {seq}')
+            logger.debug(f'incorrect peptide? {peptide} in {seq}')
             continue
         for idx, letter in enumerate(peptide):
             map_list[idx+start_position] = letter

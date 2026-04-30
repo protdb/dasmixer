@@ -11,6 +11,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import roc_auc_score
 from sklearn.preprocessing import label_binarize
 
+from dasmixer.gui.components import BoolSelector
 from ..base import BaseReport
 from dasmixer.gui.components.report_form import (
     ReportForm,
@@ -25,6 +26,7 @@ class PCAReportForm(ReportForm):
         values=["emPAI", "iBAQ", "NSAF", "Top3"],
         label="LFQ method",
     )
+    show_labels = BoolSelector(label="Show sample labels", default=True)
 
 
 # ---------------------------------------------------------------------------
@@ -60,6 +62,7 @@ def _build_pca_figure(
     subset_labels: pd.Series,
     colors: dict[str, str],
     explained: np.ndarray,
+    show_labels: bool = True,
 ) -> go.Figure:
     """
     Build 2-D PCA scatter plot.
@@ -80,7 +83,7 @@ def _build_pca_figure(
         fig.add_trace(go.Scatter(
             x=x_vals,
             y=y_vals,
-            mode="markers+text",
+            mode="markers+text" if show_labels else "markers",
             name=str(subset),
             text=text_vals,
             textposition="top center",
@@ -215,7 +218,7 @@ def _compute_roc(
 # ---------------------------------------------------------------------------
 
 class PCAReport(BaseReport):
-    name = "PCA / ROC-AUC"
+    name = "PCA ROC-AUC"
     description = "PCA scatter plot and ROC/AUC curves colored by comparison group"
     icon = Icons.SCATTER_PLOT
     parameters = PCAReportForm
@@ -262,6 +265,7 @@ class PCAReport(BaseReport):
             selected_subsets = [s.strip() for s in selected_subsets.split(",") if s.strip()]
 
         lfq_type = str(params.get("lfq_type", "emPAI"))
+        show_labels = params.get("show_labels", False)
 
         wide, meta = await self._get_quant_matrix(lfq_type, selected_subsets)
 
@@ -290,7 +294,7 @@ class PCAReport(BaseReport):
         sample_labels = pd.Series(wide.index, index=wide.index)
         subset_labels = meta["subset"]
 
-        pca_fig = _build_pca_figure(scores_df, sample_labels, subset_labels, colors, explained)
+        pca_fig = _build_pca_figure(scores_df, sample_labels, subset_labels, colors, explained, show_labels=show_labels)
 
         # ROC/AUC
         roc_data = _compute_roc(scores_df, subset_labels)

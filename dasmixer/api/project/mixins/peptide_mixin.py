@@ -240,7 +240,9 @@ class PeptideMixin:
         tool_id: int | None = None,
         identification_id: int | None = None,
         max_ppm: float | None = None,
-        min_score: float | None = None
+        min_score: float | None = None,
+        protein_id: str | None = None,
+        gene: str | None = None
     ) -> tuple[list[str], list]:
         """
         Build WHERE conditions and parameters for peptide queries.
@@ -322,6 +324,14 @@ class PeptideMixin:
         if min_score is not None:
             conditions.append("id.score >= ?")
             params.append(min_score)
+
+        if protein_id is not None:
+            conditions.append('mp.protein_id = ?')
+            params.append(protein_id)
+
+        if gene is not None:
+            conditions.append("mp.gene LIKE ?")
+            params.append(f"%{gene}%")
         
         return conditions, params
     
@@ -343,7 +353,9 @@ class PeptideMixin:
         seq_no: int | None = None,
         scans: int | None = None,
         tool: str | None = None,
-        tool_id: int | None = None
+        tool_id: int | None = None,
+        protein_id: str | None = None,
+        gene: str | None = None
     ) -> int:
         """
         Count joined peptide data with optional filtering.
@@ -415,13 +427,17 @@ class PeptideMixin:
             tool_id=tool_id,
             identification_id=identification_id,
             min_score=min_score,
-            max_ppm=max_ppm
+            max_ppm=max_ppm,
+            protein_id=protein_id,
+            gene=gene
+
         )
         
         # Add conditions to query
         if conditions:
             query += " AND " + " AND ".join(conditions)
-        
+        logger.debug(query)
+        logger.debug(params)
         # Execute query
         row = await self._fetchone(query, tuple(params) if params else None)
         return row['count'] if row else 0
@@ -443,6 +459,9 @@ class PeptideMixin:
         tool: str | None = None,
         tool_id: int | None = None,
         identification_id: int | None = None,
+        protein_id: str | None = None,
+        gene: str | None = None,
+        max_ppm: float | None = None,
         limit: int | None = None,
         offset: int = 0
     ) -> pd.DataFrame:
@@ -557,7 +576,10 @@ class PeptideMixin:
             scans=scans,
             tool=tool,
             tool_id=tool_id,
-            identification_id=identification_id
+            identification_id=identification_id,
+            protein_id=protein_id,
+            gene=gene,
+            max_ppm=max_ppm
         )
         
         # Add conditions to query
@@ -570,6 +592,8 @@ class PeptideMixin:
             params.append(limit)
             params.append(offset)
 
+        logger.debug(query)
+        logger.debug(params)
         # Execute query
         return await self.execute_query_df(query, tuple(params) if params else None)
 

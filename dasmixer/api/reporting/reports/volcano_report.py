@@ -5,6 +5,7 @@ import plotly.graph_objects as go
 from scipy.stats import false_discovery_control, mannwhitneyu, ttest_ind
 
 from ..base import BaseReport
+from dasmixer.utils.logger import logger
 from dasmixer.gui.components.report_form import (
     ReportForm,
     SubsetSelector,
@@ -147,24 +148,24 @@ class VolcanoReport(BaseReport):
 
         df = await self.get_data(params['lfq_type'], all_subsets)
         subset_lenghts_df = df[['subset', 'sample']].drop_duplicates(ignore_index=True).groupby('subset').count().reset_index(names='subset')
-        print(subset_lenghts_df)
+        logger.debug(subset_lenghts_df)
         subset_lenghts = {}
         for _, row in subset_lenghts_df.iterrows():
             subset_lenghts[row['subset']] = row['sample']
         good_proteins = df[['protein_id', 'subset']].groupby(['protein_id', 'subset']).agg('size')
-        print(good_proteins)
+        logger.debug(good_proteins)
         good_proteins = good_proteins.reset_index(name='count')
-        print(good_proteins)
+        logger.debug(good_proteins)
         good_proteins['subset_size'] = good_proteins['subset'].map(subset_lenghts)
         good_proteins['is_sufficient'] = (good_proteins['count'] / good_proteins['subset_size']) >= calc_share
-        print(len(df))
+        logger.debug(len(df))
         df = pd.merge(
             df,
             good_proteins[['protein_id', 'subset', 'is_sufficient']],
             on=['protein_id', 'subset'],
             how='left',
         ).query('is_sufficient==True').copy()
-        print(len(df))
+        logger.debug(len(df))
         result = []
         figure_data = []
 
@@ -172,7 +173,7 @@ class VolcanoReport(BaseReport):
             ctrl_values = df.query("protein_id==@protein & subset==@control_subset")['rel_value']
             if len(ctrl_values) == 0:
                 continue
-            print(protein, ctrl_values)
+            logger.debug(f"{protein} {ctrl_values}")
             subsets = []
             p_values = []
             fc_values = []
@@ -211,14 +212,14 @@ class VolcanoReport(BaseReport):
             try:
                 return min(row[x] for x in row.keys() if x.endswith('_pval'))
             except ValueError:
-                print(row)
+                logger.debug(row)
                 return None
 
         def get_max_fc_log2(row):
             try:
                 return max(abs(row[x]) for x in row.keys() if x.endswith('_fc_log2'))
             except ValueError:
-                print(row)
+                logger.debug(row)
                 return None
 
         calculated['max_fc'] = calculated.apply(lambda row: get_max_fc_log2(row.to_dict()), axis=1)

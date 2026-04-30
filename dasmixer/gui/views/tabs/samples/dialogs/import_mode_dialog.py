@@ -37,55 +37,58 @@ class ImportModeDialog:
         self.dialog = None
     
     async def show(self):
-        """Show the dialog."""
-        # Configure dialog text based on import type
+        """Show the dialog immediately, then fill content asynchronously."""
+        # Show dialog right away with a loading indicator
+        self._content_col = ft.Column(
+            [ft.ProgressRing(width=28, height=28, stroke_width=3)],
+            tight=True,
+            width=400,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        )
+        self.dialog = ft.AlertDialog(
+            title=ft.Text("Import Spectra" if self.import_type == "spectra" else "Import Identifications"),
+            content=self._content_col,
+            actions=[ft.TextButton("Cancel", on_click=self._close)],
+        )
+        self.page.overlay.append(self.dialog)
+        self.dialog.open = True
+        self.page.update()
+
+        # Now fetch data and replace content
         if self.import_type == "spectra":
             title = "Import Spectra"
             desc = "Import mass spectrometry spectra data files"
         else:
-            # Get tool name
             tool = await self.project.get_tool(self.tool_id)
-            title = f"Import Identifications - {tool.name}"
+            title = f"Import Identifications — {tool.name}"
             desc = f"Import identification files for {tool.name}"
-        
-        # Create dialog
-        self.dialog = ft.AlertDialog(
-            title=ft.Text(title),
-            content=ft.Column([
-                ft.Text("Choose import mode:", size=16, weight=ft.FontWeight.BOLD),
-                ft.Text(desc, size=11, italic=True, color=ft.Colors.GREY_600),
-                ft.Container(height=10),
-                ft.ElevatedButton(
-                    content=ft.Text("Select individual files"),
-                    icon=ft.Icons.INSERT_DRIVE_FILE,
-                    on_click=lambda e: self.page.run_task(self._on_single_files, e),
-                    width=300
-                ),
-                ft.Container(height=5),
-                ft.ElevatedButton(
-                    content=ft.Text("Pattern matching from folder"),
-                    icon=ft.Icons.FOLDER_OPEN,
-                    on_click=lambda e: self.page.run_task(self._on_pattern, e),
-                    width=300
-                ),
-                ft.Container(height=10),
-                ft.Text(
-                    "Pattern matching allows automatic sample ID extraction from filenames",
-                    size=11,
-                    italic=True,
-                    color=ft.Colors.GREY_600
-                )
-            ], tight=True, width=400),
-            actions=[
-                ft.TextButton(
-                    "Cancel",
-                    on_click=self._close
-                )
-            ]
-        )
-        
-        self.page.overlay.append(self.dialog)
-        self.dialog.open = True
+
+        self.dialog.title = ft.Text(title)
+        self._content_col.controls = [
+            ft.Text("Choose import mode:", size=16, weight=ft.FontWeight.BOLD),
+            ft.Text(desc, size=11, italic=True, color=ft.Colors.GREY_600),
+            ft.Container(height=10),
+            ft.ElevatedButton(
+                content=ft.Text("Select individual files"),
+                icon=ft.Icons.INSERT_DRIVE_FILE,
+                on_click=lambda e: self.page.run_task(self._on_single_files, e),
+                width=300,
+            ),
+            ft.Container(height=5),
+            ft.ElevatedButton(
+                content=ft.Text("Pattern matching from folder"),
+                icon=ft.Icons.FOLDER_OPEN,
+                on_click=lambda e: self.page.run_task(self._on_pattern, e),
+                width=300,
+            ),
+            ft.Container(height=10),
+            ft.Text(
+                "Pattern matching allows automatic sample ID extraction from filenames",
+                size=11,
+                italic=True,
+                color=ft.Colors.GREY_600,
+            ),
+        ]
         self.page.update()
     
     def _close(self, e=None):

@@ -5,8 +5,10 @@ import pandas as pd
 
 from dasmixer.api.project.project import Project
 from dasmixer.api.inputs.registry import registry
+from dasmixer.api.config import config as _config
 from pathlib import Path
 from dasmixer.gui.utils import show_snack
+from dasmixer.utils import logger
 
 
 class SamplesTab(ft.Container):
@@ -20,7 +22,7 @@ class SamplesTab(ft.Container):
     
     def __init__(self, project: Project):
         super().__init__()
-        print("init samples tab...")
+        logger.debug("init samples tab...")
         self.project = project
         self.groups_list = ft.Column(spacing=5)
         self.tools_list = ft.Column(spacing=5)
@@ -119,26 +121,26 @@ class SamplesTab(ft.Container):
     
     def did_mount(self):
         """Called when control is added to page - load initial data."""
-        print("SamplesTab did_mount called")
+        logger.debug("SamplesTab did_mount called")
         # Run async loading
         self.page.run_task(self._load_initial_data)
     
     async def _load_initial_data(self):
         """Load all initial data."""
-        print("Loading initial data...")
+        logger.debug("Loading initial data...")
         try:
             await self.refresh_groups()
             await self.refresh_tools()
             await self.refresh_samples()
-            print("Initial data loaded successfully")
+            logger.debug("Initial data loaded successfully")
         except Exception as ex:
-            print(f"Error loading initial data: {ex}")
+            logger.debug(f"Error loading initial data: {ex}")
             import traceback
             traceback.print_exc()
     
     async def refresh_groups(self):
         """Refresh groups list."""
-        print("Refreshing groups...")
+        logger.debug("Refreshing groups...")
         groups = await self.project.get_subsets()
         
         self.groups_list.controls.clear()
@@ -170,12 +172,12 @@ class SamplesTab(ft.Container):
                 ft.Text("No groups. Click 'Add Group' to create one.", italic=True)
             )
         
-        print(f"Groups loaded: {len(groups)}")
+        logger.debug(f"Groups loaded: {len(groups)}")
         self.groups_list.update()
     
     async def refresh_tools(self):
         """Refresh tools list."""
-        print("Refreshing tools...")
+        logger.debug("Refreshing tools...")
         tools = await self.project.get_tools()
         
         self.tools_list.controls.clear()
@@ -214,17 +216,17 @@ class SamplesTab(ft.Container):
                 ft.Text("No tools. Click 'Add Tool' to create one.", italic=True)
             )
         
-        print(f"Tools loaded: {len(tools)}")
+        logger.debug(f"Tools loaded: {len(tools)}")
         self.tools_list.update()
     
     async def refresh_samples(self):
         """Refresh samples table."""
         # Prevent updates during refresh to avoid loops
         if self._updating:
-            print("Already updating, skipping refresh_samples...")
+            logger.debug("Already updating, skipping refresh_samples...")
             return
         
-        print("Refreshing samples...")
+        logger.debug("Refreshing samples...")
         self._updating = True
         
         try:
@@ -299,7 +301,7 @@ class SamplesTab(ft.Container):
                     )
                 ], spacing=10)
             
-            print(f"Samples loaded: {len(samples)}")
+            logger.debug(f"Samples loaded: {len(samples)}")
             self.samples_container.update()
         finally:
             self._updating = False
@@ -330,6 +332,7 @@ class SamplesTab(ft.Container):
                 show_snack(self.page, f"Cannot delete: {str(ex)}", ft.Colors.ORANGE_400)
                 self.page.update()
             except Exception as ex:
+                logger.exception(ex)
                 confirm_dialog.open = False
                 self.page.update()
                 
@@ -386,6 +389,7 @@ class SamplesTab(ft.Container):
                 show_snack(self.page, f"Cannot delete: {str(ex)}", ft.Colors.ORANGE_400)
                 self.page.update()
             except Exception as ex:
+                logger.exception(ex)
                 confirm_dialog.open = False
                 self.page.update()
                 
@@ -424,10 +428,10 @@ class SamplesTab(ft.Container):
             
             # Check if value actually changed
             if new_group_value == old_value:
-                print(f"Group value unchanged ({old_value}), skipping update")
+                logger.debug(f"Group value unchanged ({old_value}), skipping update")
                 return
             
-            print(f"Changing group for {sample.name}: {old_value} -> {new_group_value}")
+            logger.debug(f"Changing group for {sample.name}: {old_value} -> {new_group_value}")
             
             # Convert to int or None
             if new_group_value == "None":
@@ -438,7 +442,7 @@ class SamplesTab(ft.Container):
             # Check if actually different from current value
             current_subset_id = sample.subset_id
             if new_subset_id == current_subset_id:
-                print(f"Subset ID unchanged, skipping update")
+                logger.debug(f"Subset ID unchanged, skipping update")
                 return
             
             # Update sample object
@@ -458,8 +462,7 @@ class SamplesTab(ft.Container):
             self.page.update()
             
         except Exception as ex:
-            import traceback
-            traceback.print_exc()
+            logger.exception(ex)
             
             show_snack(self.page, f"Error updating sample group: {str(ex)}", ft.Colors.RED_400)
             self.page.update()
@@ -502,9 +505,10 @@ class SamplesTab(ft.Container):
                 self.page.update()
                 
             except Exception as ex:
+                logger.exception(ex)
                 show_snack(self.page, f"Error: {ex}", ft.Colors.RED_400)
                 self.page.update()
-        
+
         dialog = ft.AlertDialog(
             title=ft.Text("Add Comparison Group"),
             content=ft.Column([
@@ -601,6 +605,7 @@ class SamplesTab(ft.Container):
                 self.page.update()
 
             except Exception as ex:
+                logger.exception(ex)
                 show_snack(self.page, f"Error: {ex}", ft.Colors.RED_400)
                 self.page.update()
 
@@ -813,6 +818,7 @@ class SamplesTab(ft.Container):
                     folder_field.value = folder_path
                     folder_field.update()
             except Exception as ex:
+                logger.exception(ex)
                 show_snack(self.page, f"Error selecting folder: {ex}", ft.Colors.RED_400)
                 self.page.update()
         
@@ -863,6 +869,7 @@ class SamplesTab(ft.Container):
                 files_list.update()
                 
             except Exception as ex:
+                logger.exception(ex)
                 show_snack(self.page, f"Error: {ex}", ft.Colors.RED_400)
                 self.page.update()
         
@@ -903,6 +910,7 @@ class SamplesTab(ft.Container):
                     )
                 
             except Exception as ex:
+                logger.exception(ex)
                 show_snack(self.page, f"Error: {ex}", ft.Colors.RED_400)
                 self.page.update()
         
@@ -975,8 +983,7 @@ class SamplesTab(ft.Container):
             await self.show_single_files_config(file_list, import_type, tool_id)
             
         except Exception as ex:
-            import traceback
-            traceback.print_exc()
+            logger.exception(ex)
             show_snack(self.page, f"Error opening file picker: {ex}", ft.Colors.RED_400)
             self.page.update()
     
@@ -1128,6 +1135,7 @@ class SamplesTab(ft.Container):
                     )
                 
             except Exception as ex:
+                logger.exception(ex)
                 show_snack(self.page, f"Import error: {ex}", ft.Colors.RED_400)
                 self.page.update()
         
@@ -1229,9 +1237,10 @@ class SamplesTab(ft.Container):
                     return
                 
                 # Import spectra in batches
+                batch_size = _config.spectra_batch_size
                 batch_count = 0
                 file_spectra_count = 0
-                async for batch in parser.parse_batch(batch_size=1000):
+                async for batch in parser.parse_batch(batch_size=batch_size):
                     await self.project.add_spectra_batch(spectra_file_id, batch)
                     batch_count += 1
                     file_spectra_count += len(batch)
@@ -1263,16 +1272,17 @@ class SamplesTab(ft.Container):
             self.page.update()
             
         except Exception as ex:
+            logger.exception(ex)
             import traceback
             error_details = traceback.format_exc()
-            print(f"Import error: {error_details}")
+            logger.debug(f"Import error: {error_details}")
             
             progress_dialog.open = False
             self.page.update()
             
             show_snack(self.page, f"Import error: {str(ex)}", ft.Colors.RED_400)
             self.page.update()
-    
+
     async def import_identification_files(self, file_list, tool_id: int):
         """
         Import identification files with progress indication.
@@ -1354,11 +1364,11 @@ class SamplesTab(ft.Container):
                 
                 # Parse and import identifications
                 parser = parser_class(str(file_path))
-                print(f'Parser {type(parser)} init for {file_path}')
+                logger.debug(f'Parser {type(parser)} init for {file_path}')
                 
                 # Validate file
                 is_valid = await parser.validate()
-                print(f'validation result: {is_valid}')
+                logger.debug(f'validation result: {is_valid}')
                 if not is_valid:
                     progress_dialog.open = False
                     self.page.update()
@@ -1372,22 +1382,23 @@ class SamplesTab(ft.Container):
                     spectra_file_id,
                     by=parser.spectra_id_field
                 )
-                print(spectra_mapping)
+                logger.debug(spectra_mapping)
                 # Import identifications in batches
+                batch_size = _config.identification_batch_size
                 batch_count = 0
                 file_ident_count = 0
-                async for batch_tuple in parser.parse_batch(batch_size=1000):
+                async for batch_tuple in parser.parse_batch(batch_size=batch_size):
                     # Unpack tuple (peptide_df, protein_df)
                     # batch = batch_tuple[0]  # Get peptide DataFrame
-                    print(batch_tuple)
-                    print(spectra_mapping)
+                    logger.debug(batch_tuple)
+                    logger.debug(spectra_mapping)
                     batch = pd.merge(batch_tuple[0], pd.json_normalize(spectra_mapping), on=parser.spectra_id_field, how='inner')
                     # Add spectre_id, tool_id, ident_file_id
                     # batch['spectre_id'] = batch[parser.spectra_id_field].map(spectra_mapping)
                     batch['tool_id'] = tool.id
                     batch['ident_file_id'] = ident_file_id
-                    print(batch)
-                    print(batch.columns)
+                    logger.debug(batch)
+                    logger.debug(batch.columns)
                     
                     if len(batch) > 0:
                         await self.project.add_identifications_batch(batch)
@@ -1422,9 +1433,10 @@ class SamplesTab(ft.Container):
             self.page.update()
             
         except Exception as ex:
+            logger.exception(ex)
             import traceback
             error_details = traceback.format_exc()
-            print(f"Import error: {error_details}")
+            logger.debug(f"Import error: {error_details}")
             
             progress_dialog.open = False
             self.page.update()

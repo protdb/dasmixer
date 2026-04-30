@@ -11,9 +11,11 @@ from dasmixer.api.calculations.peptides.matching import select_preferred_identif
 from dasmixer.api.calculations.peptides.protein_map import map_proteins
 from dasmixer.api.calculations.spectra.plot_matches import plot_ion_match
 from dasmixer.api.calculations.spectra.ion_match import IonMatchParameters, match_predictions
+from dasmixer.api.config import config as _config
 from dasmixer.utils.ppm import calculate_ppm
 import plotly.io as pio
 from dasmixer.gui.utils import show_snack
+from dasmixer.utils import logger
 
 
 class PeptidesTab(ft.Container):
@@ -21,7 +23,7 @@ class PeptidesTab(ft.Container):
     
     def __init__(self, project: Project):
         super().__init__()
-        print("PeptidesTab init...")
+        logger.debug("PeptidesTab init...")
         self.project = project
         self.expand = True
         self.padding = 0
@@ -54,22 +56,20 @@ class PeptidesTab(ft.Container):
     
     def did_mount(self):
         """Load initial data."""
-        print("PeptidesTab did_mount called")
+        logger.debug("PeptidesTab did_mount called")
         self.page.run_task(self._load_initial_data)
     
     async def _load_initial_data(self):
         """Load all initial data."""
-        print("Loading peptides tab initial data...")
+        logger.debug("Loading peptides tab initial data...")
         try:
             await self.refresh_tools()
             await self.load_ion_settings()
             await self.load_blast_settings()
             await self.refresh_search_filters()
-            print("Peptides tab initial data loaded")
+            logger.debug("Peptides tab initial data loaded")
         except Exception as ex:
-            print(f"Error loading initial data: {ex}")
-            import traceback
-            traceback.print_exc()
+            logger.exception("Error loading initial data")
     
     # FASTA and Protein Mapping Section
     
@@ -171,7 +171,7 @@ class PeptidesTab(ft.Container):
                 self.fasta_file_field.value = result[0].path
                 self.fasta_file_field.update()
         except Exception as ex:
-            print(f"Error: {ex}")
+            logger.exception("Error")
             show_snack(self.page, f"Error: {str(ex)}", ft.Colors.RED_400)
             self.page.update()
     
@@ -216,7 +216,9 @@ class PeptidesTab(ft.Container):
             progress_bar.update()
             
             total = 0
-            async for batch in parser.parse_batch(batch_size=100):
+            # Get batch size from config
+            batch_size = _config.protein_mapping_batch_size
+            async for batch in parser.parse_batch(batch_size=batch_size):
                 if self.fasta_enrich_uniprot_cb.value:
                     batch = await parser.enrich_with_uniprot(batch)
                 await self.project.add_proteins_batch(batch)
@@ -244,8 +246,7 @@ class PeptidesTab(ft.Container):
             self.page.update()
             
         except Exception as ex:
-            import traceback
-            print(f"Error: {traceback.format_exc()}")
+            logger.exception("Error")
             progress_dialog.open = False
             self.page.update()
             show_snack(self.page, f"Error: {str(ex)}", ft.Colors.RED_400)
@@ -259,7 +260,7 @@ class PeptidesTab(ft.Container):
             self.blast_max_accepts_field.value = max_accepts
             self.blast_max_rejects_field.value = max_rejects
         except Exception as ex:
-            print(f"Error loading BLAST settings: {ex}")
+            logger.exception("Error loading BLAST settings")
     
     async def save_blast_settings(self):
         """Save BLAST settings."""
@@ -300,11 +301,13 @@ class PeptidesTab(ft.Container):
             
             total_matches = 0
             
+            # Get batch size from config
+            batch_size = _config.protein_mapping_batch_size
             async for matches_df, count, tool_id in map_proteins(
                 self.project,
                 tool_settings,
                 only_prefered=self.match_preferred_only_cb.value,
-                batch_size=1000
+                batch_size=batch_size
             ):
                 await self.project.add_peptide_matches_batch(matches_df)
                 total_matches += count
@@ -329,8 +332,7 @@ class PeptidesTab(ft.Container):
             self.page.update()
             
         except Exception as ex:
-            import traceback
-            print(f"Error: {traceback.format_exc()}")
+            logger.exception("Error")
             show_snack(self.page, f"Error: {str(ex)}", ft.Colors.RED_400)
             self.page.update()
     
@@ -384,7 +386,7 @@ class PeptidesTab(ft.Container):
             
             self.tools_settings_container.update()
         except Exception as ex:
-            print(f"Error refreshing tools: {ex}")
+            logger.exception("Error refreshing tools")
     
     def _create_tool_settings_controls(self, tool) -> dict:
         """Create controls for tool."""
@@ -504,7 +506,7 @@ class PeptidesTab(ft.Container):
             self.ion_ppm_threshold_field.value = await self.project.get_setting('ion_ppm_threshold', '20')
             self.fragment_charges_field.value = await self.project.get_setting('fragment_charges', '1,2')
         except Exception as ex:
-            print(f"Error loading ion settings: {ex}")
+            logger.exception("Error loading ion settings")
     
     async def save_ion_settings(self):
         """Save ion settings."""
@@ -626,7 +628,7 @@ class PeptidesTab(ft.Container):
                         progress_bar.update()
                         progress_details.update()
                 except Exception as ex:
-                    print(f"Error on {ident['id']}: {ex}")
+                    logger.exception(f"Error on {ident['id']}")
             
             await self.project.save()
             
@@ -643,8 +645,7 @@ class PeptidesTab(ft.Container):
             show_snack(self.page, f"Calculated for {processed}", ft.Colors.GREEN_400)
             self.page.update()
         except Exception as ex:
-            import traceback
-            print(f"Error: {traceback.format_exc()}")
+            logger.exception("Error")
             show_snack(self.page, f"Error: {str(ex)}", ft.Colors.RED_400)
             self.page.update()
     
@@ -736,7 +737,7 @@ class PeptidesTab(ft.Container):
                         progress_bar.update()
                         progress_details.update()
                 except Exception as ex:
-                    print(f"Error on match {match['id']}: {ex}")
+                    logger.exception(f"Error on match {match['id']}")
             
             await self.project.save()
             
@@ -753,8 +754,7 @@ class PeptidesTab(ft.Container):
             show_snack(self.page, f"Calculated for {processed} matches", ft.Colors.GREEN_400)
             self.page.update()
         except Exception as ex:
-            import traceback
-            print(f"Error: {traceback.format_exc()}")
+            logger.exception("Error")
             show_snack(self.page, f"Error: {str(ex)}", ft.Colors.RED_400)
             self.page.update()
     
@@ -832,8 +832,7 @@ class PeptidesTab(ft.Container):
             show_snack(self.page, f"Processed {count} spectra", ft.Colors.GREEN_400)
             self.page.update()
         except Exception as ex:
-            import traceback
-            print(f"Error: {traceback.format_exc()}")
+            logger.exception("Error")
             show_snack(self.page, f"Error: {str(ex)}", ft.Colors.RED_400)
             self.page.update()
     
@@ -899,7 +898,7 @@ class PeptidesTab(ft.Container):
             self.search_sample_dropdown.options = [ft.dropdown.Option(key="all", text="All Samples")] + [ft.dropdown.Option(key=str(s.id), text=s.name) for s in samples]
             self.search_tool_dropdown.options = [ft.dropdown.Option(key="all", text="All Tools")] + [ft.dropdown.Option(key=str(t.id), text=t.name) for t in tools]
         except Exception as ex:
-            print(f"Error: {ex}")
+            logger.exception("Error")
     
     async def search_identifications(self, e):
         """Search identifications."""
@@ -997,8 +996,7 @@ class PeptidesTab(ft.Container):
             if len(results_df) > 0:
                 await self.view_identification(None, results_df.iloc[0].to_dict())
         except Exception as ex:
-            import traceback
-            print(f"Error: {traceback.format_exc()}")
+            logger.exception("Error")
             show_snack(self.page, f"Error: {str(ex)}", ft.Colors.RED_400)
             self.page.update()
     
@@ -1032,8 +1030,7 @@ class PeptidesTab(ft.Container):
             
             self.plot_container.update()
         except Exception as ex:
-            import traceback
-            print(f"Error: {traceback.format_exc()}")
+            logger.exception("Error")
             self.plot_container.content = ft.Column([
                 ft.Text("Error", color=ft.Colors.RED_600, weight=ft.FontWeight.BOLD),
                 ft.Text(str(ex), size=11, color=ft.Colors.RED_400)

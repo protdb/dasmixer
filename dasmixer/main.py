@@ -18,10 +18,21 @@ Usage:
     python main.py path/to/project.dasmix import mgf-pattern --folder ...
 """
 
+import logging
 import typer
 import multiprocessing
 from typing import Annotated
 from pathlib import Path
+
+from dasmixer.versions import APP_VERSION
+
+# Configure logging based on saved settings
+try:
+    from dasmixer.api.config import config as _app_config
+    from dasmixer.gui.views.settings_view import _apply_logging_config
+    _apply_logging_config(_app_config)
+except Exception as _log_init_exc:
+    print(f"[Logging] Failed to configure logging: {_log_init_exc}")
 
 # Load external plugins before anything else.
 # Results are stored as module-level variable so PluginsView can access them.
@@ -67,7 +78,7 @@ def main(
     Add command to execute CLI operations.
     """
     if version:
-        typer.echo("DASMixer version 0.1.0")
+        typer.echo(f"DASMixer version {APP_VERSION}")
         raise typer.Exit(0)
     
     # If no subcommand - launch GUI

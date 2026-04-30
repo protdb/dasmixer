@@ -9,6 +9,7 @@ from .table_importer import (
 )
 from .PowerNovo2 import PowerNovo2Importer
 from .MQ_Evidences import MaxQuantEvidenceParser
+from .PLGS import PLGSImporter
 
 # Note: Parser registration is now handled in api/inputs/__init__.py
 # to avoid circular imports
@@ -20,5 +21,6 @@ __all__ = [
     'LargeCSVImporter',
     'ColumnRenames',
     'PowerNovo2Importer',
-    'MaxQuantEvidenceParser'
+    'MaxQuantEvidenceParser',
+    'PLGSImporter'
 ]

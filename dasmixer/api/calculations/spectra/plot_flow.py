@@ -1,6 +1,7 @@
 from .ion_match import IonMatchParameters, match_predictions, get_matches_dataframe
 from .plot_matches import generate_spectrum_plot
 from typing import Any
+from dasmixer.utils.logger import logger
 
 
 def make_full_spectrum_plot(
@@ -12,7 +13,7 @@ def make_full_spectrum_plot(
         headers: list[str] | str,
         spectrum_info: Any
 ):
-    print(spectrum_info)
+    logger.debug(spectrum_info)
     if type(params) is dict:
         params = IonMatchParameters(**params)
     if type(sequences) is not list:

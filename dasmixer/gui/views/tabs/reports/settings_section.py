@@ -4,6 +4,7 @@ import flet as ft
 from dasmixer.api.project.project import Project
 from .shared_state import ReportsTabState
 from dasmixer.gui.utils import show_snack
+from dasmixer.utils import logger
 
 
 class SettingsSection(ft.Container):
@@ -129,8 +130,10 @@ class SettingsSection(ft.Container):
             
         except ValueError as ex:
             self._show_error(f"Invalid input: {ex}")
+            logger.exception(f"Invalid input: {ex}")
         except Exception as ex:
             self._show_error(f"Failed to save settings: {ex}")
+            logger.exception(f"Failed to save settings: {ex}")
     
     async def _on_generate_all(self, e):
         """Generate all selected reports."""

@@ -6,6 +6,8 @@ import typer
 import json
 from typing import Any
 
+from dasmixer.utils.logger import logger
+
 
 class AppConfig(BaseSettings):
     """
@@ -43,6 +45,9 @@ class AppConfig(BaseSettings):
     identification_batch_size: int = 5000
     identification_processing_batch_size: int = 5000
     protein_mapping_batch_size: int = 5000
+    
+    # CPU threads for multiprocessing (None = auto: cpu_count - 1)
+    max_cpu_threads: int | None = None
 
     # Default color palette (shared pool for tools and subsets)
     default_colors: list[str] = [
@@ -55,6 +60,12 @@ class AppConfig(BaseSettings):
         "#F97316",  # orange
         "#EC4899",  # pink
     ]
+
+    # Logging settings
+    log_to_file: bool = False
+    log_level: str = "INFO"           # DEBUG | INFO | WARNING | ERROR
+    log_folder: str | None = None     # None = ~/.cache/dasmixer/logs/
+    log_separate_workers: bool = False  # If True, workers write separate per-PID files
 
     # Plugin states: {plugin_id: enabled}
     plugin_states: dict[str, bool] = {}
@@ -95,7 +106,7 @@ class AppConfig(BaseSettings):
                     data = json.load(f)
                 return cls(**data)
             except Exception as e:
-                print(f"Warning: Could not load config: {e}")
+                logger.exception(f"Could not load config: {e}")
                 return cls()
         return cls()
 
@@ -106,7 +117,7 @@ class AppConfig(BaseSettings):
             with open(config_path, 'w', encoding='utf-8') as f:
                 json.dump(self.model_dump(), f, indent=2)
         except Exception as e:
-            print(f"Warning: Could not save config: {e}")
+            logger.exception(f"Could not save config: {e}")
 
     def get_next_color(self, existing_colors: list[str]) -> str:
         """
