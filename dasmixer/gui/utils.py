@@ -2,11 +2,34 @@
 
 from __future__ import annotations
 
+import multiprocessing
 import sys
 from pathlib import Path
 
 import flet as ft
 from flet.controls.base_page import BasePage
+
+
+# ---------------------------------------------------------------------------
+# Global child-process registry
+# ---------------------------------------------------------------------------
+# Any component that spawns a subprocess (e.g. PlotlyViewer webview) should
+# register it here.  DASMixerApp._shutdown() kills all registered processes
+# on window close so they don't keep the console alive.
+
+_child_processes: list[multiprocessing.Process] = []
+
+
+def register_child_process(proc: multiprocessing.Process) -> None:
+    """Register a child process for cleanup on app exit."""
+    # Prune already-dead entries while we're here.
+    _child_processes[:] = [p for p in _child_processes if p.is_alive()]
+    _child_processes.append(proc)
+
+
+def get_child_processes() -> list[multiprocessing.Process]:
+    """Return the live child-process list (shared reference)."""
+    return _child_processes
 
 
 def get_asset_path(relative: str) -> Path:
