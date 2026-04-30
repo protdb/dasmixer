@@ -66,7 +66,7 @@ class DASMixerApp:
 
         # Handle window close: clean up DB + child processes, then force-exit.
         self.page.window.prevent_close = True
-        self.page.on_window_event = self._on_window_event
+        self.page.window.on_event = self._on_window_event
 
         logger.debug("[app] Route handlers registered.")
 
@@ -83,11 +83,10 @@ class DASMixerApp:
     # Routing
     # ------------------------------------------------------------------
 
-    def _on_window_event(self, e):
+    def _on_window_event(self, e: ft.WindowEvent):
         """Handle window lifecycle events."""
-        event_type = e.data if hasattr(e, "data") else str(e)
-        logger.debug(f"[app] window event: {event_type}")
-        if event_type == "close":
+        logger.debug(f"[app] window event: {e.type}")
+        if e.type == ft.WindowEventType.CLOSE:
             self.page.run_task(self._shutdown)
 
     async def _shutdown(self):
@@ -97,9 +96,8 @@ class DASMixerApp:
         Order:
         1. Close open project (commits + closes DB connection).
         2. Kill any tracked child processes (webview, etc.).
-        3. os._exit(0) — terminates the process unconditionally, bypassing
-           asyncio/threading cleanup that would otherwise keep the console
-           alive for 10-30 seconds.
+        3. Disable prevent_close and call window.destroy() to close the Flet window.
+        4. os._exit(0) as a safety net in case destroy() doesn't terminate the process.
         """
         logger.debug("[app] _shutdown started")
 
@@ -121,6 +119,15 @@ class DASMixerApp:
                 logger.debug(f"[app] _shutdown: kill proc error: {exc}")
         get_child_processes().clear()
 
+        # 3. Close the Flet window (unblock native close, then destroy)
+        logger.debug("[app] _shutdown — destroying window")
+        try:
+            self.page.window.prevent_close = False
+            await self.page.window.destroy()
+        except Exception as exc:
+            logger.debug(f"[app] _shutdown: window.destroy() error: {exc}")
+
+        # 4. Safety net — should not be reached if destroy() works
         logger.debug("[app] _shutdown complete — calling os._exit(0)")
         os._exit(0)
 
@@ -233,7 +240,7 @@ class DASMixerApp:
                         ft.PopupMenuItem(
                             content=ft.Text("Exit"),
                             icon=ft.Icons.EXIT_TO_APP,
-                            on_click=lambda _: self.page.window.close()
+                            on_click=lambda _: self.page.run_task(self._shutdown)
                         ),
                     ]
                 ),
