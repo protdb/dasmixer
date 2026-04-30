@@ -62,6 +62,11 @@ datas = [
 
     # clr_loader native DLL (needed to bootstrap pythonnet)
     (str(SITE / "clr_loader" / "ffi" / "dlls" / "amd64"), "clr_loader/ffi/dlls/amd64"),
+
+    # choreographer ships last_known_good_chrome.json which kaleido reads via
+    # Path(__file__).resolve().parent.parent / "resources" / "last_known_good_chrome.json"
+    # Must be bundled at the same relative path so the frozen lookup succeeds.
+    (str(SITE / "choreographer" / "resources"), "choreographer/resources"),
 ]
 
 # ---------------------------------------------------------------------------

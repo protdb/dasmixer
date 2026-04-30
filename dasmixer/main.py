@@ -95,10 +95,63 @@ app.add_typer(subset.app, name="subset", help="Manage comparison groups")
 app.add_typer(import_data.app, name="import", help="Import data files")
 
 
+def _ensure_chrome() -> None:
+    """Download Chrome for Kaleido/choreographer on first run.
+
+    Chrome is stored in {app_dir}/chrome/ (e.g. %APPDATA%/dasmixer/chrome/ on
+    Windows) so it survives application updates and works across users/machines.
+    The download is skipped if the expected executable already exists.
+
+    After locating (or downloading) Chrome, sets the BROWSER_PATH environment
+    variable so choreographer picks it up in the current process without needing
+    to write anything into the frozen _internal directory.
+    """
+    import os
+    import platform
+    import sys
+    import kaleido
+    from choreographer.cli._cli_utils import get_google_supported_platform_string
+
+    app_dir = Path(typer.get_app_dir("dasmixer"))
+    chrome_dir = app_dir / "chrome"
+
+    # Determine expected exe path for the current platform
+    arch, *_ = get_google_supported_platform_string()
+    if not arch:
+        print("[Kaleido] WARNING: unsupported platform, skipping Chrome setup.", file=sys.stderr)
+        return
+
+    if platform.system().startswith("Win"):
+        chrome_exe = chrome_dir / f"chrome-{arch}" / "chrome.exe"
+    elif platform.system().startswith("Darwin"):
+        chrome_exe = (
+            chrome_dir
+            / f"chrome-{arch}"
+            / "Google Chrome for Testing.app"
+            / "Contents"
+            / "MacOS"
+            / "Google Chrome for Testing"
+        )
+    else:  # Linux
+        chrome_exe = chrome_dir / f"chrome-{arch}" / "chrome"
+
+    if not chrome_exe.exists():
+        print(f"[Kaleido] Downloading Chrome to {chrome_dir} ...")
+        try:
+            kaleido.get_chrome_sync(path=chrome_dir)
+            print(f"[Kaleido] Chrome installed: {chrome_exe}")
+        except Exception as exc:
+            print(f"[Kaleido] WARNING: could not install Chrome: {exc}", file=sys.stderr)
+            return
+
+    # Tell choreographer where Chrome lives — checked first in get_browser_path()
+    os.environ["BROWSER_PATH"] = str(chrome_exe)
+    print(f"[Kaleido] Chrome ready: {chrome_exe}")
+
+
 if __name__ == '__main__':
     # Multiprocessing for builds support
     multiprocessing.freeze_support()
-    # Kaleido pre-install chrome
-    import kaleido
-    kaleido.get_chrome_sync()
+    # Ensure Chrome for Kaleido is available in the user app directory
+    _ensure_chrome()
     app()
