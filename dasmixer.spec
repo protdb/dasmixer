@@ -18,6 +18,13 @@ from PyInstaller.utils.hooks import collect_submodules, collect_data_files
 # ---------------------------------------------------------------------------
 # Resolve paths relative to this spec file
 # ---------------------------------------------------------------------------
+# IMPORTANT: dasmixer is NOT installed as a package in the venv (no pip install -e .).
+# Poetry adds the project root to sys.path at runtime, but PyInstaller does NOT.
+# We must inject it here so that collect_submodules() can actually find and
+# enumerate all submodules of the dasmixer package.
+_project_root = str(Path(SPECPATH))
+if _project_root not in sys.path:
+    sys.path.insert(0, _project_root)
 SPEC_DIR = Path(SPECPATH)
 
 # Locate the active poetry virtual environment's site-packages
@@ -70,6 +77,10 @@ binaries = []
 # Hidden imports — modules loaded dynamically or via string at runtime
 # ---------------------------------------------------------------------------
 hiddenimports = [
+    # dasmixer GUI tabs — loaded dynamically via importlib.import_module() in
+    # project_view.py (_TAB_DEFS); PyInstaller cannot detect these automatically.
+    *collect_submodules("dasmixer.gui"),
+
     # dasmixer internals loaded via plugin_loader
     "dasmixer.api.inputs",
     "dasmixer.api.reporting",
@@ -190,7 +201,7 @@ exe = EXE(
     [],
     exclude_binaries=True,
     name="dasmixer",
-    debug=False,
+    debug=True,
     bootloader_ignore_signals=False,
     strip=False,
     upx=False,          # skip UPX to avoid antivirus false-positives

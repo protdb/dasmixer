@@ -151,11 +151,14 @@ class PlotlyViewer(ft.Container):
 
     def launch_interactive(self, e):
         try:
+            from dasmixer.gui.utils import register_child_process
             process = multiprocessing.Process(
                 target=show_webview,
                 args=(self.figure, self.title),
+                daemon=True,
             )
             process.start()
+            register_child_process(process)
         except Exception as ex:
             if self.page:
                 logger.exception(ex)

@@ -1,6 +1,7 @@
 """Main GUI application entry point."""
 
 import asyncio
+import os
 import flet as ft
 from pathlib import Path
 from dasmixer.api.config import config
@@ -62,6 +63,11 @@ class DASMixerApp:
         # Setup routing
         self.page.on_route_change = self._route_change
         self.page.on_view_pop = self._view_pop
+
+        # Handle window close: clean up DB + child processes, then force-exit.
+        self.page.window.prevent_close = True
+        self.page.on_window_event = self._on_window_event
+
         logger.debug("[app] Route handlers registered.")
 
         if initial_project_path:
@@ -76,6 +82,47 @@ class DASMixerApp:
     # ------------------------------------------------------------------
     # Routing
     # ------------------------------------------------------------------
+
+    def _on_window_event(self, e):
+        """Handle window lifecycle events."""
+        event_type = e.data if hasattr(e, "data") else str(e)
+        logger.debug(f"[app] window event: {event_type}")
+        if event_type == "close":
+            self.page.run_task(self._shutdown)
+
+    async def _shutdown(self):
+        """
+        Graceful shutdown on window close.
+
+        Order:
+        1. Close open project (commits + closes DB connection).
+        2. Kill any tracked child processes (webview, etc.).
+        3. os._exit(0) — terminates the process unconditionally, bypassing
+           asyncio/threading cleanup that would otherwise keep the console
+           alive for 10-30 seconds.
+        """
+        logger.debug("[app] _shutdown started")
+
+        # 1. Close project DB
+        if self.current_project:
+            try:
+                await self.current_project.close()
+            except Exception as exc:
+                logger.warning(f"[app] _shutdown: project close error: {exc}")
+            self.current_project = None
+
+        # 2. Kill child processes (webview windows, etc.)
+        from dasmixer.gui.utils import get_child_processes
+        for proc in list(get_child_processes()):
+            try:
+                if proc.is_alive():
+                    proc.kill()
+            except Exception as exc:
+                logger.debug(f"[app] _shutdown: kill proc error: {exc}")
+        get_child_processes().clear()
+
+        logger.debug("[app] _shutdown complete — calling os._exit(0)")
+        os._exit(0)
 
     def _route_change(self, e=None):
         """Handle route changes — rebuild view stack.
