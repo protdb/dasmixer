@@ -29,6 +29,14 @@ MIGRATIONS: list[dict] = [
             ALTER TABLE protein ADD COLUMN organism_name TEXT;
         """,
     },
+    {
+        "version": "0.3.0",
+        "sql": """
+            ALTER TABLE identification ADD COLUMN src_file_protein_id TEXT;
+            ALTER TABLE identification_file ADD COLUMN selection_field TEXT;
+            ALTER TABLE identification_file ADD COLUMN selection_field_value TEXT;
+        """,
+    },
 ]
 
 

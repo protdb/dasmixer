@@ -174,16 +174,21 @@ class ProteinMixin:
         
         return proteins
 
-    async def get_protein_db_to_search(self) -> dict[str, str]:
+    async def get_protein_db_to_search(self, null_sequence: bool = False) -> dict[str, str]:
         """
         Special function to get Protein data to apply search with npysearch.
         
         Returns:
             dict {protein_id: sequence} for full protein DB loaded
         """
+        query = "SELECT id, sequence FROM protein"
+        if not null_sequence:
+            query += " WHERE sequence is not null"
         rows = await self._fetchall(
-            "SELECT id, sequence FROM protein",
+            query
         )
+        if len(rows) == 0:
+            return {}
         return {row['id']: row['sequence'] for row in rows}
     
     async def get_protein_count(self) -> int:

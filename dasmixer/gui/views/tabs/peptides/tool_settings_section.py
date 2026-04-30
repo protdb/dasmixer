@@ -503,6 +503,7 @@ class ToolSettingsSection(BaseSection):
                 'max_ppm': float(controls['max_ppm'].value),
                 'min_score': float(controls['min_score'].value),
                 'min_ion_intensity_coverage': float(controls['min_ion_intensity_coverage'].value),
+                'use_protein_from_file': bool(controls['use_protein_from_file'].value),
                 'min_protein_identity': float(controls['min_protein_identity'].value),
                 'denovo_correction': controls['denovo_correction'].value,
                 'min_peptide_length': int(controls['min_peptide_length'].value),

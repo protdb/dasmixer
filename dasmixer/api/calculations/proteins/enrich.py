@@ -15,6 +15,8 @@ async def enrich_protein(project: Project, protein_id: str, force_update: bool =
         logger.exception(e)
         return
     stored_data.uniprot_data = uniprot_data
+    if not stored_data.sequence:
+        stored_data.sequence = uniprot_data.sequence
     if not stored_data.gene or overwrite_fasta:
         stored_data.gene = uniprot_data.gene
     if not stored_data.name or overwrite_fasta:

@@ -175,6 +175,7 @@ async def map_proteins(
     seqfixer_params: dict,
     batch_size: int = 5000,
     sample_id: int | None = None,
+    use_src_protein_ids: bool = False,
 ) -> AsyncIterator[tuple[pd.DataFrame, int, int]]:
     """
     Perform protein mapping in batches and yield results per batch.
@@ -195,6 +196,10 @@ async def map_proteins(
             force_isotope_offset (bool).
         batch_size: Identifications per DB batch.
         sample_id: If provided, only process identifications for this sample.
+        use_src_protein_ids: If True, for identifications that have
+            src_file_protein_id set, create exact-match peptide_match
+            records directly (bypassing BLAST). BLAST is then only run
+            for identifications without src_file_protein_id.
 
     Yields:
         (matches_df, count, tool_id) — DataFrame ready for
@@ -264,6 +269,50 @@ async def map_proteins(
                 break
             logger.debug('batch data retrieved!')
             # ----------------------------------------------------------------
+            # Step: handle identifications with src_file_protein_id (pre-BLAST)
+            # ----------------------------------------------------------------
+            all_res: list[dict] = []
+            if use_src_protein_ids and len(batch_data) > 0:
+                has_src_protein = batch_data['src_file_protein_id'].notna() & \
+                                  (batch_data['src_file_protein_id'] != '')
+                
+                src_protein_rows = batch_data[has_src_protein]
+                blast_rows = batch_data[~has_src_protein]  # Only these go to BLAST
+                # Build exact-match results for src_protein rows
+                for _, row in src_protein_rows.iterrows():
+                    ident_id = int(row['id'])
+                    raw_ids = str(row['src_file_protein_id'])
+                    protein_ids = [pid.strip() for pid in raw_ids.split(';') if pid.strip()]
+                    
+                    canon = str(row['canonical_sequence'])
+                    
+                    for protein_id in protein_ids:
+                        all_res.append({
+                            'protein_id': protein_id,
+                            'identification_id': ident_id,
+                            'matched_sequence': canon,
+                            'identity': 1.0,
+                            'unique_evidence': 1 if len(protein_ids) == 1 else 0,  # will be recomputed below
+                            'matched_ppm': _safe_float(row.get('ppm')),
+                            'matched_theor_mass': _safe_float(row.get('theor_mass')),
+                            'matched_coverage_percent': _safe_float(row.get('intensity_coverage')),
+                            'matched_peaks': _safe_int(row.get('ions_matched')),
+                            'matched_top_peaks': _safe_int(row.get('top_peaks_covered')),
+                            'matched_ion_type': _nan_to_none(row.get('ion_match_type')),
+                            'matched_sequence_modified': None,
+                            'substitution': False,
+                        })
+                
+                # Override batch_data to only include rows without src_file_protein_id
+                batch_data = blast_rows
+                
+                if len(batch_data) == 0:
+                    if all_res:
+                        yield pd.json_normalize(all_res), len(all_res), tool_id
+                    counter += batch_size
+                    continue
+                # --- end Step: handle src_file_protein_id ---
+            # ----------------------------------------------------------------
             # Build BLAST query dict
             # ----------------------------------------------------------------
             query: dict[str, str] = {}
@@ -289,6 +338,8 @@ async def map_proteins(
             ))
 
             if blast_df.empty:
+                if all_res:
+                    yield pd.json_normalize(all_res), len(all_res), tool_id
                 counter += batch_size
                 continue
 
@@ -332,8 +383,6 @@ async def map_proteins(
             # ----------------------------------------------------------------
             # Process each BLAST row
             # ----------------------------------------------------------------
-            all_res: list[dict] = []
-
             for _, row in blast_df.iterrows():
                 identity: float = float(row['Identity'])
                 ident_id: int = int(row['id'])

@@ -54,6 +54,10 @@ class MaxQuantEvidenceParser(SimpleTableImporter):
     renames = renames
     spectra_id_field = 'scans'  # MaxQuant uses scan numbers
 
+    # NEW: stacked support
+    can_import_stacked: bool = True
+    sample_id_column: str = 'Raw file'
+
     @staticmethod
     def _fix_sequence(mod_seq: str) -> str:
         """

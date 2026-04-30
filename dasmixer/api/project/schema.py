@@ -87,6 +87,8 @@ CREATE TABLE IF NOT EXISTS identification_file (
     spectre_file_id INTEGER NOT NULL,
     tool_id INTEGER NOT NULL,
     file_path TEXT NOT NULL,
+    selection_field TEXT,        -- column name used to filter stacked file (nullable)
+    selection_field_value TEXT,  -- value of selection_field for this record (nullable)
     FOREIGN KEY (spectre_file_id) REFERENCES spectre_file(id) ON DELETE CASCADE,
     FOREIGN KEY (tool_id) REFERENCES tool(id) ON DELETE CASCADE
 );
@@ -114,6 +116,7 @@ CREATE TABLE IF NOT EXISTS identification (
     override_charge INTEGER,
     source_sequence TEXT,  -- original unmodified sequence; NULL if same as sequence
     isotope_offset INTEGER,  -- precursor isotope offset; NULL if not determined
+    src_file_protein_id TEXT,  -- protein ID from source identification file (nullable)
     FOREIGN KEY (spectre_id) REFERENCES spectre(id) ON DELETE CASCADE,
     FOREIGN KEY (tool_id) REFERENCES tool(id) ON DELETE CASCADE,
     FOREIGN KEY (ident_file_id) REFERENCES identification_file(id) ON DELETE CASCADE

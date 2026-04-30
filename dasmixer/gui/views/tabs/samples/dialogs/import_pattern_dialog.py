@@ -79,6 +79,10 @@ class ImportPatternDialog:
         self.page.update()
 
         # Fetch data
+        _parser_supports_proteins = False
+        cb_collect_proteins = None
+        cb_is_uniprot = None
+
         if self.import_type == "spectra":
             parsers = registry.get_spectra_parsers()
             parser_type_label = "Spectra Format"
@@ -111,6 +115,24 @@ class ImportPatternDialog:
                 return
         else:
             tool = await self.project.get_tool(self.tool_id) if self.tool_id else None
+
+            # NEW: check if parser supports proteins
+            from dasmixer.api.inputs.registry import registry as _registry
+            _parser_class = _registry.get_parser(tool.parser, "identification") if tool else None
+            _parser_supports_proteins = getattr(_parser_class, 'contain_proteins', False)
+
+            cb_collect_proteins = None
+            cb_is_uniprot = None
+            if _parser_supports_proteins:
+                cb_collect_proteins = ft.Checkbox(
+                    label="Import protein IDs from file",
+                    value=False,
+                )
+                cb_is_uniprot = ft.Checkbox(
+                    label="Proteins are UniProt IDs",
+                    value=False,
+                )
+
             parser_name = tool.parser if tool else "Unknown"
             parser_type_label = f"Format: {parser_name}"
             default_pattern = "*.csv"
@@ -200,57 +222,76 @@ class ImportPatternDialog:
         )
 
         # Replace spinner with real form
+        content_controls = [
+            ft.Row(
+                [
+                    self.folder_field,
+                    ft.IconButton(
+                        icon=ft.Icons.FOLDER_OPEN,
+                        on_click=lambda e: self.page.run_task(self._browse_folder, e),
+                    ),
+                ],
+                spacing=5,
+            ),
+            ft.Row(
+                [self.file_pattern_field, self.id_pattern_field],
+                spacing=10,
+            ),
+            dropdown_row,
+        ]
+
+        if _parser_supports_proteins:
+            protein_section = ft.Container(
+                content=ft.Column([
+                    ft.Text("Protein import options:", weight=ft.FontWeight.BOLD, size=12),
+                    cb_collect_proteins,
+                    cb_is_uniprot,
+                ], spacing=5),
+                padding=10,
+                border=ft.border.all(1, ft.Colors.GREEN_300),
+                border_radius=5,
+                bgcolor=ft.Colors.GREEN_50,
+            )
+            content_controls.append(protein_section)
+
+        content_controls.extend([
+            ft.Container(height=5),
+            ft.ElevatedButton(
+                content=ft.Text("Preview Files"),
+                icon=ft.Icons.PREVIEW,
+                on_click=lambda e: self.page.run_task(self._preview_files, e),
+            ),
+            ft.Container(height=5),
+            ft.Column(
+                [
+                    ft.Row(
+                        [
+                            ft.TextButton(
+                                "Select All",
+                                icon=ft.Icons.CHECK_BOX,
+                                on_click=self._select_all_files,
+                            ),
+                            ft.TextButton(
+                                "Deselect All",
+                                icon=ft.Icons.CHECK_BOX_OUTLINE_BLANK,
+                                on_click=self._deselect_all_files,
+                            ),
+                        ],
+                        spacing=5,
+                    ),
+                    ft.Container(
+                        content=self.files_list,
+                        border=ft.border.all(1, ft.Colors.GREY_300),
+                        border_radius=5,
+                        padding=10,
+                    ),
+                ],
+                spacing=5,
+            ),
+        ])
+
         self.dialog.content = ft.Column(
-            [
-                ft.Row(
-                    [
-                        self.folder_field,
-                        ft.IconButton(
-                            icon=ft.Icons.FOLDER_OPEN,
-                            on_click=lambda e: self.page.run_task(self._browse_folder, e),
-                        ),
-                    ],
-                    spacing=5,
-                ),
-                ft.Row(
-                    [self.file_pattern_field, self.id_pattern_field],
-                    spacing=10,
-                ),
-                dropdown_row,
-                ft.Container(height=5),
-                ft.ElevatedButton(
-                    content=ft.Text("Preview Files"),
-                    icon=ft.Icons.PREVIEW,
-                    on_click=lambda e: self.page.run_task(self._preview_files, e),
-                ),
-                ft.Container(height=5),
-                ft.Column(
-                    [
-                        ft.Row(
-                            [
-                                ft.TextButton(
-                                    "Select All",
-                                    icon=ft.Icons.CHECK_BOX,
-                                    on_click=self._select_all_files,
-                                ),
-                                ft.TextButton(
-                                    "Deselect All",
-                                    icon=ft.Icons.CHECK_BOX_OUTLINE_BLANK,
-                                    on_click=self._deselect_all_files,
-                                ),
-                            ],
-                            spacing=5,
-                        ),
-                        ft.Container(
-                            content=self.files_list,
-                            border=ft.border.all(1, ft.Colors.GREY_300),
-                            border_radius=5,
-                            padding=10,
-                        ),
-                    ],
-                    spacing=5,
-                ),
-            ],
+            content_controls,
             tight=True,
             width=700,
             scroll=ft.ScrollMode.AUTO,
@@ -441,7 +482,11 @@ class ImportPatternDialog:
                     self.parser_dropdown.value
                 )
             else:
+                collect = cb_collect_proteins.value if cb_collect_proteins else False
+                is_uniprot = cb_is_uniprot.value if cb_is_uniprot else False
                 await self.on_import_callback(
                     included_files,
-                    self.tool_id
+                    self.tool_id,
+                    collect_proteins=collect,
+                    is_uniprot_proteins=is_uniprot,
                 )

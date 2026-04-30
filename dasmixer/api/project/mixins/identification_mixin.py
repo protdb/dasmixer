@@ -22,13 +22,15 @@ class IdentificationMixin:
         self,
         spectra_file_id: int,
         tool_id: int,
-        file_path: str
+        file_path: str,
+        selection_field: str | None = None,
+        selection_field_value: str | None = None,
     ) -> int:
         """Add identification file record."""
         logger.debug(f"spectra_file_id: {spectra_file_id}, tool_id: {tool_id} file_path: {file_path}")
         cursor = await self._execute(
-            "INSERT INTO identification_file (spectre_file_id, tool_id, file_path) VALUES (?, ?, ?)",
-            (spectra_file_id, tool_id, file_path)
+            "INSERT INTO identification_file (spectre_file_id, tool_id, file_path, selection_field, selection_field_value) VALUES (?, ?, ?, ?, ?)",
+            (spectra_file_id, tool_id, file_path, selection_field, selection_field_value)
         )
         
         ident_file_id = cursor.lastrowid
@@ -98,7 +100,6 @@ class IdentificationMixin:
         
         for _, row in identifications_df.iterrows():
             positional_scores_json = json.dumps(row.get('positional_scores')) if row.get('positional_scores') else None
-            
             rows_to_insert.append((
                 int(row['spectre_id']),
                 int(row['tool_id']),
@@ -110,15 +111,16 @@ class IdentificationMixin:
                 float(row['theor_mass']) if row.get('theor_mass') is not None else None,
                 float(row['score']) if row.get('score') is not None else None,
                 positional_scores_json,
-                float(row['intensity_coverage']) if row.get('intensity_coverage') is not None else None
+                float(row['intensity_coverage']) if row.get('intensity_coverage') is not None else None,
+                str(row['src_file_protein_id']) if row.get('src_file_protein_id') is not None else None,
             ))
         
         if rows_to_insert:
             await self._executemany(
                 """INSERT INTO identification 
                    (spectre_id, tool_id, ident_file_id, is_preferred, sequence, canonical_sequence,
-                    ppm, theor_mass, score, positional_scores, intensity_coverage)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    ppm, theor_mass, score, positional_scores, intensity_coverage, src_file_protein_id)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 rows_to_insert
             )
             await self.save()
@@ -156,7 +158,7 @@ class IdentificationMixin:
                 i.ppm, i.theor_mass, i.score, i.positional_scores,
                 i.intensity_coverage, i.ions_matched, i.ion_match_type,
                 i.top_peaks_covered, i.override_charge, i.source_sequence,
-                i.isotope_offset,
+                i.isotope_offset, i.src_file_protein_id,
                 s.title as spectrum_title, s.pepmass, s.rt, s.charge,
                 t.name as tool_name, t.parser as tool_parser,
                 sf.sample_id, sam.name as sample_name
@@ -186,7 +188,9 @@ class IdentificationMixin:
             conditions.append("i.is_preferred = 1")
 
         if max_abs_ppm is not None:
-            conditions.append("abs(i.ppm) <= ?")
+            # Allow rows where ppm is NULL (not yet calculated) to pass through,
+            # so they are not silently dropped before the mapping pipeline runs.
+            conditions.append("(i.ppm IS NULL OR abs(i.ppm) <= ?)")
             params.append(max_abs_ppm)
         
         if conditions:

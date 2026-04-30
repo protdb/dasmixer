@@ -9,6 +9,7 @@ import aiofiles
 import aiocsv
 
 from .base import IdentificationParser
+from dasmixer.api.project.dataclasses import Protein
 from dasmixer.utils.logger import logger
 
 
@@ -59,6 +60,7 @@ class ColumnRenames:
     positional_scores: str | None = None
     ppm: str | None = None
     theor_mass: str | None = None
+    src_file_protein_id: str | None = None  # NEW: source column for protein ID
 
 
 class TableImporter(IdentificationParser, ABC):
@@ -131,7 +133,7 @@ class TableImporter(IdentificationParser, ABC):
         """
         suffix = self.file_path.suffix.lower()
         
-        if suffix == '.csv':
+        if suffix in ('.csv', '.txt'):
             sheet = TableSheet()
             sheet.no = 0
             sheet.name = None
@@ -160,7 +162,7 @@ class TableImporter(IdentificationParser, ABC):
         else:
             raise ValueError(
                 f"Unsupported file format: {suffix}. "
-                "Supported: .csv, .xls, .xlsx, .ods"
+                "Supported: .csv, '.txt', .xls, .xlsx, .ods"
             )
 
 
@@ -208,6 +210,26 @@ class SimpleTableImporter(TableImporter):
         available_cols = [col for col in r.keys() if col in result.columns]
         return result[available_cols]
 
+    def prepare_df(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Pre-process DataFrame before transform_df and column remapping.
+
+        Called once per batch with the raw sheet data (original column names).
+        The default implementation returns df unchanged.
+
+        Override in subclasses to collapse duplicate rows — for example, when
+        one spectrum maps to multiple proteins and the source file emits one row
+        per protein hit. After prepare_df the DataFrame must still have the same
+        column names as the original sheet.
+
+        Args:
+            df: DataFrame with original column names
+
+        Returns:
+            Pre-processed DataFrame (still with original column names)
+        """
+        return df
+
     def transform_df(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Transform DataFrame before column remapping.
@@ -223,15 +245,114 @@ class SimpleTableImporter(TableImporter):
         """
         return df
 
+    def get_proteins(self, df: pd.DataFrame) -> dict[str, 'Protein'] | None:
+        """
+        Extract protein objects from a batch DataFrame.
+        
+        Called for each batch during parse_batch. If this importer's
+        ColumnRenames does not define src_file_protein_id, returns None
+        (meaning: this importer cannot provide protein data at all).
+        
+        If src_file_protein_id is defined but the batch contains no non-null
+        values in that column, returns an empty dict (proteins could be
+        present in theory, but weren't in this batch).
+        
+        Subclasses may override this to provide richer Protein objects
+        (e.g., with sequence, gene, name fields populated from additional
+        columns in the source file).
+        
+        Args:
+            df: Batch DataFrame with already-remapped column names
+                (i.e., after remap_columns was applied).
+                
+        Returns:
+            None  — if src_file_protein_id is not configured (contain_proteins=False scenario)
+            {}    — if configured but no protein IDs found in this batch
+            dict[str, Protein]  — mapping protein_id -> Protein for each unique ID found
+        """
+        if self.renames.src_file_protein_id is None:
+            return None
+        
+        if 'src_file_protein_id' not in df.columns:
+            return {}
+        
+        result: dict[str, Protein] = {}
+        for raw_val in df['src_file_protein_id'].dropna().unique():
+            raw_str = str(raw_val).strip()
+            if not raw_str:
+                continue
+            # protein IDs may be semicolon-separated (e.g. "P12345;P67890")
+            for pid in raw_str.split(';'):
+                pid = pid.strip()
+                if pid and pid not in result:
+                    result[pid] = Protein(
+                        id=pid,
+                        is_uniprot=self.is_uniprot_proteins,
+                    )
+        return result
+
+    async def get_sample_ids(self, override_column: str | None = None) -> list[str]:
+        """
+        Return sorted list of unique sample IDs from the stacked file.
+        
+        Reads the column determined by override_column or self.sample_id_column,
+        returns all unique non-null string values sorted alphabetically.
+        
+        Requires validate() to have been called (or at least _read_table()).
+        Calls validate() internally if sheets are not yet loaded.
+        
+        Args:
+            override_column: If provided, use this column name instead of
+                            self.sample_id_column.
+        
+        Returns:
+            Sorted list of unique sample ID strings.
+            
+        Raises:
+            NotImplementedError: If can_import_stacked is False.
+            ValueError: If the resolved column is not found in the file.
+        """
+        if not self.can_import_stacked:
+            raise NotImplementedError(
+                f"{self.__class__.__name__} does not support stacked import"
+            )
+        
+        column = override_column or self.sample_id_column
+        if column is None:
+            raise ValueError("sample_id_column is not defined for this parser")
+        
+        if self.sheets is None:
+            await self.validate()
+        
+        if self.peptide_sheet_selector is None:
+            sheet_df = self.get_sheet()
+        else:
+            sheet_df = self.get_sheet(**self.peptide_sheet_selector)
+        
+        if column not in sheet_df.columns:
+            raise ValueError(
+                f"Column '{column}' not found in file. "
+                f"Available columns: {list(sheet_df.columns)}"
+            )
+        
+        unique_ids = sorted(
+            str(v) for v in sheet_df[column].dropna().unique()
+            if str(v).strip()
+        )
+        return unique_ids
+
     async def parse_batch(
         self,
         batch_size: int = 1000
-    ) -> AsyncIterator[tuple[pd.DataFrame, pd.DataFrame | None]]:
+    ) -> AsyncIterator[pd.DataFrame]:
         """
         Parse table file in batches.
         
+        Protein data is collected internally in self._proteins during iteration.
+        The caller reads self._proteins after parse_batch completes.
+        
         Yields:
-            Tuple of (peptide_df, None) - protein_df not supported yet
+            DataFrame with peptide identification data
         """
         # Read table if not already loaded
         if self.sheets is None:
@@ -243,15 +364,21 @@ class SimpleTableImporter(TableImporter):
         else:
             sheet_df = self.get_sheet(**self.peptide_sheet_selector)
         
-        # Transform and remap columns
-        data = self.remap_columns(self.transform_df(sheet_df))
-        logger.debug(data)
-        
+        # Apply prepare_df to the whole sheet before batching so that
+        # deduplication (e.g. collapsing per-protein rows) works globally.
+        sheet_df = self.prepare_df(sheet_df)
+
         # Yield in batches
         cursor = 0
-        while cursor < len(data):
-            batch = data[cursor:cursor + batch_size]
-            yield batch, None
+        while cursor < len(sheet_df):
+            batch = sheet_df[cursor:cursor + batch_size]
+
+            # Collect proteins from this batch
+            if self.contain_proteins:
+                batch_proteins = self.get_proteins(batch)
+                if batch_proteins is not None:
+                    self._proteins.update(batch_proteins)
+            yield self.remap_columns(self.transform_df(batch))
             cursor += batch_size
 
     async def validate(self) -> bool:
@@ -268,7 +395,7 @@ class SimpleTableImporter(TableImporter):
             # Try to remap columns to validate configuration
             sheet_df = self.get_sheet() if self.peptide_sheet_selector is None \
                 else self.get_sheet(**self.peptide_sheet_selector)
-            self.remap_columns(self.transform_df(sheet_df))
+            self.remap_columns(self.transform_df(self.prepare_df(sheet_df)))
             return True
         except Exception as e:
             logger.exception(e)
@@ -325,12 +452,15 @@ class LargeCSVImporter(IdentificationParser, ABC):
     async def parse_batch(
         self,
         batch_size: int = 1000
-    ) -> AsyncIterator[tuple[pd.DataFrame, pd.DataFrame | None]]:
+    ) -> AsyncIterator[pd.DataFrame]:
         """
         Parse large CSV file in batches using async streaming.
         
+        Protein data is collected internally in self._proteins during iteration.
+        The caller reads self._proteins after parse_batch completes.
+        
         Yields:
-            Tuple of (peptide_df, None)
+            DataFrame with peptide identification data
         """
         reader_params = self.reader_params or {}
         
@@ -357,10 +487,42 @@ class LargeCSVImporter(IdentificationParser, ABC):
                 
                 # Yield batch when ready
                 if cursor >= batch_size:
-                    yield pd.DataFrame(lines), None
+                    batch_df = pd.DataFrame(lines)
+                    
+                    # Collect proteins from this batch
+                    if self.contain_proteins and 'src_file_protein_id' in batch_df.columns:
+                        for raw_val in batch_df['src_file_protein_id'].dropna().unique():
+                            raw_str = str(raw_val).strip()
+                            if not raw_str:
+                                continue
+                            for pid in raw_str.split(';'):
+                                pid = pid.strip()
+                                if pid and pid not in self._proteins:
+                                    self._proteins[pid] = Protein(
+                                        id=pid,
+                                        is_uniprot=self.is_uniprot_proteins,
+                                    )
+                    
+                    yield batch_df
                     lines.clear()
                     cursor = 0
             
             # Yield remaining lines
             if lines:
-                yield pd.DataFrame(lines), None
+                batch_df = pd.DataFrame(lines)
+                
+                # Collect proteins from this batch
+                if self.contain_proteins and 'src_file_protein_id' in batch_df.columns:
+                    for raw_val in batch_df['src_file_protein_id'].dropna().unique():
+                        raw_str = str(raw_val).strip()
+                        if not raw_str:
+                            continue
+                        for pid in raw_str.split(';'):
+                            pid = pid.strip()
+                            if pid and pid not in self._proteins:
+                                self._proteins[pid] = Protein(
+                                    id=pid,
+                                    is_uniprot=self.is_uniprot_proteins,
+                                )
+                
+                yield batch_df

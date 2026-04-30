@@ -14,7 +14,8 @@ class ImportModeDialog:
         import_type: str,
         tool_id: int = None,
         on_single_files_callback=None,
-        on_pattern_callback=None
+        on_pattern_callback=None,
+        on_stacked_callback=None,
     ):
         """
         Initialize import mode dialog.
@@ -26,6 +27,7 @@ class ImportModeDialog:
             tool_id: Tool ID (required for identifications)
             on_single_files_callback: Callback for single files mode
             on_pattern_callback: Callback for pattern matching mode
+            on_stacked_callback: Callback for stacked file import mode
         """
         self.project = project
         self.page = page
@@ -33,6 +35,7 @@ class ImportModeDialog:
         self.tool_id = tool_id
         self.on_single_files_callback = on_single_files_callback
         self.on_pattern_callback = on_pattern_callback
+        self.on_stacked_callback = on_stacked_callback
         
         self.dialog = None
     
@@ -63,8 +66,17 @@ class ImportModeDialog:
             title = f"Import Identifications — {tool.name}"
             desc = f"Import identification files for {tool.name}"
 
+        # Check stacked support
+        show_stacked_btn = False
+        if self.import_type == "identifications" and self.tool_id:
+            from dasmixer.api.inputs.registry import registry as _registry
+            _tool = await self.project.get_tool(self.tool_id)
+            if _tool:
+                _parser_class = _registry.get_parser(_tool.parser, "identification")
+                show_stacked_btn = getattr(_parser_class, 'can_import_stacked', False)
+
         self.dialog.title = ft.Text(title)
-        self._content_col.controls = [
+        controls = [
             ft.Text("Choose import mode:", size=16, weight=ft.FontWeight.BOLD),
             ft.Text(desc, size=11, italic=True, color=ft.Colors.GREY_600),
             ft.Container(height=10),
@@ -81,6 +93,25 @@ class ImportModeDialog:
                 on_click=lambda e: self.page.run_task(self._on_pattern, e),
                 width=300,
             ),
+        ]
+        if show_stacked_btn:
+            controls += [
+                ft.Container(height=5),
+                ft.ElevatedButton(
+                    content=ft.Text("Import stacked file"),
+                    icon=ft.Icons.TABLE_VIEW,
+                    on_click=lambda e: self.page.run_task(self._on_stacked, e),
+                    width=300,
+                ),
+                ft.Container(height=5),
+                ft.Text(
+                    "Stacked file contains identifications for multiple samples",
+                    size=11,
+                    italic=True,
+                    color=ft.Colors.GREY_600,
+                ),
+            ]
+        controls += [
             ft.Container(height=10),
             ft.Text(
                 "Pattern matching allows automatic sample ID extraction from filenames",
@@ -89,6 +120,7 @@ class ImportModeDialog:
                 color=ft.Colors.GREY_600,
             ),
         ]
+        self._content_col.controls = controls
         self.page.update()
     
     def _close(self, e=None):
@@ -107,3 +139,9 @@ class ImportModeDialog:
         self._close()
         if self.on_pattern_callback:
             await self.on_pattern_callback()
+    
+    async def _on_stacked(self, e):
+        """Handle stacked file import mode selection."""
+        self._close()
+        if self.on_stacked_callback:
+            await self.on_stacked_callback()

@@ -6,6 +6,8 @@ from dasmixer.utils.logger import logger
 
 
 def get_coverage(seq: str, peptides: list[str]) -> tuple[float, float]:
+    if not seq:
+        return 0.0, 0.0
     map_list = ['-' for _ in range(len(seq))]
     for peptide in peptides:
         start_position = seq.find(peptide)

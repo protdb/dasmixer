@@ -68,7 +68,7 @@ class ProteinIdentificationsAction(BaseAction):
                 return 0
 
             dialog.update_progress(None, "Loading protein database...")
-            sequences_db = await self.project.get_protein_db_to_search()
+            sequences_db = await self.project.get_protein_db_to_search(null_sequence=True)
 
             if len(sequences_db) == 0:
                 dialog.close()

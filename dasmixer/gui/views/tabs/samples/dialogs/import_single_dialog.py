@@ -103,6 +103,7 @@ class ImportSingleDialog:
         self.page.update()
 
         # Fetch data
+        parser_supports_proteins = False
         if self.import_type == "spectra":
             parsers = registry.get_spectra_parsers()
             parser_type_label = "Spectra Format / Parser"
@@ -139,6 +140,25 @@ class ImportSingleDialog:
             )
         else:
             tool = await self.project.get_tool(self.tool_id)
+
+            # NEW: check if parser supports proteins
+            from dasmixer.api.inputs.registry import registry as _registry
+            parser_class = _registry.get_parser(tool.parser, "identification")
+            parser_supports_proteins = getattr(parser_class, 'contain_proteins', False)
+
+            # Create protein checkboxes (only if parser supports proteins)
+            cb_collect_proteins = None
+            cb_is_uniprot = None
+            if parser_supports_proteins:
+                cb_collect_proteins = ft.Checkbox(
+                    label="Import protein IDs from file",
+                    value=False,
+                )
+                cb_is_uniprot = ft.Checkbox(
+                    label="Proteins are UniProt IDs",
+                    value=False,
+                )
+
             parser_type_label = f"Format: {tool.parser}"
             parser_dropdown = None
             group_options = []
@@ -200,6 +220,20 @@ class ImportSingleDialog:
                 )
             )
 
+        if parser_supports_proteins:
+            protein_section = ft.Container(
+                content=ft.Column([
+                    ft.Text("Protein import options:", weight=ft.FontWeight.BOLD, size=12),
+                    cb_collect_proteins,
+                    cb_is_uniprot,
+                ], spacing=5),
+                padding=10,
+                border=ft.border.all(1, ft.Colors.GREEN_300),
+                border_radius=5,
+                bgcolor=ft.Colors.GREEN_50,
+            )
+            config_controls.append(protein_section)
+
         for cfg in file_configs:
             row_controls = [cfg['sample_name']]
             if cfg['group_dropdown']:
@@ -239,10 +273,14 @@ class ImportSingleDialog:
                             fixed_sample_name=self.fixed_sample_name,
                         )
                     else:
+                        collect = cb_collect_proteins.value if cb_collect_proteins else False
+                        is_uniprot = cb_is_uniprot.value if cb_is_uniprot else False
                         await self.on_import_callback(
                             files_to_import,
                             self.tool_id,
                             fixed_spectra_file_id=self.fixed_spectra_file_id,
+                            collect_proteins=collect,
+                            is_uniprot_proteins=is_uniprot,
                         )
             except Exception as ex:
                 logger.exception(ex)

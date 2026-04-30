@@ -98,6 +98,10 @@ class MatchProteinsAction(BaseAction):
 
         try:
             batch_size = _config.protein_mapping_batch_size
+            # use_src_protein_ids = True if ANY tool has "Use protein ID from file" checked
+            use_src_protein_ids = any(
+                s.get('use_protein_from_file', False) for s in tool_settings.values()
+            )
             gen = map_proteins(
                 self.project,
                 tool_settings,
@@ -106,6 +110,7 @@ class MatchProteinsAction(BaseAction):
                 seqfixer_params=seqfixer_params,
                 batch_size=batch_size,
                 sample_id=sample_id,
+                use_src_protein_ids=use_src_protein_ids,
             )
 
             # Prime: get first batch from generator

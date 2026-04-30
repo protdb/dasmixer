@@ -147,7 +147,14 @@ class ImportHandlers:
             show_snack(self.page, f"Import error: {str(ex)}", ft.Colors.RED_400)
             self.page.update()
     
-    async def import_identification_files(self, file_list, tool_id: int, fixed_spectra_file_id: int = None):
+    async def import_identification_files(
+        self,
+        file_list,
+        tool_id: int,
+        fixed_spectra_file_id: int = None,
+        collect_proteins: bool = False,
+        is_uniprot_proteins: bool = False,
+    ):
         """
         Import identification files with progress indication.
         
@@ -231,7 +238,11 @@ class ImportHandlers:
                 )
                 
                 # Parse and import identifications
-                parser = parser_class(str(file_path))
+                parser = parser_class(
+                    str(file_path),
+                    collect_proteins=collect_proteins,
+                    is_uniprot_proteins=is_uniprot_proteins,
+                )
                 logger.debug(f'Parser {type(parser)} init for {file_path}')
                 
                 # Validate file
@@ -257,11 +268,11 @@ class ImportHandlers:
                 batch_size = _config.identification_batch_size
                 batch_count = 0
                 file_ident_count = 0
-                async for batch_tuple in parser.parse_batch(batch_size=batch_size):
-                    logger.warn(batch_tuple)
+                async for batch in parser.parse_batch(batch_size=batch_size):
+                    logger.warn(batch)
                     logger.warn(spectra_mapping)
                     batch = pd.merge(
-                        batch_tuple[0],
+                        batch,
                         pd.json_normalize(spectra_mapping),
                         on=parser.spectra_id_field,
                         how='inner'
@@ -271,16 +282,26 @@ class ImportHandlers:
                     batch['ident_file_id'] = ident_file_id
                     logger.debug(batch)
                     logger.debug(batch.columns)
-                    
+
                     if len(batch) > 0:
                         await self.project.add_identifications_batch(batch)
                         batch_count += 1
                         file_ident_count += len(batch)
                         total_identifications += len(batch)
-                    
+
                     progress_details.value = f"Imported {file_ident_count} identifications (batch {batch_count})..."
                     progress_details.update()
-            
+
+                # Save proteins collected during parsing
+                if collect_proteins and parser.contain_proteins and parser.proteins:
+                    proteins_df = pd.DataFrame([
+                        p.to_dict() for p in parser.proteins.values()
+                    ])
+                    # Apply is_uniprot flag
+                    proteins_df['is_uniprot'] = 1 if is_uniprot_proteins else 0
+                    await self._save_proteins_batch(proteins_df)
+                    logger.info(f"Saved {len(parser.proteins)} proteins from identification file")
+
             # Complete
             progress_bar.value = 1.0
             progress_text.value = "Import complete!"
@@ -294,23 +315,203 @@ class ImportHandlers:
             await asyncio.sleep(1)
             progress_dialog.open = False
             self.page.update()
-            
+
             # Show success
             show_snack(self.page, f"Successfully imported {total_identifications} identifications from {total_files} file(s)", ft.Colors.GREEN_400)
             self.page.update()
-            
+
             # Call completion callback
             if self.on_complete_callback:
                 await self.on_complete_callback()
-            
+
         except Exception as ex:
             logger.exception(ex)
             import traceback
             error_details = traceback.format_exc()
             logger.debug(f"Import error: {error_details}")
+
+            progress_dialog.open = False
+            self.page.update()
+
+            show_snack(self.page, f"Import error: {str(ex)}", ft.Colors.RED_400)
+            self.page.update()
+
+    async def _save_proteins_batch(self, proteins_df: pd.DataFrame) -> None:
+        """
+        Save proteins to DB using ON CONFLICT(id) DO NOTHING semantics.
+        
+        Unlike project.add_proteins_batch() which uses INSERT OR REPLACE,
+        here we must NOT overwrite existing proteins (they may have richer
+        data from FASTA import or UniProt enrichment).
+        """
+        rows = []
+        for _, row in proteins_df.iterrows():
+            rows.append((
+                str(row['id']),
+                1 if row.get('is_uniprot', False) else 0,
+                row.get('fasta_name'),
+                row.get('sequence'),
+                row.get('gene'),
+                row.get('name'),
+                row.get('taxon_id'),
+                row.get('organism_name'),
+            ))
+        
+        if rows:
+            await self.project._executemany(
+                """INSERT INTO protein
+                   (id, is_uniprot, fasta_name, sequence, gene, name, taxon_id, organism_name)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                   ON CONFLICT(id) DO NOTHING""",
+                rows
+            )
+            await self.project.save()
+
+    async def import_identification_files_stacked(
+        self,
+        entries: list[dict],
+        tool_id: int,
+    ):
+        """
+        Import identifications from a stacked file for multiple samples.
+        
+        Args:
+            entries: list of dicts, each with:
+                - file_path: Path
+                - project_sample_name: str  (name of existing Sample in DB)
+                - file_sample_id: str       (value in selection_field column)
+                - selection_field: str | None
+            tool_id: Tool ID
+        """
+        # Show progress dialog
+        progress_text = ft.Text("Preparing stacked import...")
+        progress_bar = ft.ProgressBar(value=0)
+        progress_details = ft.Text("", size=11, color=ft.Colors.GREY_600)
+        
+        progress_dialog = ft.AlertDialog(
+            title=ft.Text("Importing Stacked Identifications"),
+            content=ft.Column([
+                progress_text, progress_bar,
+                ft.Container(height=5), progress_details
+            ], tight=True, width=400),
+            modal=True
+        )
+        self.page.overlay.append(progress_dialog)
+        progress_dialog.open = True
+        self.page.update()
+        
+        try:
+            tool = await self.project.get_tool(tool_id)
+            if not tool:
+                raise ValueError(f"Tool id={tool_id} not found")
             
+            parser_class = registry.get_parser(tool.parser, "identification")
+            total = len(entries)
+            total_identifications = 0
+            
+            for i, entry in enumerate(entries):
+                file_path = entry['file_path']
+                project_sample_name = entry['project_sample_name']
+                file_sample_id = entry['file_sample_id']
+                selection_field = entry['selection_field']
+                
+                progress_text.value = f"Processing {project_sample_name} ({i+1}/{total})..."
+                progress_bar.value = i / total
+                progress_text.update()
+                progress_bar.update()
+                
+                # Find sample by name
+                sample = await self.project.get_sample_by_name(project_sample_name)
+                if not sample:
+                    raise ValueError(f"Sample '{project_sample_name}' not found in project")
+                
+                # Get spectra files for sample
+                spectra_files = await self.project.get_spectra_files(sample_id=sample.id)
+                if len(spectra_files) == 0:
+                    raise ValueError(f"No spectra files for sample '{project_sample_name}'")
+                
+                spectra_file_id = spectra_files.iloc[0]['id']
+                
+                # Create identification_file record with stacked metadata
+                ident_file_id = await self.project.add_identification_file(
+                    spectra_file_id=int(spectra_file_id),
+                    tool_id=tool.id,
+                    file_path=str(file_path),
+                    selection_field=selection_field,
+                    selection_field_value=file_sample_id,
+                )
+                
+                # Parse file, filter by file_sample_id
+                parser = parser_class(str(file_path))
+                is_valid = await parser.validate()
+                if not is_valid:
+                    raise ValueError(f"Invalid file format: {file_path.name}")
+                
+                # Get spectra mapping
+                spectra_mapping = await self.project.get_spectra_idlist(
+                    spectra_file_id, by=parser.spectra_id_field
+                )
+                
+                effective_field = selection_field or getattr(parser_class, 'sample_id_column', None)
+                
+                batch_size = _config.identification_batch_size
+                file_ident_count = 0
+                
+                async for batch in parser.parse_batch(batch_size=batch_size):
+                    # Filter: keep only rows matching this sample
+                    if effective_field and effective_field in batch.columns:
+                        batch = batch[batch[effective_field].astype(str) == str(file_sample_id)]
+                    
+                    if len(batch) == 0:
+                        continue
+                    
+                    # Drop sample_id column before merge (not needed in DB)
+                    if effective_field and effective_field in batch.columns:
+                        batch = batch.drop(columns=[effective_field])
+                    
+                    merged = pd.merge(
+                        batch,
+                        pd.json_normalize(spectra_mapping),
+                        on=parser.spectra_id_field,
+                        how='inner',
+                    )
+                    merged['tool_id'] = tool.id
+                    merged['ident_file_id'] = ident_file_id
+                    
+                    if len(merged) > 0:
+                        await self.project.add_identifications_batch(merged)
+                        file_ident_count += len(merged)
+                        total_identifications += len(merged)
+                    
+                    progress_details.value = f"{project_sample_name}: {file_ident_count} identifications..."
+                    progress_details.update()
+            
+            # Complete
+            progress_bar.value = 1.0
+            progress_text.value = "Import complete!"
+            progress_details.value = f"Total: {total_identifications} identifications from {total} sample(s)"
+            progress_text.update()
+            progress_bar.update()
+            progress_details.update()
+            
+            import asyncio
+            await asyncio.sleep(1)
             progress_dialog.open = False
             self.page.update()
             
+            show_snack(
+                self.page,
+                f"Successfully imported {total_identifications} identifications for {total} sample(s)",
+                ft.Colors.GREEN_400
+            )
+            self.page.update()
+            
+            if self.on_complete_callback:
+                await self.on_complete_callback()
+        
+        except Exception as ex:
+            logger.exception(ex)
+            progress_dialog.open = False
+            self.page.update()
             show_snack(self.page, f"Import error: {str(ex)}", ft.Colors.RED_400)
             self.page.update()
