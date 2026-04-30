@@ -50,6 +50,43 @@ Developed at the **Laboratory of Structural Proteomics, IBMC, Moscow**.
 
 ---
 
+## Installation
+
+### From PyPI
+```bash
+pip install dasmixer
+```
+
+### Development setup (Poetry)
+```bash
+git clone git@github.com:protdb/dasmixer.git
+cd dasmixer
+poetry install
+poetry run dasmixer
+```
+
+### Standalone windows executable:
+
+**[Download latest version](https://github.com/protdb/dasmixer/releases/download/0.3.0/dasmixer0.3.0_Windows_x64.zip)**
+
+Then you should unpack the archive and run dasmixer.exe from unpacking folder
+
+**Requirements:** Python ≥ 3.11
+
+---
+
+## Usage
+
+**[Read the instruction](docs/user/Instruction_DasMixer.pdf)**
+
+Also check out the guide for the process [here](docs/user/workflow.md)
+
+### Launch GUI
+```bash
+dasmixer                          # Start with empty screen
+dasmixer project.dasmix           # Open existing project in GUI
+```
+
 ## Architecture
 
 | Layer | Technology |
@@ -70,55 +107,6 @@ The application exposes three parallel interfaces:
 
 ---
 
-## Installation
-
-### From PyPI (planned)
-```bash
-pip install dasmixer
-```
-
-### Development setup (Poetry)
-```bash
-git clone git@github.com:protdb/dasmixer.git
-cd dasmixer
-poetry install
-poetry run dasmixer
-```
-
-**Requirements:** Python ≥ 3.11
-
----
-
-## Usage
-
-### Launch GUI
-```bash
-dasmixer                          # Start with empty screen
-dasmixer project.dasmix           # Open existing project in GUI
-```
-
-### CLI Commands
-```bash
-# Create project (opens GUI)
-dasmixer project.dasmix
-
-# Import MGF files by pattern
-dasmixer project.dasmix import mgf-pattern \
-    --folder /data/spectra \
-    --pattern "*.mgf" \
-    --id-pattern "{id}_*.mgf" \
-    --group Control
-
-# Import single MGF file
-dasmixer project.dasmix import mgf-file \
-    --file /data/sample1.mgf \
-    --sample-id "Sample1" \
-    --group Control
-
-# Manage comparison groups
-dasmixer project.dasmix subset add --name "Treatment"
-dasmixer project.dasmix subset list
-```
 
 ---
 
