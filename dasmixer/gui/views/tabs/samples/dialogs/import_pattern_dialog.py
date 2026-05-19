@@ -58,6 +58,8 @@ class ImportPatternDialog:
         self.dialog = None
         self._file_entries: List[FileEntry] = []
         self._import_btn = None
+        self.cb_collect_proteins = None
+        self.cb_is_uniprot = None
 
     async def show(self):
         """Show dialog immediately, then load data and populate fields."""
@@ -80,8 +82,6 @@ class ImportPatternDialog:
 
         # Fetch data
         _parser_supports_proteins = False
-        cb_collect_proteins = None
-        cb_is_uniprot = None
 
         if self.import_type == "spectra":
             parsers = registry.get_spectra_parsers()
@@ -121,14 +121,14 @@ class ImportPatternDialog:
             _parser_class = _registry.get_parser(tool.parser, "identification") if tool else None
             _parser_supports_proteins = getattr(_parser_class, 'contain_proteins', False)
 
-            cb_collect_proteins = None
-            cb_is_uniprot = None
+            self.cb_collect_proteins = None
+            self.cb_is_uniprot = None
             if _parser_supports_proteins:
-                cb_collect_proteins = ft.Checkbox(
+                self.cb_collect_proteins = ft.Checkbox(
                     label="Import protein IDs from file",
                     value=False,
                 )
-                cb_is_uniprot = ft.Checkbox(
+                self.cb_is_uniprot = ft.Checkbox(
                     label="Proteins are UniProt IDs",
                     value=False,
                 )
@@ -244,8 +244,8 @@ class ImportPatternDialog:
             protein_section = ft.Container(
                 content=ft.Column([
                     ft.Text("Protein import options:", weight=ft.FontWeight.BOLD, size=12),
-                    cb_collect_proteins,
-                    cb_is_uniprot,
+                    self.cb_collect_proteins,
+                    self.cb_is_uniprot,
                 ], spacing=5),
                 padding=10,
                 border=ft.border.all(1, ft.Colors.GREEN_300),
@@ -482,8 +482,8 @@ class ImportPatternDialog:
                     self.parser_dropdown.value
                 )
             else:
-                collect = cb_collect_proteins.value if cb_collect_proteins else False
-                is_uniprot = cb_is_uniprot.value if cb_is_uniprot else False
+                collect = self.cb_collect_proteins.value if self.cb_collect_proteins else False
+                is_uniprot = self.cb_is_uniprot.value if self.cb_is_uniprot else False
                 await self.on_import_callback(
                     included_files,
                     self.tool_id,
