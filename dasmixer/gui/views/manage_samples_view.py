@@ -448,23 +448,22 @@ class ManageSamplesView(ft.View):
 
         right_buttons = ft.Row([
             ft.ElevatedButton(
-                content=ft.Row([ft.Icon(ft.Icons.EDIT_OUTLINED, size=16), ft.Text("Edit")], spacing=4, tight=True),
+                content=ft.Row([ft.Icon(ft.Icons.EDIT_OUTLINED, size=20)], spacing=4, tight=True),
                 tooltip="Edit sample properties",
                 on_click=lambda e, s=sample: self.page.run_task(self._show_edit_dialog, s) if self.page else None,
             ),
             ft.ElevatedButton(
                 content=ft.Row([
-                    ft.Icon(ft.Icons.FLAG if sample.outlier else ft.Icons.FLAG_OUTLINED, size=16,
+                    ft.Icon(ft.Icons.FLAG if sample.outlier else ft.Icons.FLAG_OUTLINED, size=20,
                             color=ft.Colors.RED_500 if sample.outlier else None),
-                    ft.Text("Outlier"),
+
                 ], spacing=4, tight=True),
                 tooltip="Toggle outlier mark",
                 on_click=lambda e, s=sample: self.page.run_task(self._toggle_outlier, s) if self.page else None,
             ),
             ft.ElevatedButton(
                 content=ft.Row([
-                    ft.Icon(ft.Icons.DELETE_OUTLINED, size=16, color=ft.Colors.RED_600),
-                    ft.Text("Delete", color=ft.Colors.RED_600),
+                    ft.Icon(ft.Icons.DELETE_OUTLINED, size=20, color=ft.Colors.RED_600),
                 ], spacing=4, tight=True),
                 tooltip="Delete sample",
                 on_click=lambda e, s=sample: self.page.run_task(self._delete_sample, s) if self.page else None,
