@@ -4,6 +4,7 @@ import flet as ft
 from pathlib import Path
 
 from dasmixer.gui.utils import get_asset_path
+from dasmixer.versions import APP_VERSION
 
 
 class StartView(ft.Container):
@@ -68,6 +69,7 @@ class StartView(ft.Container):
                 "Mass Spectrometry Data Integration Tool",
                 size=20,
             ),
+            ft.Text(f"v{APP_VERSION}", weight=ft.FontWeight.BOLD, size=15),
         ]
         header = ft.Container(
             content=ft.Column(
