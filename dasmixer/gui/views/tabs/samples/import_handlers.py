@@ -26,7 +26,7 @@ class ImportHandlers:
         self.page = page
         self.on_complete_callback = on_complete_callback
     
-    async def import_spectra_files(self, file_list, subset_id, parser_name, fixed_sample_name=None):
+    async def import_spectra_files(self, file_list, subset_id, parser_name, fixed_sample_name=None, on_duplicates="skip"):
         """
         Import spectra files with progress indication.
         
@@ -62,6 +62,7 @@ class ImportHandlers:
             
             total_files = len(file_list)
             total_spectra = 0
+            skipped_count = 0
             
             for i, (file_path, sample_id) in enumerate(file_list):
                 progress_text.value = f"Importing {file_path.name} ({i+1}/{total_files})..."
@@ -80,6 +81,16 @@ class ImportHandlers:
                         subset_id=subset_id
                     )
                 
+                # Check for duplicates
+                existing_sf = await self.project.get_spectra_file_by_path(str(file_path))
+                if existing_sf is not None:
+                    if on_duplicates == "skip":
+                        skipped_count += 1
+                        continue
+                    elif on_duplicates == "reload":
+                        await self.project.delete_spectra_file(existing_sf['id'])
+                    # "add_as_new": do nothing, just create a new record
+
                 # Add spectra file record
                 spectra_file_id = await self.project.add_spectra_file(
                     sample_id=sample.id,
@@ -112,6 +123,11 @@ class ImportHandlers:
                     
                     progress_details.value = f"Imported {file_spectra_count} spectra (batch {batch_count})..."
                     progress_details.update()
+
+            # Show skip warning
+            if skipped_count > 0:
+                show_snack(self.page, f"{skipped_count} file(s) skipped (already imported)", ft.Colors.ORANGE_400)
+                self.page.update()
             
             # Complete
             progress_bar.value = 1.0
@@ -154,6 +170,7 @@ class ImportHandlers:
         fixed_spectra_file_id: int = None,
         collect_proteins: bool = False,
         is_uniprot_proteins: bool = False,
+        on_duplicates: str = "skip",
     ):
         """
         Import identification files with progress indication.
@@ -194,6 +211,7 @@ class ImportHandlers:
             
             total_files = len(file_list)
             total_identifications = 0
+            skipped_count = 0
             
             for i, (file_path, sample_id) in enumerate(file_list):
                 progress_text.value = f"Importing {file_path.name} ({i+1}/{total_files})..."
@@ -230,6 +248,16 @@ class ImportHandlers:
                     # Use first spectra file
                     spectra_file_id = spectra_files.iloc[0]['id']
                 
+                # Check for duplicates
+                existing_if = await self.project.get_identification_file_by_path(str(file_path))
+                if existing_if is not None:
+                    if on_duplicates == "skip":
+                        skipped_count += 1
+                        continue
+                    elif on_duplicates == "reload":
+                        await self.project.delete_identification_file(existing_if['id'])
+                    # "add_as_new": do nothing, just create a new record
+
                 # Add identification file record
                 ident_file_id = await self.project.add_identification_file(
                     spectra_file_id=int(spectra_file_id),
@@ -302,6 +330,11 @@ class ImportHandlers:
                     await self._save_proteins_batch(proteins_df)
                     logger.info(f"Saved {len(parser.proteins)} proteins from identification file")
 
+            # Show skip warning
+            if skipped_count > 0:
+                show_snack(self.page, f"{skipped_count} file(s) skipped (already imported)", ft.Colors.ORANGE_400)
+                self.page.update()
+            
             # Complete
             progress_bar.value = 1.0
             progress_text.value = "Import complete!"

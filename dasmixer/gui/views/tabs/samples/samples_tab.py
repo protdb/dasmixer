@@ -93,7 +93,8 @@ class SamplesTab(ft.Container):
             ft.Container(height=10),
             
             # Samples
-            self.sections['samples']
+            self.sections['samples'],
+            ft.Container(height=20),
         ],
         spacing=10,
         scroll=ft.ScrollMode.AUTO,

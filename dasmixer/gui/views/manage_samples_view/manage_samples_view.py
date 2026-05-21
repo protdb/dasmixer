@@ -1,12 +1,13 @@
 """ManageSamplesView — full-screen view for per-sample management.
 
-Opened from SamplesSummarySection via "Manage Samples" button.
-Displays the full ExpansionPanelList with all sample details and actions.
-On back-navigation the control list is cleared to release memory.
+Refactored into a thin orchestrator that delegates to:
+- SampleDataManager for data operations
+- UpdateRow for the update/loader/threshold row
+- SampleViewPanel for individual sample panels (with checkbox)
+- MassOperationsRow for mass-operation buttons
 """
 
-import json
-from pathlib import Path
+import asyncio
 from typing import Callable, Awaitable
 
 import flet as ft
@@ -16,16 +17,17 @@ from dasmixer.api.project.project import Project
 from dasmixer.gui.utils import show_snack
 from dasmixer.utils import logger
 
+from .data_manager import SampleDataManager
+from .update_row import UpdateRow
+from .sample_panel import SampleViewPanel
+from .mass_operations_row import MassOperationsRow
+
 
 class ManageSamplesView(ft.View):
     """
     ft.View pushed on top of the view stack for /samples route.
 
-    Manages:
-    - Full ExpansionPanelList of samples (file tree + actions)
-    - Update / recalculate stats button
-    - min_proteins / min_idents threshold fields
-    - Back button that pops this view and calls on_back callback
+    Thin orchestrator that delegates to helper components.
     """
 
     def __init__(self, project: Project, on_back: Callable[[], Awaitable[None]]):
@@ -33,23 +35,26 @@ class ManageSamplesView(ft.View):
         self.project = project
         self._on_back_cb = on_back
 
+        # Data manager
+        self._data_manager = SampleDataManager(project)
+
         # State
         self._samples: list[Sample] = []
         self._tools_count: int = 0
         self._panel_index: dict[int, int] = {}
+        self._selected_ids: set[int] = set()
 
         # Controls
         self._panels_list: ft.ExpansionPanelList | None = None
-        self._min_proteins_field: ft.TextField | None = None
-        self._min_idents_field: ft.TextField | None = None
-        self._update_btn: ft.ElevatedButton | None = None
-        self._update_loader: ft.ProgressRing | None = None
+        self._update_row: UpdateRow | None = None
+        self._mass_ops_row: MassOperationsRow | None = None
+        self._panel_controls: list[SampleViewPanel] = []
 
         self.appbar = self._build_appbar()
         self.controls = [self._build_body()]
 
     # ------------------------------------------------------------------
-    # AppBar with back button
+    # AppBar
     # ------------------------------------------------------------------
 
     def _build_appbar(self) -> ft.AppBar:
@@ -67,28 +72,16 @@ class ManageSamplesView(ft.View):
     # ------------------------------------------------------------------
 
     def _build_body(self) -> ft.Control:
-        self._min_proteins_field = ft.TextField(
-            label="Min proteins",
-            value="30",
-            width=130,
-            keyboard_type=ft.KeyboardType.NUMBER,
-            dense=True,
-        )
-        self._min_idents_field = ft.TextField(
-            label="Min identifications",
-            value="1000",
-            width=170,
-            keyboard_type=ft.KeyboardType.NUMBER,
-            dense=True,
-        )
-        self._update_loader = ft.ProgressRing(
-            width=20, height=20, stroke_width=2,
-            color=ft.Colors.BLUE_400, visible=False,
-        )
-        self._update_btn = ft.ElevatedButton(
-            content=ft.Text("Update"),
-            icon=ft.Icons.REFRESH,
-            on_click=lambda e: self.page.run_task(self._on_update_clicked) if self.page else None,
+        self._update_row = UpdateRow(on_update_clicked=self._on_update_clicked)
+
+        self._mass_ops_row = MassOperationsRow(
+            on_select_all=self._on_select_all,
+            on_deselect_all=self._on_deselect_all,
+            on_outlier=self._on_mass_outlier,
+            on_drop_file=self._on_mass_drop_file,
+            on_assign_subset=self._on_mass_assign_subset,
+            on_delete=self._on_mass_delete,
+            on_drop_empty=self._on_drop_empty_files,
         )
 
         self._panels_list = ft.ExpansionPanelList(
@@ -100,19 +93,8 @@ class ManageSamplesView(ft.View):
 
         return ft.Column(
             [
-                ft.Container(
-                    content=ft.Row(
-                        [
-                            self._update_btn,
-                            self._update_loader,
-                            self._min_proteins_field,
-                            self._min_idents_field,
-                        ],
-                        spacing=10,
-                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                    ),
-                    padding=ft.padding.symmetric(horizontal=16, vertical=8),
-                ),
+                self._update_row,
+                self._mass_ops_row,
                 ft.Container(
                     content=self._panels_list,
                     padding=ft.padding.symmetric(horizontal=16),
@@ -132,11 +114,12 @@ class ManageSamplesView(ft.View):
         self.page.run_task(self._load_data)
 
     def will_unmount(self):
-        """Free panel controls from memory when navigating away."""
         if self._panels_list is not None:
             self._panels_list.controls.clear()
         self._samples.clear()
         self._panel_index.clear()
+        self._panel_controls.clear()
+        self._selected_ids.clear()
 
     # ------------------------------------------------------------------
     # Back navigation
@@ -146,21 +129,20 @@ class ManageSamplesView(ft.View):
         await self._on_back_cb()
 
     # ------------------------------------------------------------------
-    # Initial data load — fast path from cache
+    # Data loading
     # ------------------------------------------------------------------
 
     async def _load_data(self):
         """Load panels: use cache where available, fetch fresh for uncached."""
-        self._samples = await self.project.get_samples()
-        self._tools_count = await self.project.get_tools_count()
-        min_proteins, min_idents = self._thresholds()
-        all_cached = await self.project.get_all_cached_sample_stats()
+        self._samples, all_cached, self._tools_count = await self._data_manager.load_all()
+        min_proteins, min_idents = self._update_row.get_thresholds()
 
         if self._panels_list is None:
             return
 
         self._panels_list.controls.clear()
         self._panel_index.clear()
+        self._panel_controls.clear()
 
         if not self._samples:
             self._panels_list.controls.append(
@@ -178,9 +160,19 @@ class ManageSamplesView(ft.View):
         else:
             for idx, sample in enumerate(self._samples):
                 sid = int(sample.id or 0)
-                stats = all_cached.get(sid) or _empty_stats()
-                panel = await self._build_sample_panel(sample, stats, min_proteins, min_idents)
+                stats = all_cached.get(sid) or {}
+                panel_ctrl = SampleViewPanel(
+                    sample=sample,
+                    stats=stats,
+                    tools_count=self._tools_count,
+                    min_proteins=min_proteins,
+                    min_idents=min_idents,
+                    on_action=self._on_panel_action,
+                    on_selection_changed=self._on_selection_changed,
+                )
+                panel = await panel_ctrl.build()
                 self._panel_index[sid] = idx
+                self._panel_controls.append(panel_ctrl)
                 self._panels_list.controls.append(panel)
 
         if self._panels_list.page:
@@ -197,55 +189,61 @@ class ManageSamplesView(ft.View):
                 await self._refresh_single_stats_in_place(sample_id, save_cache=True)
 
     # ------------------------------------------------------------------
-    # Manual update — full recalc
+    # Update — full recalc
     # ------------------------------------------------------------------
 
     async def _on_update_clicked(self):
-        self._set_loader(True)
+        if self._update_row:
+            self._update_row.set_loading(True)
         try:
-            self._samples = await self.project.get_samples()
-            self._tools_count = await self.project.get_tools_count()
-            min_proteins, min_idents = self._thresholds()
+            self._samples, all_cached, self._tools_count = await self._data_manager.refresh_all_fresh()
+            min_proteins, min_idents = self._update_row.get_thresholds()
 
-            if self._panels_list is not None:
-                self._panels_list.controls.clear()
+            if self._panels_list is None:
+                return
+
+            self._panels_list.controls.clear()
             self._panel_index.clear()
+            self._panel_controls.clear()
 
             if not self._samples:
-                if self._panels_list is not None:
-                    self._panels_list.controls.append(
-                        ft.ExpansionPanel(
-                            header=ft.ListTile(
-                                title=ft.Text("No samples yet.", color=ft.Colors.GREY_600, italic=True)
-                            ),
-                            content=ft.Container(),
-                            can_tap_header=False,
-                        )
+                self._panels_list.controls.append(
+                    ft.ExpansionPanel(
+                        header=ft.ListTile(
+                            title=ft.Text("No samples yet.", color=ft.Colors.GREY_600, italic=True)
+                        ),
+                        content=ft.Container(),
+                        can_tap_header=False,
                     )
-                if self._panels_list is not None and self._panels_list.page:
-                    self._panels_list.update()
+                )
             else:
                 for idx, sample in enumerate(self._samples):
                     sid = int(sample.id or 0)
-                    stats = await self.project.get_sample_stats(sid)
-                    await self.project.upsert_sample_status_cache(sid, stats)
-                    panel = await self._build_sample_panel(sample, stats, min_proteins, min_idents)
+                    stats = all_cached.get(sid) or {}
+                    panel_ctrl = SampleViewPanel(
+                        sample=sample,
+                        stats=stats,
+                        tools_count=self._tools_count,
+                        min_proteins=min_proteins,
+                        min_idents=min_idents,
+                        on_action=self._on_panel_action,
+                        on_selection_changed=self._on_selection_changed,
+                    )
+                    panel = await panel_ctrl.build()
                     self._panel_index[sid] = idx
-                    if self._panels_list is not None:
-                        self._panels_list.controls.append(panel)
+                    self._panel_controls.append(panel_ctrl)
+                    self._panels_list.controls.append(panel)
 
-                await self.project.save()
-
-                if self._panels_list is not None and self._panels_list.page:
-                    self._panels_list.update()
-
+            if self._panels_list.page:
+                self._panels_list.update()
         except Exception:
             logger.exception("ManageSamplesView._on_update_clicked error")
             if self.page:
                 show_snack(self.page, "Error updating samples", ft.Colors.RED_400)
                 self.page.update()
         finally:
-            self._set_loader(False)
+            if self._update_row:
+                self._update_row.set_loading(False)
 
     # ------------------------------------------------------------------
     # Per-sample refresh
@@ -257,14 +255,14 @@ class ManageSamplesView(ft.View):
             await self._load_data()
             return
 
-        refreshed = await self.project.get_sample(sample_id)
-        if refreshed is None:
+        refreshed_sample, stats = await self._data_manager.refresh_single(sample_id, save_cache=True)
+        if refreshed_sample is None:
             await self._load_data()
             return
 
         for i, s in enumerate(self._samples):
             if s.id == sample_id:
-                self._samples[i] = refreshed
+                self._samples[i] = refreshed_sample
                 break
 
         await self._refresh_single_stats_in_place(sample_id, save_cache=True)
@@ -274,205 +272,295 @@ class ManageSamplesView(ft.View):
         if sample is None:
             return
 
-        stats = await self.project.get_sample_stats(sample_id)
-        if save_cache:
-            await self.project.upsert_sample_status_cache(sample_id, stats)
-            await self.project.save()
+        _, stats = await self._data_manager.refresh_single(sample_id, save_cache=save_cache)
 
         idx = self._panel_index.get(sample_id)
-        if idx is None:
+        if idx is None or self._panels_list is None:
             return
 
-        min_proteins, min_idents = self._thresholds()
-        new_panel = await self._build_sample_panel(sample, stats, min_proteins, min_idents)
-        if self._panels_list is not None:
+        min_proteins, min_idents = self._update_row.get_thresholds()
+
+        if idx < len(self._panel_controls):
+            self._panel_controls[idx].update_stats(stats, min_proteins, min_idents)
+            new_panel = await self._panel_controls[idx].build()
             self._panels_list.controls[idx] = new_panel
             if self._panels_list.page:
                 self._panels_list.update()
 
     # ------------------------------------------------------------------
-    # Loader helper
+    # Panel action dispatcher
     # ------------------------------------------------------------------
 
-    def _set_loader(self, visible: bool) -> None:
-        if self._update_loader is None:
+    async def _on_panel_action(self, action: str, *args):
+        """Dispatch actions from SampleViewPanel."""
+        if action == 'get_detail':
+            return await self._data_manager.get_sample_detail(args[0])
+        elif action == 'add_ident_file':
+            sf_id, sample = args
+            await self._add_identification_file(sf_id, sample)
+        elif action == 'delete_spectra_file':
+            sf_id, sample = args
+            await self._delete_spectra_file(sf_id, sample)
+        elif action == 'delete_ident_file':
+            if_id, sample = args
+            await self._delete_ident_file(if_id, sample)
+        elif action == 'add_spectra_file':
+            sample = args[0]
+            await self._add_spectra_file(sample)
+        elif action == 'calculate_ions':
+            sample = args[0]
+            await self._action_calculate_ions(sample)
+        elif action == 'select_preferred':
+            sample = args[0]
+            await self._action_select_preferred(sample)
+        elif action == 'match_proteins':
+            sample = args[0]
+            await self._action_match_proteins(sample)
+        elif action == 'protein_identifications':
+            sample = args[0]
+            await self._action_protein_identifications(sample)
+        elif action == 'lfq':
+            sample = args[0]
+            await self._action_lfq(sample)
+        elif action == 'edit_sample':
+            sample = args[0]
+            await self._show_edit_dialog(sample)
+        elif action == 'toggle_outlier':
+            sample = args[0]
+            await self._toggle_outlier(sample)
+        elif action == 'delete_sample':
+            sample = args[0]
+            await self._delete_sample(sample)
+
+    # ------------------------------------------------------------------
+    # Selection
+    # ------------------------------------------------------------------
+
+    def _on_selection_changed(self, sample_id: int, selected: bool):
+        if selected:
+            self._selected_ids.add(sample_id)
+        else:
+            self._selected_ids.discard(sample_id)
+
+    def _on_select_all(self):
+        self._selected_ids.clear()
+        for ctrl in self._panel_controls:
+            self._selected_ids.add(ctrl.sample_id)
+            ctrl.set_selected(True)
+
+    def _on_deselect_all(self):
+        self._selected_ids.clear()
+        for ctrl in self._panel_controls:
+            ctrl.set_selected(False)
+
+    # ------------------------------------------------------------------
+    # Mass operations
+    # ------------------------------------------------------------------
+
+    async def _on_mass_outlier(self):
+        sids = list(self._selected_ids)
+        if not sids:
+            show_snack(self.page, "No samples selected", ft.Colors.ORANGE_400)
+            self.page.update()
             return
-        self._update_loader.visible = visible
-        if self._update_btn is not None:
-            self._update_btn.disabled = visible
-        if self.page:
-            if self._update_loader.page:
-                self._update_loader.update()
-            if self._update_btn and self._update_btn.page:
-                self._update_btn.update()
 
-    def _thresholds(self) -> tuple[int, int]:
-        try:
-            mp = int(self._min_proteins_field.value or 30)
-        except (ValueError, AttributeError):
-            mp = 30
-        try:
-            mi = int(self._min_idents_field.value or 1000)
-        except (ValueError, AttributeError):
-            mi = 1000
-        return mp, mi
+        selected_samples = [s for s in self._samples if s.id in sids]
+        all_outliers = all(s.outlier for s in selected_samples)
+        new_outlier = not all_outliers
 
-    # ------------------------------------------------------------------
-    # Panel builder — identical logic to old SamplesSection
-    # ------------------------------------------------------------------
+        count = 0
+        for sample in selected_samples:
+            sample.outlier = new_outlier
+            await self.project.update_sample(sample)
+            count += 1
 
-    async def _build_sample_panel(
-        self,
-        sample: Sample,
-        stats: dict,
-        min_proteins: int,
-        min_idents: int,
-    ) -> ft.ExpansionPanel:
-        header = _build_sample_header(sample, stats, self._tools_count, min_proteins, min_idents)
-        body   = await self._build_sample_body(sample, stats, min_idents)
-        return ft.ExpansionPanel(
-            header=ft.ListTile(title=header),
-            content=ft.Container(
-                content=body,
-                padding=ft.padding.only(left=16, right=16, bottom=16),
-            ),
-            expanded=False,
-            can_tap_header=True,
+        await self.project.save()
+
+        for sid in sids:
+            await self._refresh_single_stats_in_place(sid)
+
+        label = "set" if new_outlier else "cleared"
+        show_snack(self.page, f"Outlier {label} for {count} sample(s)", ft.Colors.GREEN_400)
+        self.page.update()
+
+    async def _on_mass_drop_file(self):
+        from .dialogs.drop_file_dialog import DropFileDialog
+        sids = list(self._selected_ids)
+        dialog = DropFileDialog(
+            project=self.project,
+            page=self.page,
+            selected_sample_ids=sids,
+            on_complete=self._on_mass_op_complete,
         )
+        await dialog.show()
 
-    async def _build_sample_body(self, sample: Sample, stats: dict, min_idents: int) -> ft.Control:
-        detail = await self.project.get_sample_detail(int(sample.id or 0))
-        body_controls: list[ft.Control] = []
+    async def _on_mass_assign_subset(self):
+        from .dialogs.assign_subset_dialog import AssignSubsetDialog
+        sids = list(self._selected_ids)
+        dialog = AssignSubsetDialog(
+            project=self.project,
+            page=self.page,
+            selected_sample_ids=sids,
+            on_complete=self._on_mass_op_complete,
+        )
+        await dialog.show()
 
-        if detail:
-            for sf in detail:
-                sf_id = int(sf['id'])
-                sf_name = Path(sf['path']).name
+    async def _on_mass_delete(self):
+        sids = list(self._selected_ids)
+        if not sids:
+            show_snack(self.page, "No samples selected", ft.Colors.ORANGE_400)
+            self.page.update()
+            return
 
-                spectra_row = ft.Row([
-                    ft.Icon(ft.Icons.GRAPHIC_EQ, size=16, color=ft.Colors.BLUE_600),
-                    ft.Text(sf_name, weight=ft.FontWeight.BOLD, size=13),
-                    ft.Text(f"({sf['format']})", size=11, color=ft.Colors.GREY_600),
-                    ft.Container(expand=True),
-                    ft.IconButton(
-                        icon=ft.Icons.ADD_CIRCLE_OUTLINE,
-                        icon_color=ft.Colors.BLUE_500,
-                        tooltip="Add identification file",
-                        on_click=lambda e, _sf_id=sf_id, _s=sample:
-                            self.page.run_task(self._add_identification_file, _sf_id, _s)
-                            if self.page else None,
-                    ),
-                    ft.IconButton(
-                        icon=ft.Icons.DELETE_OUTLINE,
-                        icon_color=ft.Colors.RED_400,
-                        tooltip="Delete spectra file",
-                        on_click=lambda e, _sf_id=sf_id, _s=sample:
-                            self.page.run_task(self._delete_spectra_file, _sf_id, _s)
-                            if self.page else None,
-                    ),
-                ], spacing=4)
-                body_controls.append(spectra_row)
+        samples_to_delete = [s for s in self._samples if s.id in sids]
 
-                for ident_file in sf.get('ident_files', []):
-                    if_id = int(ident_file['id'])
-                    count = int(ident_file.get('ident_count', 0))
-                    is_empty = count == 0
-                    is_below = 0 < count < min_idents
-                    row_border = None
-                    if is_empty:
-                        row_border = ft.border.all(1, ft.Colors.RED_400)
-                    elif is_below:
-                        row_border = ft.border.all(1, ft.Colors.ORANGE_400)
-
-                    ident_row = ft.Container(
-                        content=ft.Row([
-                            ft.Container(width=20),
-                            ft.Icon(ft.Icons.DESCRIPTION_OUTLINED, size=14, color=ft.Colors.GREY_600),
-                            ft.Text(ident_file.get('tool_name', '?'), size=12, weight=ft.FontWeight.W_500),
-                            ft.Text(Path(ident_file.get('file_path', '')).name, size=12, color=ft.Colors.GREY_700),
-                            ft.Text(f"({count} idents)", size=11,
-                                    color=ft.Colors.RED_600 if is_empty else ft.Colors.GREY_600),
-                            ft.Container(expand=True),
-                            ft.IconButton(
-                                icon=ft.Icons.DELETE_OUTLINE,
-                                icon_color=ft.Colors.RED_400,
-                                tooltip="Delete identification file",
-                                on_click=lambda e, _if_id=if_id, _s=sample:
-                                    self.page.run_task(self._delete_ident_file, _if_id, _s)
-                                    if self.page else None,
-                            ),
-                        ], spacing=4),
-                        border=row_border,
-                        border_radius=4,
-                        padding=ft.padding.symmetric(horizontal=4, vertical=2),
-                    )
-                    body_controls.append(ident_row)
-
-        body_controls.append(
-            ft.TextButton(
-                content=ft.Row([
-                    ft.Icon(ft.Icons.ADD, size=16),
-                    ft.Text("Add spectra file", size=13),
-                ], spacing=4, tight=True),
-                on_click=lambda e, s=sample:
-                    self.page.run_task(self._add_spectra_file, s) if self.page else None,
+        name_rows = []
+        for s in samples_to_delete:
+            name_rows.append(
+                ft.Container(
+                    content=ft.Text(f"• {s.name}", size=13),
+                    padding=ft.padding.symmetric(vertical=1),
+                )
             )
-        )
-        body_controls.append(ft.Divider(height=8))
 
-        # Additions
-        if sample.additions:
+        name_list = ft.Container(
+            content=ft.ListView(controls=name_rows, spacing=1, height=150),
+            border=ft.border.all(1, ft.Colors.GREY_300),
+            border_radius=5,
+            padding=10,
+        )
+
+        confirmed = False
+        event = asyncio.Event()
+
+        async def on_delete(e):
+            nonlocal confirmed
+            confirmed = True
+            dlg.open = False
+            self.page.update()
+            event.set()
+
+        def on_cancel(e):
+            dlg.open = False
+            self.page.update()
+            event.set()
+
+        dlg = ft.AlertDialog(
+            title=ft.Text("Delete samples?"),
+            content=ft.Column([
+                ft.Text("The following samples will be deleted:", size=13),
+                name_list,
+                ft.Text(
+                    "All spectra, identifications and peptide matches will be permanently removed.",
+                    size=12, color=ft.Colors.RED_600,
+                ),
+            ], tight=True, width=400),
+            actions=[
+                ft.TextButton("Cancel", on_click=on_cancel),
+                ft.ElevatedButton(
+                    "Delete",
+                    style=ft.ButtonStyle(bgcolor=ft.Colors.RED_600, color=ft.Colors.WHITE),
+                    on_click=lambda e: self.page.run_task(on_delete, e),
+                ),
+            ],
+        )
+        self.page.overlay.append(dlg)
+        dlg.open = True
+        self.page.update()
+        await event.wait()
+
+        if not confirmed:
+            return
+
+        count = 0
+        for sid in sids:
             try:
-                additions_text = json.dumps(sample.additions, indent=2, ensure_ascii=False)
+                await self.project.delete_sample(sid)
+                count += 1
+            except Exception as ex:
+                logger.exception(f"Error deleting sample id={sid}: {ex}")
+
+        self._samples = [s for s in self._samples if s.id not in sids]
+        self._selected_ids.clear()
+        await self._rebuild_panels_from_cache()
+        show_snack(self.page, f"Deleted {count} sample(s)", ft.Colors.GREEN_400)
+        self.page.update()
+
+    async def _on_drop_empty_files(self):
+        try:
+            deleted_spectra, deleted_idents = await self._data_manager.drop_empty_files()
+            if deleted_spectra == 0 and deleted_idents == 0:
+                show_snack(self.page, "No empty files found", ft.Colors.ORANGE_400)
+            else:
+                show_snack(
+                    self.page,
+                    f"Removed {deleted_spectra} spectra file(s) and {deleted_idents} identification file(s)",
+                    ft.Colors.GREEN_400,
+                )
+            await self._on_mass_op_complete()
+        except Exception as ex:
+            logger.exception("Error dropping empty files")
+            show_snack(self.page, f"Error: {ex}", ft.Colors.RED_400)
+            self.page.update()
+
+    async def _on_mass_op_complete(self):
+        """Reload data and rebuild panels after a mass operation."""
+        self._samples, all_cached, self._tools_count = await self._data_manager.load_all()
+        await self._rebuild_panels(all_cached=all_cached)
+
+    # ------------------------------------------------------------------
+    # Rebuild panels helper
+    # ------------------------------------------------------------------
+
+    async def _rebuild_panels_from_cache(self):
+        all_cached = {}
+        for sample in self._samples:
+            sid = int(sample.id or 0)
+            try:
+                stats = await self.project.get_sample_stats(sid)
+                all_cached[sid] = stats
             except Exception:
-                additions_text = str(sample.additions)
-            body_controls.append(
-                ft.Text(f"Additions:\n{additions_text}", size=11, color=ft.Colors.GREY_700,
-                        font_family="monospace")
+                pass
+        await self._rebuild_panels(all_cached=all_cached)
+
+    async def _rebuild_panels(self, all_cached: dict | None = None):
+        if self._panels_list is None:
+            return
+        min_proteins, min_idents = self._update_row.get_thresholds()
+        self._panels_list.controls.clear()
+        self._panel_index.clear()
+        self._panel_controls.clear()
+
+        if not self._samples:
+            self._panels_list.controls.append(
+                ft.ExpansionPanel(
+                    header=ft.ListTile(
+                        title=ft.Text("No samples yet.", color=ft.Colors.GREY_600, italic=True)
+                    ),
+                    content=ft.Container(),
+                    can_tap_header=False,
+                )
             )
-            body_controls.append(ft.Container(height=6))
+        else:
+            for idx, sample in enumerate(self._samples):
+                sid = int(sample.id or 0)
+                stats = (all_cached or {}).get(sid) or {}
+                panel_ctrl = SampleViewPanel(
+                    sample=sample,
+                    stats=stats,
+                    tools_count=self._tools_count,
+                    min_proteins=min_proteins,
+                    min_idents=min_idents,
+                    on_action=self._on_panel_action,
+                    on_selection_changed=self._on_selection_changed,
+                )
+                panel = await panel_ctrl.build()
+                self._panel_index[sid] = idx
+                self._panel_controls.append(panel_ctrl)
+                self._panels_list.controls.append(panel)
 
-        # Action buttons
-        left_buttons = ft.Row([
-            ft.ElevatedButton(content=ft.Text("Calculate ions"), icon=ft.Icons.BOLT,
-                on_click=lambda e, s=sample: self.page.run_task(self._action_calculate_ions, s) if self.page else None),
-            ft.ElevatedButton(content=ft.Text("Select preferred"), icon=ft.Icons.STAR_OUTLINE,
-                on_click=lambda e, s=sample: self.page.run_task(self._action_select_preferred, s) if self.page else None),
-            ft.ElevatedButton(content=ft.Text("Match proteins"), icon=ft.Icons.LINK,
-                on_click=lambda e, s=sample: self.page.run_task(self._action_match_proteins, s) if self.page else None),
-            ft.ElevatedButton(content=ft.Text("Protein Identifications"), icon=ft.Icons.BIOTECH,
-                on_click=lambda e, s=sample: self.page.run_task(self._action_protein_identifications, s) if self.page else None),
-            ft.ElevatedButton(content=ft.Text("LFQ"), icon=ft.Icons.ANALYTICS,
-                on_click=lambda e, s=sample: self.page.run_task(self._action_lfq, s) if self.page else None),
-        ], spacing=6, wrap=True)
-
-        right_buttons = ft.Row([
-            ft.ElevatedButton(
-                content=ft.Row([ft.Icon(ft.Icons.EDIT_OUTLINED, size=16), ft.Text("Edit")], spacing=4, tight=True),
-                tooltip="Edit sample properties",
-                on_click=lambda e, s=sample: self.page.run_task(self._show_edit_dialog, s) if self.page else None,
-            ),
-            ft.ElevatedButton(
-                content=ft.Row([
-                    ft.Icon(ft.Icons.FLAG if sample.outlier else ft.Icons.FLAG_OUTLINED, size=16,
-                            color=ft.Colors.RED_500 if sample.outlier else None),
-                    ft.Text("Outlier"),
-                ], spacing=4, tight=True),
-                tooltip="Toggle outlier mark",
-                on_click=lambda e, s=sample: self.page.run_task(self._toggle_outlier, s) if self.page else None,
-            ),
-            ft.ElevatedButton(
-                content=ft.Row([
-                    ft.Icon(ft.Icons.DELETE_OUTLINED, size=16, color=ft.Colors.RED_600),
-                    ft.Text("Delete", color=ft.Colors.RED_600),
-                ], spacing=4, tight=True),
-                tooltip="Delete sample",
-                on_click=lambda e, s=sample: self.page.run_task(self._delete_sample, s) if self.page else None,
-            ),
-        ], spacing=6)
-
-        body_controls.append(ft.Row([left_buttons, ft.Container(expand=True), right_buttons]))
-        return ft.Column(body_controls, spacing=6)
+        if self._panels_list.page:
+            self._panels_list.update()
 
     # ------------------------------------------------------------------
     # File operations
@@ -594,25 +682,6 @@ class ManageSamplesView(ft.View):
         except Exception as ex:
             self._show_error(f"Error: {ex}")
 
-    async def _rebuild_panels_from_cache(self):
-        all_cached = await self.project.get_all_cached_sample_stats()
-        min_proteins, min_idents = self._thresholds()
-
-        if self._panels_list is None:
-            return
-
-        self._panels_list.controls.clear()
-        self._panel_index.clear()
-
-        for idx, sample in enumerate(self._samples):
-            stats = all_cached.get(sample.id) or _empty_stats()
-            panel = await self._build_sample_panel(sample, stats, min_proteins, min_idents)
-            self._panel_index[sample.id] = idx
-            self._panels_list.controls.append(panel)
-
-        if self._panels_list.page:
-            self._panels_list.update()
-
     # ------------------------------------------------------------------
     # Action buttons
     # ------------------------------------------------------------------
@@ -666,7 +735,7 @@ class ManageSamplesView(ft.View):
         await self.refresh_single_panel(sample.id)
 
     # ------------------------------------------------------------------
-    # Settings getters (same as old SamplesSection)
+    # Settings getters
     # ------------------------------------------------------------------
 
     def _get_peptides_state(self):
@@ -704,11 +773,10 @@ class ManageSamplesView(ft.View):
         return None
 
     # ------------------------------------------------------------------
-    # Confirm dialog helper
+    # Confirm dialog
     # ------------------------------------------------------------------
 
     async def _confirm(self, title: str, message: str) -> bool:
-        import asyncio
         confirmed = False
         event = asyncio.Event()
 
@@ -760,73 +828,3 @@ class ManageSamplesView(ft.View):
         if self.page:
             show_snack(self.page, msg, ft.Colors.ORANGE_400)
             self.page.update()
-
-
-# ------------------------------------------------------------------
-# Module-level pure helpers (no self, reusable)
-# ------------------------------------------------------------------
-
-def _empty_stats() -> dict:
-    return {
-        'spectra_files_count': 0, 'ident_files_count': 0,
-        'identifications_count': 0, 'preferred_count': 0,
-        'coverage_known_count': 0, 'protein_ids_count': 0,
-        'empty_ident_files_count': 0,
-    }
-
-
-def _build_sample_header(
-    sample: Sample,
-    stats: dict,
-    tools_count: int,
-    min_proteins: int,
-    min_idents: int,
-) -> ft.Control:
-    sf_count  = stats.get('spectra_files_count', 0)
-    if_count  = stats.get('ident_files_count', 0)
-    idents    = stats.get('identifications_count', 0)
-    preferred = stats.get('preferred_count', 0)
-    coverage  = stats.get('coverage_known_count', 0)
-    proteins  = stats.get('protein_ids_count', 0)
-    empty_if  = stats.get('empty_ident_files_count', 0)
-
-    has_spectra = sf_count > 0
-    has_ident   = if_count > 0
-    expected_if = tools_count * sf_count if sf_count > 0 else 0
-    ident_ok    = (expected_if == 0) or (if_count == expected_if)
-    idents_ok   = idents >= min_idents
-    proteins_ok = (proteins == 0) or (proteins >= min_proteins)
-
-    if not has_spectra or (has_spectra and not has_ident):
-        marker_icon, marker_color = ft.Icons.ERROR_OUTLINE_OUTLINED, ft.Colors.RED_600
-    elif has_spectra and has_ident and ident_ok and idents_ok and proteins_ok and empty_if == 0:
-        marker_icon, marker_color = ft.Icons.CHECK_CIRCLE_OUTLINE_OUTLINED, ft.Colors.GREEN_600
-    else:
-        marker_icon, marker_color = ft.Icons.WARNING_AMBER_OUTLINED, ft.Colors.AMBER_600
-
-    controls: list[ft.Control] = [ft.Icon(marker_icon, color=marker_color, size=20)]
-    if sample.outlier:
-        controls.append(ft.Icon(ft.Icons.FLAG, color=ft.Colors.RED_500, size=16))
-
-    controls += [
-        ft.Text(sample.name, weight=ft.FontWeight.BOLD, size=14, no_wrap=True),
-        ft.Text("·", color=ft.Colors.GREY_400, size=12),
-        ft.Text(sample.subset_name or "No group", color=ft.Colors.GREY_700, size=12, no_wrap=True),
-        ft.Text("·", color=ft.Colors.GREY_400, size=12),
-        ft.Text(f"Files: {sf_count}", size=11, color=ft.Colors.GREY_800),
-        ft.Text(f"ID files: {if_count}", size=11, color=ft.Colors.GREY_800),
-        ft.Text(f"Idents: {idents}", size=11,
-                color=ft.Colors.RED_700 if not idents_ok and has_ident else ft.Colors.GREY_800),
-        ft.Text(f"Coverage: {coverage}", size=11, color=ft.Colors.GREY_800),
-        ft.Text(f"Preferred: {preferred}", size=11, color=ft.Colors.GREY_800),
-        ft.Text(f"Proteins: {proteins}", size=11,
-                color=ft.Colors.RED_700 if not proteins_ok and proteins > 0 else ft.Colors.GREY_800),
-    ]
-
-    if empty_if > 0:
-        controls.append(ft.Icon(
-            ft.Icons.WARNING_AMBER_OUTLINED, color=ft.Colors.ORANGE_500, size=14,
-            tooltip=ft.Tooltip(message=f"{empty_if} identification file(s) have zero identifications"),
-        ))
-
-    return ft.Row(controls, spacing=6, wrap=False)
