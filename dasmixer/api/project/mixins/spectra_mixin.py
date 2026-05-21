@@ -332,3 +332,14 @@ class SpectraMixin:
                 'charge': row['charge'],
             }
         return result
+
+    async def get_spectra_file_by_path(self, path: str) -> dict | None:
+        """
+        Find spectra file by exact file path.
+        Returns dict with spectre_file fields, or None if not found.
+        """
+        row = await self._fetchone(
+            "SELECT * FROM spectre_file WHERE path = ?",
+            (path,)
+        )
+        return dict(row) if row else None

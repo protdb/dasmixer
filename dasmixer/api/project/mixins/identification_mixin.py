@@ -497,3 +497,14 @@ class IdentificationMixin:
                 data_row['id'],
             ))
         await self._executemany(query, params)
+
+    async def get_identification_file_by_path(self, file_path: str) -> dict | None:
+        """
+        Find identification file by exact file path.
+        Returns dict with identification_file fields, or None if not found.
+        """
+        row = await self._fetchone(
+            "SELECT * FROM identification_file WHERE file_path = ?",
+            (file_path,)
+        )
+        return dict(row) if row else None

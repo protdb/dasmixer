@@ -214,6 +214,22 @@ class ImportPatternDialog:
         self.files_list = ft.ListView(spacing=3, height=250)
         dropdown_row = ft.Row(dropdown_controls, spacing=10) if dropdown_controls else ft.Container()
 
+        # On duplicates radio group
+        self._on_duplicates_group = ft.RadioGroup(
+            value="skip",
+            content=ft.Container(
+                content=ft.Column([
+                    ft.Text("On duplicates:", weight=ft.FontWeight.BOLD, size=12),
+                    ft.Radio(value="skip", label="Skip"),
+                    ft.Radio(value="reload", label="Reload"),
+                    ft.Radio(value="add_as_new", label="Add as new"),
+                ], spacing=2),
+                padding=10,
+                border=ft.border.all(1, ft.Colors.GREY_300),
+                border_radius=5,
+            ),
+        )
+
         self._import_btn = ft.ElevatedButton(
             "Import",
             icon=ft.Icons.DOWNLOAD,
@@ -238,6 +254,7 @@ class ImportPatternDialog:
                 spacing=10,
             ),
             dropdown_row,
+            self._on_duplicates_group,
         ]
 
         if _parser_supports_proteins:
@@ -479,7 +496,8 @@ class ImportPatternDialog:
                 await self.on_import_callback(
                     included_files,
                     int(self.group_dropdown.value),
-                    self.parser_dropdown.value
+                    self.parser_dropdown.value,
+                    on_duplicates=self._on_duplicates_group.value,
                 )
             else:
                 collect = self.cb_collect_proteins.value if self.cb_collect_proteins else False
@@ -489,4 +507,5 @@ class ImportPatternDialog:
                     self.tool_id,
                     collect_proteins=collect,
                     is_uniprot_proteins=is_uniprot,
+                    on_duplicates=self._on_duplicates_group.value,
                 )
