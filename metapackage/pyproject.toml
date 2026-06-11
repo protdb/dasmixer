@@ -1,0 +1,21 @@
+[project]
+name = "dasmixer"
+version = "0.5.0"
+description = "DASMixer — Mass Spectrometry Data Integration Tool (metapackage)"
+authors = [
+    {name = "gluck", email = "glucksistemi@gmail.com"}
+]
+readme = "README.md"
+requires-python = "<4.0, >=3.11"
+dependencies = [
+    "dasmixer-core ==0.5.0",
+    "dasmixer-gui ==0.5.0",
+    "dasmixer-cli ==0.5.0",
+]
+
+[tool.poetry]
+packages = [{include = "dasmixer"}]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

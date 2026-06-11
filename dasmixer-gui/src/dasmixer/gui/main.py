@@ -1,26 +1,13 @@
 """
-DASMixer - Mass Spectrometry Data Integration Tool
+DASMixer GUI — entry point for the `dasmixer` command.
 
-Main entry point for both GUI and CLI modes.
-
-Usage:
-    # Launch GUI
-    python main.py
-    
-    # Open project in GUI
-    python main.py path/to/project.dasmix
-    
-    # Create new project (CLI)
-    python main.py path/to/project.dasmix create
-    
-    # Other CLI commands
-    python main.py path/to/project.dasmix subset add --name "Treatment"
-    python main.py path/to/project.dasmix import mgf-pattern --folder ...
+Launches the Flet-based GUI. Optionally opens a project file.
+Creates a new project if the file doesn't exist.
 """
 
 import logging
-import typer
 import multiprocessing
+import typer
 from typing import Annotated
 from pathlib import Path
 
@@ -49,10 +36,13 @@ except Exception as _plugin_load_exc:
     _plugin_load_results = []
     print(f"[Plugin loader] Failed to initialize plugin loader: {_plugin_load_exc}")
 
+# Bind GUI-side report forms to report classes (monkey-patch)
+import dasmixer.gui.reports.forms  # noqa: F401
+
 app = typer.Typer(
     name="dasmixer",
     help="DASMixer - Mass Spectrometry Data Integration Tool",
-    add_completion=False
+    add_completion=False,
 )
 
 
@@ -63,36 +53,27 @@ def main(
         str | None,
         typer.Argument(
             help="Path to project file (.dasmix). Opens in GUI if no command specified."
-        )
+        ),
     ] = None,
     version: Annotated[
         bool,
-        typer.Option("--version", "-v", help="Show version and exit")
-    ] = False
+        typer.Option("--version", "-v", help="Show version and exit"),
+    ] = False,
 ):
     """
-    DASMixer - Mass Spectrometry Data Integration Tool.
-    
+    DASMixer — запустить GUI (опционально с файлом проекта).
+
     Run without arguments to launch GUI.
     Provide project path to open it in GUI.
-    Add command to execute CLI operations.
     """
     if version:
         typer.echo(f"DASMixer version {APP_VERSION}")
         raise typer.Exit(0)
-    
-    # If no subcommand - launch GUI
+
+    # If no subcommand — launch GUI
     if ctx.invoked_subcommand is None:
         from dasmixer.gui.app import run_gui
         run_gui(file_path)
-
-
-# Register CLI command modules
-from dasmixer.cli.commands import project, subset, import_data
-
-app.add_typer(project.app, name="create", help="Create new project")
-app.add_typer(subset.app, name="subset", help="Manage comparison groups")
-app.add_typer(import_data.app, name="import", help="Import data files")
 
 
 def _ensure_chrome() -> None:
@@ -149,7 +130,7 @@ def _ensure_chrome() -> None:
     print(f"[Kaleido] Chrome ready: {chrome_exe}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Multiprocessing for builds support
     multiprocessing.freeze_support()
     # Ensure Chrome for Kaleido is available in the user app directory
