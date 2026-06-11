@@ -1,47 +1,19 @@
 import numpy as np
 import pandas as pd
-from flet import Icons
+from dasmixer.api.reporting._icons import Icons
 import plotly.graph_objects as go
 from scipy.stats import false_discovery_control, mannwhitneyu, ttest_ind
 
 from ..base import BaseReport
 from dasmixer.utils.logger import logger
-from dasmixer.gui.components.report_form import (
-    ReportForm,
-    SubsetSelector,
-    MultiSubsetSelector,
-    EnumSelector,
-    IntSelector,
-    FloatSelector,
-)
 from smart_round import format_dataframe
-
-
-class VolcanoReportForm(ReportForm):
-    control_subset = SubsetSelector(label="Control subset")
-    exptl_subsets = MultiSubsetSelector(label="Experimental subsets")
-    lfq_type = EnumSelector(
-        values=["emPAI", "iBAQ", "NSAF", "Top3"],
-        label="LFQ method",
-    )
-    stats_method = EnumSelector(
-        values=["Mann-Whitney", "T-test"],
-        label="Statistical method",
-    )
-    fdc = EnumSelector(
-        values=["BH", "BY", "Bonferroni"],
-        label="FDR correction",
-    )
-    percent_to_calculate = IntSelector(default=20, label="Min % samples with value")
-    fc_threshold = FloatSelector(default=1.5, label="FC threshold")
-    p_threshold = FloatSelector(default=0.05, label="p-value threshold")
 
 
 class VolcanoReport(BaseReport):
     name = "Volcano Report (not conected)"
     description = "Reporting FC/p-value changes and Volcano plots"
     icon = Icons.VOLCANO
-    parameters = VolcanoReportForm
+    parameters = None
 
     async def get_data(self, lfq_type: str, subsets: list[str]) -> pd.DataFrame:
         return await self.project.get_protein_quantification_data(

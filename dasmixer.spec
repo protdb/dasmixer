@@ -174,7 +174,7 @@ additional_hooks_dirs = [
 # Analysis
 # ---------------------------------------------------------------------------
 a = Analysis(
-    [str(SPEC_DIR / "dasmixer" / "main.py")],
+    [str(SPEC_DIR / "dasmixer-gui" / "src" / "dasmixer" / "gui" / "main.py")],
     pathex=[str(SPEC_DIR)],
     binaries=binaries,
     datas=datas,

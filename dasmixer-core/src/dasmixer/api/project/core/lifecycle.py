@@ -4,8 +4,6 @@ import aiosqlite
 from datetime import datetime
 from pathlib import Path
 
-from flet.controls.core import row
-
 from .base import ProjectBase
 from ..schema import CREATE_SCHEMA_SQL, DEFAULT_METADATA
 from dasmixer.utils.logger import logger

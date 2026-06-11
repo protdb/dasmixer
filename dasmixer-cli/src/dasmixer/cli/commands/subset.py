@@ -11,7 +11,7 @@ app = typer.Typer(help="Manage comparison groups")
 
 @app.command()
 def add(
-    ctx: typer.Context,
+    project_path: Annotated[str, typer.Argument(help="Path to .dasmix project file")],
     name: Annotated[str, typer.Option("--name", "-n", help="Group name")] = ...,
     details: Annotated[
         str | None,
@@ -23,12 +23,6 @@ def add(
     ] = None
 ):
     """Add new comparison group to project."""
-    project_path = ctx.parent.parent.params.get('file_path')
-    
-    if not project_path:
-        typer.echo("Error: Project path required", err=True)
-        raise typer.Exit(1)
-    
     project_path = Path(project_path)
     
     if not project_path.exists():
@@ -56,16 +50,10 @@ def add(
 
 @app.command()
 def delete(
-    ctx: typer.Context,
+    project_path: Annotated[str, typer.Argument(help="Path to .dasmix project file")],
     name: Annotated[str, typer.Option("--name", "-n", help="Group name to delete")] = ...
 ):
     """Delete comparison group from project."""
-    project_path = ctx.parent.parent.params.get('file_path')
-    
-    if not project_path:
-        typer.echo("Error: Project path required", err=True)
-        raise typer.Exit(1)
-    
     project_path = Path(project_path)
     
     if not project_path.exists():
@@ -103,14 +91,10 @@ def delete(
 
 
 @app.command("list")
-def list_subsets(ctx: typer.Context):
+def list_subsets(
+    project_path: Annotated[str, typer.Argument(help="Path to .dasmix project file")]
+):
     """List all comparison groups in project."""
-    project_path = ctx.parent.parent.params.get('file_path')
-    
-    if not project_path:
-        typer.echo("Error: Project path required", err=True)
-        raise typer.Exit(1)
-    
     project_path = Path(project_path)
     
     if not project_path.exists():

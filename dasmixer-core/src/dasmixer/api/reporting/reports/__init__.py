@@ -5,7 +5,7 @@ from .toolmatch_report import ToolMatchReport
 from .volcano_report import VolcanoReport
 from .upset import UpsetReport
 from .pca_report import PCAReport
-from .coverage_report import ToolCoverageReport, ToolCoverageReportForm
+from .coverage_report import ToolCoverageReport
 
 __all__ = [
     'SampleReport',
@@ -14,5 +14,4 @@ __all__ = [
     'UpsetReport',
     'PCAReport',
     'ToolCoverageReport',
-    'ToolCoverageReportForm',
 ]

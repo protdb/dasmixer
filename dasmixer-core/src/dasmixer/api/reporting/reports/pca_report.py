@@ -5,29 +5,12 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
-from flet import Icons
+from dasmixer.api.reporting._icons import Icons
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import roc_auc_score
 from sklearn.preprocessing import label_binarize
-
-from dasmixer.gui.components import BoolSelector
 from ..base import BaseReport
-from dasmixer.gui.components.report_form import (
-    ReportForm,
-    MultiSubsetSelector,
-    EnumSelector,
-)
-
-
-class PCAReportForm(ReportForm):
-    subsets = MultiSubsetSelector(label="Subsets to include")
-    lfq_type = EnumSelector(
-        values=["emPAI", "iBAQ", "NSAF", "Top3"],
-        label="LFQ method",
-    )
-    show_labels = BoolSelector(label="Show sample labels", default=True)
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -221,7 +204,7 @@ class PCAReport(BaseReport):
     name = "PCA ROC-AUC"
     description = "PCA scatter plot and ROC/AUC curves colored by comparison group"
     icon = Icons.SCATTER_PLOT
-    parameters = PCAReportForm
+    parameters = None
 
     async def _get_quant_matrix(
         self, lfq_type: str, selected_subsets: list[str]

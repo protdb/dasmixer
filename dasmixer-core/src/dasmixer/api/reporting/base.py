@@ -11,10 +11,10 @@ import json
 import base64
 from datetime import datetime
 from ..project import Project
-import flet as ft
+from dasmixer.api.reporting._icons import Icons
 
 if TYPE_CHECKING:
-    from dasmixer.gui.components.report_form import ReportForm
+    from dasmixer.api.reporting.report_form import ReportForm
 
 
 class BaseReport(ABC):
@@ -33,7 +33,7 @@ class BaseReport(ABC):
     # Report metadata (must be overridden in subclasses)
     name: str = "Base Report"
     description: str = "Base report class"
-    icon: str = ft.Icons.REPORT  # flet.Icons name
+    icon: str = Icons.REPORT  # flet.Icons name
 
     # Typed parameter form class (set in subclasses to a ReportForm subclass).
     # When set, ReportItem will render a Parameters dialog instead of TextArea.

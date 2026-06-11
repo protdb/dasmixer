@@ -15,10 +15,9 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
-from flet import Icons
+from dasmixer.api.reporting._icons import Icons
 
 from ..base import BaseReport
-from dasmixer.gui.components.report_form import ReportForm
 # No extra form parameters needed — the report uses all identified proteins
 # and the project LFQ settings (enzyme, min/max length, missed cleavages).
 
@@ -196,11 +195,6 @@ def _build_coverage_histogram(
 # Report class
 # ---------------------------------------------------------------------------
 
-class ToolCoverageReportForm(ReportForm):
-    # No parameters needed — uses project LFQ settings
-    pass
-
-
 class ToolCoverageReport(BaseReport):
     name = "Tool Coverage Comparison"
     description = (
@@ -208,7 +202,7 @@ class ToolCoverageReport(BaseReport):
         "including theoretical maximum coverage"
     )
     icon = Icons.AREA_CHART
-    parameters = ToolCoverageReportForm
+    parameters = None
 
     async def _generate_impl(
         self,

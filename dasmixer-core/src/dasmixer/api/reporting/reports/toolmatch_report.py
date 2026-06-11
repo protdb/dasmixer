@@ -1,24 +1,12 @@
 import numpy as np
 import pandas as pd
 import plotly.express as px
-from flet import Icons
+from dasmixer.api.reporting._icons import Icons
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 from ..base import BaseReport
-from dasmixer.gui.components.report_form import ReportForm, ToolSelector, IntSelector, BoolSelector
 from dasmixer.utils.logger import logger
-
-
-class ToolMatchReportForm(ReportForm):
-    tool1 = ToolSelector(label="Tool 1 (Library)")
-    tool2 = ToolSelector(label="Tool 2 (De Novo)")
-    min_psm = IntSelector(default=1, label="Min PSM count")
-    min_unique_psm = IntSelector(default=1, label="Min unique PSM count")
-    count_per_sample = BoolSelector(
-        default=False,
-        label="Count unique peptides per sample (matches UpSet/PIR logic)",
-    )
 
 
 class ToolMatchReport(BaseReport):
@@ -26,7 +14,7 @@ class ToolMatchReport(BaseReport):
     description = "Shows increase in identifications between two selected tools"
     icon = Icons.PIE_CHART
     both_color = 'yellow'
-    parameters = ToolMatchReportForm
+    parameters = None
 
     def _get_proteins_data(self, data: pd.DataFrame, tools: list[str], min_peptides: int, min_uq: int, min_unique_psm: int = 1) -> tuple[pd.DataFrame, pd.DataFrame]:
         """

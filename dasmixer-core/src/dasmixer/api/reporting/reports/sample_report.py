@@ -2,21 +2,9 @@
 
 import pandas as pd
 import plotly.graph_objects as go
-from flet import Icons
+from dasmixer.api.reporting._icons import Icons
 
 from ..base import BaseReport
-from dasmixer.gui.components.report_form import (
-    ReportForm,
-    IntSelector,
-    BoolSelector,
-    EnumSelector,
-)
-
-
-class SampleReportForm(ReportForm):
-    max_samples = IntSelector(default=10, label="Max samples")
-    include_table = BoolSelector(default=True, label="Include table")
-    chart_type = EnumSelector(values=["bar", "scatter"], label="Chart type")
 
 
 class SampleReport(BaseReport):
@@ -29,7 +17,7 @@ class SampleReport(BaseReport):
     name = "Sample Report"
     description = "Demonstrates report system with sample data"
     icon = Icons.BAR_CHART
-    parameters = SampleReportForm
+    parameters = None
 
     async def _generate_impl(
         self,

@@ -5,11 +5,10 @@ from itertools import product
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
-from flet import Icons
+from dasmixer.api.reporting._icons import Icons
 from plotly.subplots import make_subplots
 
 from ..base import BaseReport
-from dasmixer.gui.components.report_form import ReportForm, MultiSubsetSelector, IntSelector
 
 
 # ---------------------------------------------------------------------------
@@ -212,11 +211,6 @@ def plot_upset(df: pd.DataFrame, min_proteins: int = 1) -> go.Figure:
 # ReportForm
 # ---------------------------------------------------------------------------
 
-class UpsetReportForm(ReportForm):
-    subsets = MultiSubsetSelector(label="Subsets to include")
-    min_proteins = IntSelector(default=1, label="Min proteins per intersection")
-
-
 # ---------------------------------------------------------------------------
 # Report class
 # ---------------------------------------------------------------------------
@@ -225,7 +219,7 @@ class UpsetReport(BaseReport):
     name = "Upset Plot"
     description = "Upset plot for protein identifications across comparison groups"
     icon = Icons.INSERT_CHART_ROUNDED
-    parameters = UpsetReportForm
+    parameters = None
 
     async def _get_upset_data(self, selected_subsets: list[str]) -> pd.DataFrame:
         """Fetch protein × sample × subset data from the project DB."""

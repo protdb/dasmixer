@@ -22,7 +22,7 @@ from dasmixer.gui.utils import show_snack
 
 def _get_plugin_load_results() -> list[dict]:
     """Get plugin load results stored in main module, or empty list."""
-    main_module = sys.modules.get("dasmixer.main")
+    main_module = sys.modules.get("dasmixer.gui.main")
     if main_module and hasattr(main_module, "_plugin_load_results"):
         return main_module._plugin_load_results
     return []

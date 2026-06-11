@@ -14,7 +14,7 @@ app = typer.Typer(help="Import data files")
 
 @app.command()
 def mgf_pattern(
-    ctx: typer.Context,
+    project_path: Annotated[str, typer.Argument(help="Path to .dasmix project file")],
     folder: Annotated[str, typer.Option("--folder", "-f", help="Folder to search")] = ...,
     file_pattern: Annotated[str, typer.Option("--pattern", "-p", help="File pattern (e.g., *.mgf)")] = "*.mgf",
     id_pattern: Annotated[str, typer.Option("--id-pattern", "-i", help="Sample ID pattern (e.g., {id}_*.mgf)")] = "{id}*.mgf",
@@ -31,12 +31,6 @@ def mgf_pattern(
             --id-pattern "{id}_run*.mgf" \\
             --group Control
     """
-    project_path = ctx.parent.parent.params.get('file_path')
-    
-    if not project_path:
-        typer.echo("Error: Project path required", err=True)
-        raise typer.Exit(1)
-    
     project_path = Path(project_path)
     
     if not project_path.exists():
@@ -137,7 +131,7 @@ def mgf_pattern(
 
 @app.command()
 def mgf_file(
-    ctx: typer.Context,
+    project_path: Annotated[str, typer.Argument(help="Path to .dasmix project file")],
     file: Annotated[str, typer.Option("--file", "-f", help="Path to MGF file")] = ...,
     sample_id: Annotated[str, typer.Option("--sample-id", "-s", help="Sample ID")] = ...,
     parser: Annotated[str, typer.Option("--parser", help="Parser name")] = "MGF",
@@ -152,12 +146,6 @@ def mgf_file(
             --sample-id "Sample1" \\
             --group Control
     """
-    project_path = ctx.parent.parent.params.get('file_path')
-    
-    if not project_path:
-        typer.echo("Error: Project path required", err=True)
-        raise typer.Exit(1)
-    
     project_path = Path(project_path)
     file_path = Path(file)
     
@@ -229,7 +217,7 @@ def mgf_file(
 
 @app.command()
 def ident_pattern(
-    ctx: typer.Context,
+    project_path: Annotated[str, typer.Argument(help="Path to .dasmix project file")],
     folder: Annotated[str, typer.Option("--folder", "-f", help="Folder to search")] = ...,
     file_pattern: Annotated[str, typer.Option("--pattern", "-p", help="File pattern")] = "*.csv",
     id_pattern: Annotated[str, typer.Option("--id-pattern", "-i", help="Sample ID pattern")] = "{id}*.csv",
@@ -257,7 +245,7 @@ def ident_pattern(
 
 @app.command()
 def ident_file(
-    ctx: typer.Context,
+    project_path: Annotated[str, typer.Argument(help="Path to .dasmix project file")],
     file: Annotated[str, typer.Option("--file", "-f", help="Path to identification file")] = ...,
     sample_id: Annotated[str, typer.Option("--sample-id", "-s", help="Sample ID")] = ...,
     parser: Annotated[str, typer.Option("--parser", help="Parser name")] = ...,

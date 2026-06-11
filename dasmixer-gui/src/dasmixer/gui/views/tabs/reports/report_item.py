@@ -7,7 +7,7 @@ from pathlib import Path
 
 from dasmixer.api.project.project import Project
 from dasmixer.api.reporting.base import BaseReport
-from dasmixer.api.reporting.viewer import ReportViewer
+from dasmixer.gui.reporting.viewer import ReportViewer
 from .shared_state import ReportsTabState
 from dasmixer.gui.utils import show_snack
 from dasmixer.utils import logger
