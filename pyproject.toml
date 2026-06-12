@@ -1,0 +1,22 @@
+[project]
+name = "dasmixer-workspace"
+version = "0.5.0"
+description = "DASMixer development workspace (not for distribution)"
+requires-python = "<4.0, >=3.11"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+# Poetry workspace: all packages are in subdirectories.
+# Run `poetry install` from this root to install all packages in editable mode.
+[tool.poetry]
+packages = []
+
+[tool.poetry.dependencies]
+python = "<4.0, >=3.11"
+
+[dependency-groups]
+dev = [
+    "pytest >=9.0.2,<10.0.0",
+]
