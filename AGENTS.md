@@ -10,11 +10,46 @@ This document provides essential context for AI coding agents working on the DAS
 
 - **Lab:** Laboratory of Structural Proteomics, IBMC, Moscow
 - **Repo:** `git@github.com:protdb/dasmixer.git`
-- **Package name:** `dasmixer`
-- **Entry point:** `dasmixer/main.py` → `dasmixer` CLI command
-
+- **Version:** 0.5.0
 
 **MOST IMPORTANT DOCUMENT WITH DETAILS:** `docs/project/MASTER_SPEC_NEW.md`
+
+---
+
+## Package Structure (v0.5.0+)
+
+The project is a **monorepo** with four publishable packages using **namespace packages (PEP 420)**:
+
+```
+dasmixer/                          # repo root
+├── dasmixer-core/                 # core API library
+│   ├── pyproject.toml
+│   └── src/dasmixer/              # NO __init__.py (namespace package)
+│       ├── api/                   # project API, calculations, inputs, reporting
+│       ├── utils/                 # logger, seek_files, seqfixer_utils, etc.
+│       └── versions.py            # APP_VERSION
+│
+├── dasmixer-gui/                  # Flet GUI
+│   ├── pyproject.toml
+│   └── src/dasmixer/              # NO __init__.py
+│       ├── gui/                   # app, components, views, actions
+│       │   ├── main.py            # entry point: `dasmixer` command
+│       │   └── reports/forms.py   # GUI-side report form definitions
+│       └── __main__.py            # python -m dasmixer
+│
+├── dasmixer-cli/                  # CLI tools
+│   ├── pyproject.toml
+│   └── src/dasmixer/              # NO __init__.py
+│       └── cli/                   # commands (project, subset, import_data)
+│           └── main.py            # entry point: `dasmixer-cli` command
+│
+└── metapackage/                   # umbrella package `dasmixer`
+    ├── pyproject.toml             # dependencies only, no code
+    └── dasmixer/__init__.py       # just __version__
+```
+
+All four packages install into `site-packages/dasmixer/` — Python merges them via PEP 420.
+
 ---
 
 ## Technology Stack
@@ -28,7 +63,7 @@ This document provides essential context for AI coding agents working on the DAS
 | Proteomics | Pyteomics, Peptacular, Npysearch |
 | DB | SQLite via **aiosqlite** (async) |
 | Config | pydantic-settings |
-| Build | Poetry (pyproject.toml) |
+| Build | Poetry |
 
 ---
 
@@ -75,107 +110,82 @@ Use the pattern in `dasmixer/gui/app.py:DASMixerApp._route_change`.
 
 ## Source Layout
 
+### `dasmixer-core/src/dasmixer/api/`
+
 ```
-dasmixer/
-├── main.py                 # CLI entry point (Typer app + GUI launcher)
-├── api/
-│   ├── config.py           # AppConfig (pydantic-settings), global `config` instance
-│   ├── plugin_loader.py    # Dynamic plugin loading
-│   ├── project/
-│   │   ├── project.py      # Project class (composed from mixins)
-│   │   ├── schema.py       # SQLite schema SQL
-│   │   ├── dataclasses.py  # Subset, Tool, Sample, Protein, IdentificationWithSpectrum
-│   │   ├── array_utils.py  # compress_array / decompress_array (numpy ↔ bytes)
-│   │   ├── core/
-│   │   │   ├── base.py         # ProjectBase: _execute, _fetchone, _fetchall, _executemany, etc.
-│   │   │   └── lifecycle.py    # ProjectLifecycle: initialize, save, close, context manager
-│   │   └── mixins/
-│   │       ├── subset_mixin.py
-│   │       ├── tool_mixin.py
-│   │       ├── sample_mixin.py
-│   │       ├── spectra_mixin.py
-│   │       ├── identification_mixin.py
-│   │       ├── peptide_mixin.py
-│   │       ├── protein_mixin.py
-│   │       ├── plot_mixin.py
-│   │       ├── query_mixin.py
-│   │       └── report_mixin.py
-│   ├── inputs/
-│   │   ├── base.py             # BaseImporter ABC
-│   │   ├── registry.py         # InputTypesRegistry + global `registry`
-│   │   ├── spectra/
-│   │   │   ├── base.py         # SpectralDataParser ABC
-│   │   │   └── mgf.py          # MGFParser
-│   │   ├── peptides/
-│   │   │   ├── base.py         # IdentificationParser ABC
-│   │   │   ├── table_importer.py  # SimpleTableImporter base
-│   │   │   ├── PowerNovo2.py
-│   │   │   ├── MQ_Evidences.py
-│   │   │   └── PLGS.py
-│   │   └── proteins/
-│   │       └── fasta.py        # FASTA importer
-│   ├── calculations/
-│   │   ├── spectra/
-│   │   │   ├── ion_match.py          # IonMatchParameters, match_predictions, get_matches_dataframe
-│   │   │   ├── identification_processor.py  # Batch worker for PPM+coverage calculation
-│   │   │   ├── coverage_worker.py
-│   │   │   ├── plot_flow.py
-│   │   │   └── plot_matches.py
-│   │   ├── peptides/
-│   │   │   ├── matching.py           # select_preferred_identifications
-│   │   │   └── protein_map.py        # npysearch BLAST wrapper
-│   │   ├── proteins/
-│   │   │   ├── lfq.py               # calculate_lfq (emPAI, iBAQ, NSAF, Top3)
-│   │   │   ├── map_identifications.py  # find_protein_identifications
-│   │   │   └── sempai/              # LFQ computation library
-│   │   └── ppm/
-│   │       ├── dataclasses.py       # SeqMatchParams, SeqResults
-│   │       └── seqfixer.py          # SeqFixer: charge/isotope correction for de novo
-│   └── reporting/
-│       ├── base.py         # BaseReport ABC
-│       ├── registry.py     # ReportRegistry + global `registry`
-│       ├── viewer.py       # Interactive report viewer (PyWebView)
-│       └── reports/        # Concrete report implementations
-│           ├── pca_report.py
-│           ├── volcano_report.py
-│           ├── upset.py
-│           ├── coverage_report.py
-│           ├── sample_report.py
-│           └── toolmatch_report.py
-├── gui/
-│   ├── app.py              # DASMixerApp: routing, project lifecycle, AppBar
-│   ├── utils.py            # show_snack, other GUI helpers
-│   ├── components/         # Reusable UI components
-│   │   ├── base_table_view.py
-│   │   ├── base_plot_view.py
-│   │   ├── base_table_and_plot_view.py
-│   │   ├── plotly_viewer.py    # PyWebView integration for Plotly
-│   │   ├── progress_dialog.py
-│   │   └── report_form.py      # ReportForm base for typed report parameters
-│   ├── actions/            # Async action handlers (GUI → API bridge)
-│   │   ├── base.py
-│   │   ├── ion_actions.py
-│   │   ├── lfq_action.py
-│   │   ├── protein_ident_action.py
-│   │   └── protein_map_action.py
-│   └── views/
-│       ├── start_view.py
-│       ├── project_view.py     # ProjectView: lazy tab loading + suspend/resume
-│       ├── settings_view.py
-│       ├── plugins_view.py
-│       ├── manage_samples_view.py
-│       └── tabs/
-│           ├── samples/        # Samples tab sections
-│           ├── peptides/       # Peptides tab sections
-│           ├── proteins/       # Proteins tab sections
-│           ├── reports/        # Reports tab
-│           └── plots/          # Saved plots tab
-└── cli/
-    └── commands/
-        ├── project.py      # create command
-        ├── subset.py       # subset add/list/delete
-        └── import_data.py  # mgf-file, mgf-pattern, ident-file, ident-pattern
+api/
+├── config.py              # AppConfig (pydantic-settings), global `config` instance
+├── plugin_loader.py       # Dynamic plugin loading
+├── project/
+│   ├── project.py         # Project class (composed from mixins)
+│   ├── schema.py          # SQLite schema SQL
+│   ├── dataclasses.py     # Subset, Tool, Sample, Protein, IdentificationWithSpectrum
+│   ├── array_utils.py     # compress_array / decompress_array (numpy ↔ bytes)
+│   ├── core/
+│   │   ├── base.py            # ProjectBase: _execute, _fetchone, _fetchall, _executemany
+│   │   └── lifecycle.py       # ProjectLifecycle: initialize, save, close, context manager
+│   └── mixins/
+│       ├── subset_mixin.py    ├── tool_mixin.py        ├── sample_mixin.py
+│       ├── spectra_mixin.py   ├── identification_mixin.py
+│       ├── peptide_mixin.py   ├── protein_mixin.py     ├── plot_mixin.py
+│       ├── query_mixin.py     └── report_mixin.py
+├── inputs/
+│   ├── base.py            # BaseImporter ABC
+│   ├── registry.py        # InputTypesRegistry + global `registry`
+│   ├── spectra/mgf.py     # MGFParser
+│   ├── peptides/          # PowerNovo2, MQ_Evidences, PLGS, table_importer
+│   └── proteins/fasta.py  # FASTA importer
+├── calculations/
+│   ├── spectra/           # ion_match, identification_processor, plot_matches, plot_flow
+│   ├── peptides/          # matching (preferred selection), protein_map (npysearch)
+│   ├── proteins/          # lfq, map_identifications, sempai/
+│   └── ppm/               # seqfixer, dataclasses
+└── reporting/
+    ├── base.py            # BaseReport ABC
+    ├── registry.py        # ReportRegistry
+    ├── _icons.py          # Mock Icons (no-flet fallback)
+    ├── report_form.py     # Abstract ReportForm (no-flet)
+    └── reports/           # PCA, Volcano, UpSet, Coverage, Sample, ToolMatch
 ```
+
+### `dasmixer-gui/src/dasmixer/gui/`
+
+```
+gui/
+├── main.py               # Entry point: `dasmixer` command
+├── app.py                # DASMixerApp: routing, project lifecycle, AppBar
+├── utils.py              # show_snack
+├── components/           # base_table_view, base_plot_view, plotly_viewer,
+│   │                     # progress_dialog, report_form (GUI-side, flet-based)
+│   └── report_form.py    # GUI ReportForm — extends core ReportForm with build()
+├── actions/              # ion_actions, lfq_action, protein_ident_action, protein_map_action
+├── reports/forms.py      # GUI report form declarations + monkey-patch
+├── reporting/viewer.py   # ReportViewer (PyWebView)
+└── views/
+    ├── start_view.py, project_view.py, settings_view.py, plugins_view.py
+    └── tabs/             # samples/, peptides/, proteins/, reports/, plots/, export/
+```
+
+### `dasmixer-cli/src/dasmixer/cli/`
+
+```
+cli/
+├── main.py               # Entry point: `dasmixer-cli` command
+└── commands/
+    ├── project.py        # create
+    ├── subset.py         # add/list/delete
+    └── import_data.py    # mgf-file, mgf-pattern, ident-file, ident-pattern
+```
+
+---
+
+## Entry Points
+
+| Command | Package | Module |
+|---|---|---|
+| `dasmixer` | `dasmixer-gui` | `dasmixer.gui.main:app` |
+| `dasmixer-cli` | `dasmixer-cli` | `dasmixer.cli.main:app` |
+| `python -m dasmixer` | `dasmixer-gui` | `dasmixer/__main__.py` |
 
 ---
 
@@ -235,7 +245,7 @@ All methods are **async**. The database uses WAL mode and has foreign keys enabl
 - `add_identification_file(spectra_file_id, tool_id, file_path)` → `int`
 - `add_identifications_batch(identifications_df)` — batch insert
 - `get_identifications(...)` → `DataFrame`
-- `get_identifications_with_spectra_batch(tool_id, offset, limit, only_missing?, spectra_file_ids?)` → `list[IdentificationWithSpectrum]`
+- `get_identifications_with_spectra_batch(tool_id, offset, limit, ...)` → `list[IdentificationWithSpectrum]`
 - `put_identification_data_batch(data_rows)` — update PPM/coverage fields
 - `set_preferred_identification(spectre_id, identification_id)`
 
@@ -291,18 +301,21 @@ registry.add_spectra_parser("MGF", MGFParser)
 
 ## Reports
 
-Base class: `dasmixer.api.reporting.base.BaseReport`
+### In code (API-side)
 
 ```python
+from dasmixer.api.reporting._icons import Icons
+from dasmixer.api.reporting.base import BaseReport
+
 class MyReport(BaseReport):
     name = "My Report"
     description = "..."
-    icon = ft.Icons.REPORT
-    parameters = MyReportForm  # optional typed form
+    icon = Icons.REPORT           # works without flet installed
+    parameters = None             # set by GUI-side monkey-patch
 
     async def _generate_impl(self, params: dict) -> tuple[list, list]:
         plots = [("Plot name", go.Figure(...))]
-        tables = [("Table name", df, True)]  # bool = show in UI
+        tables = [("Table name", df, True)]
         return plots, tables
 ```
 
@@ -310,6 +323,18 @@ Register:
 ```python
 from dasmixer.api.reporting.registry import registry
 registry.register(MyReport)
+```
+
+### In code (GUI-side) — `gui/reports/forms.py`
+
+```python
+from dasmixer.gui.components.report_form import ReportForm, BoolSelector, IntSelector
+
+class MyForm(ReportForm):
+    threshold = FloatSelector(default=0.05)
+    show_labels = BoolSelector(default=True)
+
+MyReport.parameters = MyForm  # monkey-patch at startup
 ```
 
 ---
@@ -328,16 +353,18 @@ App dir location:
 
 ## Development Rules
 
-1. **Never modify `pyproject.toml`** without a strong reason.
-2. **All Project methods must be async** — use `await` everywhere.
-3. **Data format from Project:** `pandas.DataFrame` for sets; `dataclasses` for single entities; `dict` for low-level.
-4. **Array storage:** NumPy arrays compressed via `np.savez_compressed` → `bytes` BLOB. Use `array_utils.compress_array` / `decompress_array`.
-5. **JSON fields in DB:** Serialized as TEXT with `json.dumps`/`json.loads`.
-6. **Batch vs save:** Methods doing batch operations do NOT call `save()` internally. The caller must call `save()` after the batch.
-7. **No unit tests from agent** — integration tests only, written separately when requested.
-8. **Language:** User-facing strings in **English**. Development docs, specs, and agent↔developer communication in **Russian**.
-9. **Do not generate test data** — test data is provided by the developer.
-10. **Flet 0.80.5 API** — see notes above.
+1. **All Project methods must be async** — use `await` everywhere.
+2. **Data format from Project:** `pandas.DataFrame` for sets; `dataclasses` for single entities; `dict` for low-level.
+3. **Array storage:** NumPy arrays compressed via `np.savez_compressed` → `bytes` BLOB. Use `array_utils.compress_array` / `decompress_array`.
+4. **JSON fields in DB:** Serialized as TEXT with `json.dumps`/`json.loads`.
+5. **Batch vs save:** Methods doing batch operations do NOT call `save()` internally. The caller must call `save()` after the batch.
+6. **No unit tests from agent** — integration tests only, written separately when requested.
+7. **Language:** User-facing strings in **English**. Development docs, specs, and agent↔developer communication in **Russian**.
+8. **Do not generate test data** — test data is provided by the developer.
+9. **Flet 0.80.5 API** — see notes above.
+10. **Namespace packages**: directories `src/dasmixer/` in each subpackage must NOT contain `__init__.py`.
+11. **Core reports** must not import from `dasmixer.gui.*`. Use `dasmixer.api.reporting._icons` for icons, set `parameters = None`.
+12. **pyproject.toml** changes: use path dependencies in `[tool.poetry.dependencies]` for local dev (`{path = "..", develop = true}`), keep `[project.dependencies]` for PyPI versions.
 
 ---
 
@@ -360,14 +387,21 @@ Config file: `{app_dir}/config.json`.
 
 | File | Purpose |
 |---|---|
-| `dasmixer/main.py` | Entry point, CLI commands registration |
-| `dasmixer/api/project/project.py` | Project class definition (mixin composition) |
-| `dasmixer/api/project/schema.py` | Full SQLite schema |
-| `dasmixer/api/project/dataclasses.py` | Data transfer objects |
-| `dasmixer/gui/app.py` | GUI app controller, routing, project lifecycle |
-| `dasmixer/gui/views/project_view.py` | Tab container with lazy loading + suspend/resume |
-| `dasmixer/api/calculations/spectra/ion_match.py` | Ion matching core |
-| `dasmixer/api/calculations/spectra/identification_processor.py` | Batch PPM+coverage worker |
-| `dasmixer/api/calculations/proteins/lfq.py` | LFQ calculation |
-| `dasmixer/api/reporting/base.py` | Report base class |
+| `dasmixer-gui/src/dasmixer/gui/main.py` | GUI entry point (`dasmixer` command) |
+| `dasmixer-cli/src/dasmixer/cli/main.py` | CLI entry point (`dasmixer-cli` command) |
+| `dasmixer-core/src/dasmixer/api/project/project.py` | Project class definition (mixin composition) |
+| `dasmixer-core/src/dasmixer/api/project/schema.py` | Full SQLite schema |
+| `dasmixer-core/src/dasmixer/api/project/dataclasses.py` | Data transfer objects |
+| `dasmixer-gui/src/dasmixer/gui/app.py` | GUI app controller, routing, project lifecycle |
+| `dasmixer-gui/src/dasmixer/gui/views/project_view.py` | Tab container with lazy loading + suspend/resume |
+| `dasmixer-core/src/dasmixer/api/calculations/spectra/ion_match.py` | Ion matching core |
+| `dasmixer-core/src/dasmixer/api/calculations/spectra/identification_processor.py` | Batch PPM+coverage worker |
+| `dasmixer-core/src/dasmixer/api/calculations/proteins/lfq.py` | LFQ calculation |
+| `dasmixer-core/src/dasmixer/api/reporting/base.py` | Report base class |
+| `dasmixer-core/src/dasmixer/api/reporting/_icons.py` | Mock Icons (no-flet fallback) |
+| `dasmixer-core/src/dasmixer/api/reporting/report_form.py` | Abstract ReportForm (no-flet) |
+| `dasmixer-gui/src/dasmixer/gui/reports/forms.py` | GUI report forms + monkey-patch |
+| `dasmixer-gui/src/dasmixer/gui/components/report_form.py` | GUI ReportForm (flet-based) |
 | `docs/project/MASTER_SPEC_NEW.md` | Full current project specification |
+| `docs/project/spec/0.5.0_SPEC.md` | 0.5.0 implementation spec |
+| `docs/project/changes/v0.5.0.md` | 0.5.0 changelog |
