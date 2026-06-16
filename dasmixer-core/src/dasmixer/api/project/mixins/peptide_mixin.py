@@ -78,15 +78,23 @@ class PeptideMixin:
             ))
 
         if rows_to_insert:
-            await self._executemany(
-                """INSERT INTO peptide_match
+            query = """INSERT INTO peptide_match
                    (protein_id, identification_id, matched_sequence, identity,
                     matched_ppm, matched_theor_mass, unique_evidence, matched_coverage_percent,
                     matched_peaks, matched_top_peaks, matched_ion_type,
                     matched_sequence_modified, substitution)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                rows_to_insert
-            )
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"""
+            # await self._executemany(
+            #     query,
+            #     rows_to_insert
+            # )
+            try:
+                for r in rows_to_insert:
+                    await self._execute(query, r)
+            except Exception as e:
+                print(query)
+                print(r)
+                raise e
             # Note: No auto-save for batch efficiency
             logger.debug(f"Added {len(rows_to_insert)} peptide matches")
     

@@ -8,6 +8,8 @@ from dasmixer.api.config import config
 from dasmixer.api.project.project import Project
 import traceback
 from dasmixer.gui.utils import show_snack
+from dasmixer.gui.components.progress_dialog import ProgressDialog
+from dasmixer.gui.components.merge_options_dialog import MergeOptionsDialog
 from dasmixer.utils import logger
 
 
@@ -228,6 +230,33 @@ class DASMixerApp:
                             content=ft.Text("Open Project"),
                             icon=ft.Icons.FOLDER_OPEN,
                             on_click=lambda _: self.page.run_task(self.open_project_dialog)
+                        ),
+                        ft.PopupMenuItem(),  # Divider
+                        ft.PopupMenuItem(
+                            content=ft.Text("Save Project"),
+                            icon=ft.Icons.SAVE,
+                            on_click=lambda _: self.page.run_task(self.save_project),
+                            disabled=close_disabled
+                        ),
+                        ft.PopupMenuItem(
+                            content=ft.Text("Save Project As..."),
+                            icon=ft.Icons.SAVE_AS,
+                            on_click=lambda _: self.page.run_task(self.save_project_as),
+                            disabled=close_disabled
+                        ),
+                        ft.PopupMenuItem(),  # Divider
+                        ft.PopupMenuItem(
+                            content=ft.Text("Vacuum"),
+                            icon=ft.Icons.CLEANING_SERVICES,
+                            on_click=lambda _: self.page.run_task(self.vacuum_project),
+                            disabled=close_disabled
+                        ),
+                        ft.PopupMenuItem(),  # Divider
+                        ft.PopupMenuItem(
+                            content=ft.Text("Merge Project..."),
+                            icon=ft.Icons.MERGE,
+                            on_click=lambda _: self.page.run_task(self.merge_project),
+                            disabled=close_disabled
                         ),
                         ft.PopupMenuItem(),  # Divider
                         ft.PopupMenuItem(
@@ -552,3 +581,132 @@ class DASMixerApp:
             except Exception as ex:
                 logger.exception(f"[app] close_project ERROR: {ex}")
                 self._show_error(f"Error closing project: {ex}")
+
+    async def save_project(self, e=None):
+        """Save current project with WAL checkpoint."""
+        if not self.current_project:
+            return
+        
+        dialog = ProgressDialog("Saving project...")
+        self.page.overlay.append(dialog)
+        dialog.open = True
+        self.page.update()
+        
+        try:
+            await self.current_project.save(checkpoint=True)
+            dialog.open = False
+            self.page.update()
+            show_snack(self.page, "Project saved", ft.Colors.GREEN_400)
+        except Exception as ex:
+            dialog.open = False
+            self.page.update()
+            logger.exception(f"[app] save_project ERROR: {ex}")
+            self._show_error(f"Error saving project: {ex}")
+
+    async def save_project_as(self, e=None):
+        """Save project to a new file."""
+        if not self.current_project:
+            return
+        
+        file_path = await ft.FilePicker().save_file(
+            dialog_title="Save Project As",
+            file_name="project.dasmix",
+            file_type=ft.FilePickerFileType.CUSTOM,
+            allowed_extensions=["dasmix"]
+        )
+        
+        if not file_path:
+            return
+        
+        dialog = ProgressDialog("Saving project...")
+        self.page.overlay.append(dialog)
+        dialog.open = True
+        self.page.update()
+        
+        try:
+            await self.current_project.save_as(file_path)
+            config.add_recent_project(file_path)
+            dialog.open = False
+            self.page.update()
+            show_snack(self.page, f"Saved as {Path(file_path).name}", ft.Colors.GREEN_400)
+        except Exception as ex:
+            dialog.open = False
+            self.page.update()
+            logger.exception(f"[app] save_project_as ERROR: {ex}")
+            self._show_error(f"Error saving project: {ex}")
+
+    async def vacuum_project(self, e=None):
+        """Vacuum (compact) the current project database."""
+        if not self.current_project:
+            return
+        
+        dialog = ProgressDialog("Vacuuming database...")
+        self.page.overlay.append(dialog)
+        dialog.open = True
+        self.page.update()
+        
+        try:
+            await self.current_project.save(checkpoint=True)
+            await self.current_project.vacuum()
+            dialog.open = False
+            self.page.update()
+            show_snack(self.page, "Vacuum complete", ft.Colors.GREEN_400)
+        except Exception as ex:
+            dialog.open = False
+            self.page.update()
+            logger.exception(f"[app] vacuum_project ERROR: {ex}")
+            self._show_error(f"Error vacuuming project: {ex}")
+
+    async def merge_project(self, e=None):
+        """Merge another .dasmix project into the current one."""
+        if not self.current_project:
+            return
+        
+        # Step 1: Select source file
+        files = await ft.FilePicker().pick_files(
+            dialog_title="Select project to merge",
+            file_type=ft.FilePickerFileType.CUSTOM,
+            allowed_extensions=["dasmix"],
+            allow_multiple=False
+        )
+        
+        if not files or not files[0].path:
+            return
+        
+        source_path = files[0].path
+        
+        # Step 2: Show merge options dialog
+        options_dialog = MergeOptionsDialog()
+        self.page.overlay.append(options_dialog)
+        options_dialog.open = True
+        self.page.update()
+        
+        result = await options_dialog.wait_for_result()
+        
+        if result is None:
+            # Cancelled
+            return
+        
+        # Step 3: Execute import with progress
+        progress_dialog = ProgressDialog("Merging project...")
+        self.page.overlay.append(progress_dialog)
+        progress_dialog.open = True
+        self.page.update()
+        
+        def on_progress(table: str, fraction: float):
+            progress_dialog.update_progress(fraction, f"Importing {table}...")
+        
+        try:
+            await self.current_project.import_project(
+                source_path=source_path,
+                status_callback=on_progress,
+                **result
+            )
+            progress_dialog.open = False
+            self.page.update()
+            show_snack(self.page, "Project merged successfully", ft.Colors.GREEN_400)
+        except Exception as ex:
+            progress_dialog.open = False
+            self.page.update()
+            logger.exception(f"[app] merge_project ERROR: {ex}")
+            self._show_error(f"Error merging project: {ex}")

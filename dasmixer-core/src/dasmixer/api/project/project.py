@@ -1,4 +1,4 @@
-"""Main Project class for DASMixer - composed from mixins."""
+"""Main Project class for DASMixer - composed from mixins including ImportProjectMixin."""
 
 from .core import ProjectLifecycle
 from .migrations import MigrationMixin
@@ -10,6 +10,7 @@ from .mixins import (
     IdentificationMixin,
     PeptideMixin,
     ProteinMixin,
+    ImportProjectMixin,
     PlotMixin,
     QueryMixin,
     ReportMixin,
@@ -29,6 +30,7 @@ class Project(
     IdentificationMixin,
     PeptideMixin,
     ProteinMixin,
+    ImportProjectMixin,
     
     # Utility mixins
     PlotMixin,
@@ -50,6 +52,7 @@ class Project(
     - IdentificationMixin: Identification files and identifications management
     - PeptideMixin: Peptide matches and complex joined queries
     - ProteinMixin: Protein, identification results, and quantification management
+    - ImportProjectMixin: Import another project's data into this one
     - PlotMixin: Data preparation for plotting
     - QueryMixin: Low-level SQL query interface
     - ReportMixin: Report generation and management

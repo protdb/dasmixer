@@ -82,8 +82,13 @@ class ProjectLifecycle(ProjectBase):
         """Context manager exit - auto-saves and closes."""
         await self.close()
     
-    async def save(self) -> None:
-        """Save current state (commit transaction)."""
+    async def save(self, checkpoint: bool = False) -> None:
+        """Save current state (commit transaction).
+        
+        Args:
+            checkpoint: If True, also performs WAL checkpoint (PRAGMA wal_checkpoint(TRUNCATE))
+                        to consolidate WAL into main database file for portable copy.
+        """
         if not self._db:
             raise RuntimeError("Project not initialized")
         
@@ -95,6 +100,11 @@ class ProjectLifecycle(ProjectBase):
         )
         
         await self._db.commit()
+        
+        if checkpoint:
+            await self._db.execute("PRAGMA wal_checkpoint(TRUNCATE);")
+            logger.debug("WAL checkpoint done")
+        
         logger.debug("Project saved")
     
     async def save_as(self, path: Path | str) -> None:
@@ -112,7 +122,7 @@ class ProjectLifecycle(ProjectBase):
         # Use SQLite backup API
         if self.path:
             # Close current connection
-            await self.save()
+            await self.save(checkpoint=True)
             await self._db.close()
             
             # Copy file
@@ -135,6 +145,17 @@ class ProjectLifecycle(ProjectBase):
             self._db_path = str(self.path)
         
         logger.info(f"Project saved as: {new_path}")
+    
+    async def vacuum(self) -> None:
+        """Rebuild the database file, compacting free pages (SQLite VACUUM).
+        
+        Should be called after save(checkpoint=True) to ensure no pending
+        transactions exist, as VACUUM requires being outside a transaction.
+        """
+        if not self._db:
+            raise RuntimeError("Project not initialized")
+        await self._db.execute("VACUUM")
+        logger.info("Project vacuumed")
     
     async def get_metadata(self) -> dict:
         """

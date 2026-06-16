@@ -10,6 +10,8 @@ from pathlib import Path
 
 from dasmixer.versions import APP_VERSION
 from dasmixer.cli.commands import project, subset, import_data
+from dasmixer.cli.commands import portable
+from dasmixer.cli.commands import import_project as import_project_cmd
 
 app = typer.Typer(
     name="dasmixer-cli",
@@ -37,6 +39,9 @@ def main(
 app.add_typer(project.app, name="create", help="Create new project")
 app.add_typer(subset.app, name="subset", help="Manage comparison groups")
 app.add_typer(import_data.app, name="import", help="Import data files")
+app.add_typer(portable.app, name="checkpoint", help="Save WAL to database file")
+app.add_typer(portable.app, name="vacuum", help="Compact database file")
+app.add_typer(import_project_cmd.app, name="import-project", help="Merge another project into this one")
 
 if __name__ == "__main__":
     app()
