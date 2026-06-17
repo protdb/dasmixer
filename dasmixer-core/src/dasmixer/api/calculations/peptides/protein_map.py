@@ -12,7 +12,11 @@ Maps peptide identifications to proteins via BLAST (npysearch), then:
 import math
 from typing import AsyncIterator
 
-import npysearch as npy
+try:
+    import npysearch as npy
+except ImportError:  # pragma: no cover
+    npy = None  # type: ignore[assignment]
+
 import pandas as pd
 
 from dasmixer.api import Project
@@ -205,6 +209,12 @@ async def map_proteins(
         (matches_df, count, tool_id) — DataFrame ready for
         project.add_peptide_matches_batch(), number of rows, tool id.
     """
+    if npy is None:
+        raise ImportError(
+            "npysearch is not installed. Install dasmixer-core with the 'proteins' extra: "
+            "pip install 'dasmixer-core[proteins]'"
+        )
+
     fasta = await project.get_protein_db_to_search()
     max_acc: int = int((await project.get_setting('max_blast_accept')) or 5)
     max_rej: int = int((await project.get_setting('max_blast_reject')) or 16)

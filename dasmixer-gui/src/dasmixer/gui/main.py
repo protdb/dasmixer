@@ -76,54 +76,67 @@ def main(
         run_gui(file_path)
 
 
+def _find_chrome_exe(chrome_dir: Path) -> Path | None:
+    """Scan chrome_dir for the Chrome executable on any platform.
+
+    Kaleido downloads Chrome into a subdirectory whose exact name depends on
+    the kaleido/choreographer version (e.g. 'chrome-win64', 'chrome-linux64',
+    'chrome-mac-arm64', etc.).  Rather than predicting the name, we glob for
+    the executable after download.
+    """
+    import platform
+    system = platform.system()
+    if system.startswith("Win"):
+        candidates = list(chrome_dir.glob("chrome-*/chrome.exe"))
+    elif system.startswith("Darwin"):
+        candidates = list(
+            chrome_dir.glob(
+                "chrome-*/Google Chrome for Testing.app"
+                "/Contents/MacOS/Google Chrome for Testing"
+            )
+        )
+    else:  # Linux
+        candidates = list(chrome_dir.glob("chrome-*/chrome"))
+    return candidates[0] if candidates else None
+
+
 def _ensure_chrome() -> None:
     """Download Chrome for Kaleido/choreographer on first run.
 
     Chrome is stored in {app_dir}/chrome/ (e.g. %APPDATA%/dasmixer/chrome/ on
     Windows) so it survives application updates and works across users/machines.
-    The download is skipped if the expected executable already exists.
+    The download is skipped if the executable is already present.
 
     After locating (or downloading) Chrome, sets the BROWSER_PATH environment
     variable so choreographer picks it up in the current process without needing
     to write anything into the frozen _internal directory.
     """
     import os
-    import platform
     import sys
     import kaleido
-    from choreographer.cli._cli_utils import get_google_supported_platform_string
 
     app_dir = Path(typer.get_app_dir("dasmixer"))
     chrome_dir = app_dir / "chrome"
 
-    # Determine expected exe path for the current platform
-    arch, *_ = get_google_supported_platform_string()
-    if not arch:
-        print("[Kaleido] WARNING: unsupported platform, skipping Chrome setup.", file=sys.stderr)
-        return
+    # Check if Chrome is already installed (glob for any matching exe)
+    chrome_exe = _find_chrome_exe(chrome_dir)
 
-    if platform.system().startswith("Win"):
-        chrome_exe = chrome_dir / f"chrome-{arch}" / "chrome.exe"
-    elif platform.system().startswith("Darwin"):
-        chrome_exe = (
-            chrome_dir
-            / f"chrome-{arch}"
-            / "Google Chrome for Testing.app"
-            / "Contents"
-            / "MacOS"
-            / "Google Chrome for Testing"
-        )
-    else:  # Linux
-        chrome_exe = chrome_dir / f"chrome-{arch}" / "chrome"
-
-    if not chrome_exe.exists():
+    if chrome_exe is None:
         print(f"[Kaleido] Downloading Chrome to {chrome_dir} ...")
         try:
             kaleido.get_chrome_sync(path=chrome_dir)
-            print(f"[Kaleido] Chrome installed: {chrome_exe}")
         except Exception as exc:
             print(f"[Kaleido] WARNING: could not install Chrome: {exc}", file=sys.stderr)
             return
+        # Locate the actual exe in the directory Kaleido created
+        chrome_exe = _find_chrome_exe(chrome_dir)
+        if chrome_exe is None:
+            print(
+                f"[Kaleido] WARNING: Chrome downloaded but executable not found in {chrome_dir}",
+                file=sys.stderr,
+            )
+            return
+        print(f"[Kaleido] Chrome installed: {chrome_exe}")
 
     # Tell choreographer where Chrome lives — checked first in get_browser_path()
     os.environ["BROWSER_PATH"] = str(chrome_exe)

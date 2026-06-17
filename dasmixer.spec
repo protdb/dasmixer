@@ -49,6 +49,18 @@ datas = [
     # Project assets (icons, logos)
     (str(SPEC_DIR / "assets"), "assets"),
 
+    # Jinja2 HTML templates for report export
+    # base.py resolves: Path(__file__).parent / 'templates' → _internal/dasmixer/api/reporting/templates/
+    (
+        str(SPEC_DIR / "dasmixer-core" / "src" / "dasmixer" / "api" / "reporting" / "templates"),
+        "dasmixer/api/reporting/templates",
+    ),
+    # plots_tab.py resolves: Path(__file__).parent / 'templates' → _internal/dasmixer/gui/views/tabs/plots/templates/
+    (
+        str(SPEC_DIR / "dasmixer-gui" / "src" / "dasmixer" / "gui" / "views" / "tabs" / "plots" / "templates"),
+        "dasmixer/gui/views/tabs/plots/templates",
+    ),
+
     # peptacular ships data files (chem.txt, *.obo, resid.xml, unimod.obo, ...)
     # that are loaded at runtime via relative paths — must be bundled explicitly.
     *collect_data_files("peptacular"),

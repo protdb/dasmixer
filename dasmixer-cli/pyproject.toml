@@ -1,6 +1,6 @@
 [project]
 name = "dasmixer-cli"
-version = "0.5.0"
+version = "0.6.0a2"
 description = "DASMixer CLI — command-line tools for project management"
 authors = [
     {name = "gluck", email = "glucksistemi@gmail.com"}
