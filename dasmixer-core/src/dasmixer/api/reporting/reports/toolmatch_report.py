@@ -1,9 +1,8 @@
+from __future__ import annotations
+
 import numpy as np
 import pandas as pd
-import plotly.express as px
 from dasmixer.api.reporting._icons import Icons
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 
 from ..base import BaseReport
 from dasmixer.utils.logger import logger
@@ -166,6 +165,9 @@ class ToolMatchReport(BaseReport):
         self,
         params: dict
     ) -> tuple[list[tuple[str, go.Figure]], list[tuple[str, pd.DataFrame, bool]]]:
+        import plotly.graph_objects as go
+        from plotly.subplots import make_subplots
+
         logger.debug(params)
         tool1 = str(params['tool1'])
         tool2 = str(params['tool2'])

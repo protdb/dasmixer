@@ -1,6 +1,6 @@
 [project]
 name = "dasmixer"
-version = "0.6.0.a2"
+version = "0.6.0a3"
 description = "DASMixer — Mass Spectrometry Data Integration Tool (metapackage)"
 authors = [
     {name = "gluck", email = "glucksistemi@gmail.com"}
@@ -9,9 +9,9 @@ readme = "README.md"
 requires-python = "<4.0, >=3.11"
 urls = {Homepage = "https://github.com/protdb/dasmixer"}
 dependencies = [
-    "dasmixer-core ==0.6.0.a2",
-    "dasmixer-gui ==0.6.0.a2",
-    "dasmixer-cli ==0.6.0.a2",
+    "dasmixer-core ==0.6.0a3",
+    "dasmixer-gui ==0.6.0a3",
+    "dasmixer-cli ==0.6.0a3",
 ]
 
 [tool.poetry]

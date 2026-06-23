@@ -3,8 +3,11 @@
 from .base import BaseReport
 from .registry import registry
 
-# Import all reports to trigger registration
-from .reports import *
+try:
+    from .reports import *
+except ImportError as e:
+    import logging
+    logging.getLogger(__name__).warning(f"Report modules not loaded: {e}")
 
 __all__ = [
     'BaseReport',

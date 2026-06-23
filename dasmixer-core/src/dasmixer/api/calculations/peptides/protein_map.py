@@ -166,6 +166,17 @@ def _ident_passes_tool_thresholds(row: dict, tool_params: dict) -> bool:
         return False
     return True
 
+def _filter_worse_idents(df: pd.DataFrame) -> pd.DataFrame:
+    res = []
+    uq_idents_id = df['identification_id'].unique()
+    for ident in uq_idents_id:
+        subset = df[df['identification_id'] == ident]
+        max_identity = subset['identity'].max()
+        subset = subset[subset['identity'] == max_identity]
+        subset.drop_duplicates(['protein_id'], inplace=True)
+        res.append(subset)
+    return pd.concat(res, ignore_index=True)
+
 
 # ---------------------------------------------------------------------------
 # Main async generator
@@ -372,9 +383,8 @@ async def map_proteins(
             # ----------------------------------------------------------------
             # Identify which identification IDs need spectra
             # ----------------------------------------------------------------
-            partial_ids: list[int] = list(
-                blast_df.loc[blast_df['Identity'] < 1.0, 'id'].unique()
-            )
+            partial_ids: list[int] = [int(x) for x in blast_df.loc[blast_df['Identity'] < 1.0, 'id'].unique()]
+            print(partial_ids)
             spectra_map: dict[int, dict] = {}
             if partial_ids:
                 logger.debug(f'reading spectra for {len(partial_ids)}')
@@ -430,7 +440,7 @@ async def map_proteins(
                 spectrum = spectra_map.get(ident_id)
                 if spectrum is None:
                     # Spectrum data unavailable — skip
-                    continue
+                    raise Exception('Spectre Unreachable!')
 
                 mz_array: list[float] = spectrum['mz_array']
                 intensity_array: list[float] = spectrum['intensity_array']
@@ -442,7 +452,7 @@ async def map_proteins(
 
                 if eff_charge is None:
                     # Cannot compute PPM without charge — skip
-                    continue
+                    raise Exception('Charge unreachable!')
 
                 isotope_offset = _safe_int(row.get('isotope_offset')) or 0
 
@@ -534,6 +544,6 @@ async def map_proteins(
                         })
 
             if all_res:
-                yield pd.json_normalize(all_res), len(all_res), tool_id
+                yield _filter_worse_idents(pd.json_normalize(all_res)), len(all_res), tool_id
 
             counter += batch_size

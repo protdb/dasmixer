@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-import plotly.graph_objects as go
 from dasmixer.api.reporting._icons import Icons
 
 from ..base import BaseReport
@@ -158,6 +157,8 @@ def _build_coverage_histogram(
     One trace per tool + 'combined' + 'theoretical' (if present).
     Uses overlaid semi-transparent bars with 10%-wide bins.
     """
+    import plotly.graph_objects as go
+
     series_to_plot: list[tuple[str, pd.Series]] = []
     for tool in tools:
         if tool in coverage_df.columns:

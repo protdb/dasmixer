@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 import numpy as np
 import pandas as pd
 from dasmixer.api.reporting._icons import Icons
-import plotly.graph_objects as go
 from scipy.stats import false_discovery_control, mannwhitneyu, ttest_ind
 
 from ..base import BaseReport
@@ -21,6 +22,8 @@ class VolcanoReport(BaseReport):
         )
 
     async def draw_plot(self, data: pd.DataFrame, p_threshold: float, fc_threshold_log2: float) -> go.Figure:
+        import plotly.graph_objects as go
+
         subsets = await self.project.get_subsets()
         subset_colors = {x.name: x.display_color for x in subsets}
         df = data.copy()

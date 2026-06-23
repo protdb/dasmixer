@@ -1,10 +1,11 @@
 """Base class for report modules."""
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Optional, TYPE_CHECKING
 import pandas as pd
-import plotly.graph_objects as go
 import gzip
 import pickle
 import json
@@ -15,6 +16,7 @@ from dasmixer.api.reporting._icons import Icons
 
 if TYPE_CHECKING:
     from dasmixer.api.reporting.report_form import ReportForm
+    import plotly.graph_objects as go
 
 
 class BaseReport(ABC):

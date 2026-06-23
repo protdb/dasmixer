@@ -1,11 +1,15 @@
 """Mixin for plot data preparation and saved plots management."""
 
+from __future__ import annotations
+
 import json
 import gzip
 import pickle
 from datetime import datetime
-from typing import Optional
-import plotly.graph_objects as go
+from typing import Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import plotly.graph_objects as go
 
 
 class PlotMixin:

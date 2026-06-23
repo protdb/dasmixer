@@ -1,12 +1,12 @@
 """UpSet Plot report for protein identifications across comparison groups."""
 
+from __future__ import annotations
+
 from itertools import product
 
 import numpy as np
 import pandas as pd
-import plotly.graph_objects as go
 from dasmixer.api.reporting._icons import Icons
-from plotly.subplots import make_subplots
 
 from ..base import BaseReport
 
@@ -135,6 +135,9 @@ def plot_upset(df: pd.DataFrame, min_proteins: int = 1) -> go.Figure:
     Returns:
         go.Figure — two-row subplot: bar chart (top) + dot matrix (bottom).
     """
+    import plotly.graph_objects as go
+    from plotly.subplots import make_subplots
+
     subsets = list(df['subset'].unique())
     subset_sample_counts = get_subset_sample_counts(df)
     comb_df = place_to_groups(df)

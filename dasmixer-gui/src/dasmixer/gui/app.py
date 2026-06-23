@@ -245,13 +245,13 @@ class DASMixerApp:
                             disabled=close_disabled
                         ),
                         ft.PopupMenuItem(),  # Divider
-                        ft.PopupMenuItem(
-                            content=ft.Text("Vacuum"),
-                            icon=ft.Icons.CLEANING_SERVICES,
-                            on_click=lambda _: self.page.run_task(self.vacuum_project),
-                            disabled=close_disabled
-                        ),
-                        ft.PopupMenuItem(),  # Divider
+                        # ft.PopupMenuItem(
+                        #     content=ft.Text("Vacuum"),
+                        #     icon=ft.Icons.CLEANING_SERVICES,
+                        #     on_click=lambda _: self.page.run_task(self.vacuum_project),
+                        #     disabled=close_disabled
+                        # ),
+                        # ft.PopupMenuItem(),  # Divider
                         ft.PopupMenuItem(
                             content=ft.Text("Merge Project..."),
                             icon=ft.Icons.MERGE,

@@ -95,8 +95,7 @@ def _get_best_override(
     overrides: list[tuple[SeqMatchParams, MatchResult]], criteria: str
 ) -> tuple[SeqMatchParams, MatchResult]:
     """Select the best override by primary criterion, then by abs_ppm."""
-    if criteria == "coverage":
-        criteria = "intensity_percent"
+    criteria = "intensity_percent"
     overrides.sort(key=lambda row: (-getattr(row[1], criteria), row[0].abs_ppm))
     return overrides[0]
 
