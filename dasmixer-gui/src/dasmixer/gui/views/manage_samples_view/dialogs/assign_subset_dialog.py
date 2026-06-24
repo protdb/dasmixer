@@ -68,7 +68,7 @@ class AssignSubsetDialog:
             ], tight=True, width=350),
             actions=[
                 ft.TextButton("Cancel", on_click=self._close),
-                ft.ElevatedButton("Assign", on_click=lambda e: self.page.run_task(on_assign, e)),
+                ft.ElevatedButton("Assign", on_click=lambda e: e.page.run_task(on_assign, e)),
             ],
         )
         self.page.overlay.append(self._dialog)

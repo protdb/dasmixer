@@ -75,7 +75,7 @@ class DropFileDialog:
             ], tight=True, width=450),
             actions=[
                 ft.TextButton("Cancel", on_click=self._close),
-                ft.ElevatedButton("Confirm", on_click=lambda e: self.page.run_task(on_confirm_first, e)),
+                ft.ElevatedButton("Confirm", on_click=lambda e: e.page.run_task(on_confirm_first, e)),
             ],
         )
         self.page.overlay.append(self._dialog)
@@ -132,9 +132,9 @@ class DropFileDialog:
             actions=[
                 ft.TextButton("Cancel", on_click=self._close),
                 ft.ElevatedButton(
-                    "Delete",
+                    content=ft.Text("Delete"),
                     style=ft.ButtonStyle(bgcolor=ft.Colors.RED_600, color=ft.Colors.WHITE),
-                    on_click=lambda e: self.page.run_task(on_delete, e),
+                    on_click=lambda e: e.page.run_task(on_delete, e),
                 ),
             ],
         )

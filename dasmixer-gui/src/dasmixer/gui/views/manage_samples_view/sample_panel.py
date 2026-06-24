@@ -170,17 +170,17 @@ class SampleViewPanel(ft.Container):
                         icon=ft.Icons.ADD_CIRCLE_OUTLINE,
                         icon_color=ft.Colors.BLUE_500,
                         tooltip="Add identification file",
-                        on_click=lambda e, _sf_id=sf_id: self.page.run_task(
+                        on_click=lambda e, _sf_id=sf_id: e.page.run_task(
                             self._on_action, 'add_ident_file', _sf_id, self._sample
-                        ) if self.page else None,
+                        ),
                     ),
                     ft.IconButton(
                         icon=ft.Icons.DELETE_OUTLINE,
                         icon_color=ft.Colors.RED_400,
                         tooltip="Delete spectra file",
-                        on_click=lambda e, _sf_id=sf_id: self.page.run_task(
+                        on_click=lambda e, _sf_id=sf_id: e.page.run_task(
                             self._on_action, 'delete_spectra_file', _sf_id, self._sample
-                        ) if self.page else None,
+                        ),
                     ),
                 ], spacing=4)
                 body_controls.append(spectra_row)
@@ -209,9 +209,9 @@ class SampleViewPanel(ft.Container):
                                 icon=ft.Icons.DELETE_OUTLINE,
                                 icon_color=ft.Colors.RED_400,
                                 tooltip="Delete identification file",
-                                on_click=lambda e, _if_id=if_id: self.page.run_task(
+                                on_click=lambda e, _if_id=if_id: e.page.run_task(
                                     self._on_action, 'delete_ident_file', _if_id, self._sample
-                                ) if self.page else None,
+                                ),
                             ),
                         ], spacing=4),
                         border=row_border,
@@ -226,9 +226,9 @@ class SampleViewPanel(ft.Container):
                     ft.Icon(ft.Icons.ADD, size=16),
                     ft.Text("Add spectra file", size=13),
                 ], spacing=4, tight=True),
-                on_click=lambda e: self.page.run_task(
+                on_click=lambda e: e.page.run_task(
                     self._on_action, 'add_spectra_file', self._sample
-                ) if self.page else None,
+                ),
             )
         )
         body_controls.append(ft.Divider(height=8))
@@ -248,22 +248,22 @@ class SampleViewPanel(ft.Container):
         sample = self._sample
         left_buttons = ft.Row([
             ft.ElevatedButton(content=ft.Text("Calculate ions"), icon=ft.Icons.BOLT,
-                on_click=lambda e, s=sample: self.page.run_task(self._on_action, 'calculate_ions', s) if self.page else None),
+                on_click=lambda e, s=sample: e.page.run_task(self._on_action, 'calculate_ions', s)),
             ft.ElevatedButton(content=ft.Text("Select preferred"), icon=ft.Icons.STAR_OUTLINE,
-                on_click=lambda e, s=sample: self.page.run_task(self._on_action, 'select_preferred', s) if self.page else None),
+                on_click=lambda e, s=sample: e.page.run_task(self._on_action, 'select_preferred', s)),
             ft.ElevatedButton(content=ft.Text("Match proteins"), icon=ft.Icons.LINK,
-                on_click=lambda e, s=sample: self.page.run_task(self._on_action, 'match_proteins', s) if self.page else None),
+                on_click=lambda e, s=sample: e.page.run_task(self._on_action, 'match_proteins', s)),
             ft.ElevatedButton(content=ft.Text("Protein Identifications"), icon=ft.Icons.BIOTECH,
-                on_click=lambda e, s=sample: self.page.run_task(self._on_action, 'protein_identifications', s) if self.page else None),
+                on_click=lambda e, s=sample: e.page.run_task(self._on_action, 'protein_identifications', s)),
             ft.ElevatedButton(content=ft.Text("LFQ"), icon=ft.Icons.ANALYTICS,
-                on_click=lambda e, s=sample: self.page.run_task(self._on_action, 'lfq', s) if self.page else None),
+                on_click=lambda e, s=sample: e.page.run_task(self._on_action, 'lfq', s)),
         ], spacing=6, wrap=True)
 
         right_buttons = ft.Row([
             ft.ElevatedButton(
                 content=ft.Row([ft.Icon(ft.Icons.EDIT_OUTLINED, size=20)], spacing=4, tight=True),
                 tooltip="Edit sample properties",
-                on_click=lambda e, s=sample: self.page.run_task(self._on_action, 'edit_sample', s) if self.page else None,
+                on_click=lambda e, s=sample: e.page.run_task(self._on_action, 'edit_sample', s),
             ),
             ft.ElevatedButton(
                 content=ft.Row([
@@ -271,14 +271,14 @@ class SampleViewPanel(ft.Container):
                             color=ft.Colors.RED_500 if sample.outlier else None),
                 ], spacing=4, tight=True),
                 tooltip="Toggle outlier mark",
-                on_click=lambda e, s=sample: self.page.run_task(self._on_action, 'toggle_outlier', s) if self.page else None,
+                on_click=lambda e, s=sample: e.page.run_task(self._on_action, 'toggle_outlier', s),
             ),
             ft.ElevatedButton(
                 content=ft.Row([
                     ft.Icon(ft.Icons.DELETE_OUTLINED, size=20, color=ft.Colors.RED_600),
                 ], spacing=4, tight=True),
                 tooltip="Delete sample",
-                on_click=lambda e, s=sample: self.page.run_task(self._on_action, 'delete_sample', s) if self.page else None,
+                on_click=lambda e, s=sample: e.page.run_task(self._on_action, 'delete_sample', s),
             ),
         ], spacing=6)
 

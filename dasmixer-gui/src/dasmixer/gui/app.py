@@ -7,7 +7,7 @@ from pathlib import Path
 from dasmixer.api.config import config
 from dasmixer.api.project.project import Project
 import traceback
-from dasmixer.gui.utils import show_snack
+from dasmixer.gui.utils import show_snack, get_asset_path
 from dasmixer.gui.components.progress_dialog import ProgressDialog
 from dasmixer.gui.components.merge_options_dialog import MergeOptionsDialog
 from dasmixer.utils import logger
@@ -51,7 +51,7 @@ class DASMixerApp:
         self.page.padding = 0
 
         # Set application icon
-        icon_path = Path("assets/icons/icon_256.png")
+        icon_path = get_asset_path("icons/icon_256.png")
         if icon_path.exists():
             self.page.window.icon = str(icon_path)
             logger.debug(f"[app] Icon set: {icon_path}")
@@ -422,7 +422,6 @@ class DASMixerApp:
         from dasmixer.api.project.migrations import MigrationError
         from dasmixer.gui.components.progress_dialog import ProgressDialog
         from dasmixer.versions import PROJECT_VERSION
-        from dasmixer.gui.utils import show_snack
 
         dialog = ProgressDialog("Updating project...")
         self.page.overlay.append(dialog)

@@ -44,12 +44,13 @@ class StartView(ft.Container):
     
     def _build_content(self):
         """Build the view content."""
-        # Header — logo image + title text
+        # Logo image
         logo_path = get_asset_path("logo_header.png")
         breakpoints = {
             ft.ResponsiveRowBreakpoint.MD: 6,
-            ft.ResponsiveRowBreakpoint.SM: 12
+            ft.ResponsiveRowBreakpoint.SM: 12,
         }
+
         header_controls = []
         if logo_path.exists():
             header_controls.append(
@@ -71,41 +72,41 @@ class StartView(ft.Container):
             ),
             ft.Text(f"v{APP_VERSION}", weight=ft.FontWeight.BOLD, size=15),
         ]
-        header = ft.Container(
-            content=ft.Column(
-                header_controls,
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                spacing=10,
-            ),
-            padding=40,
-            col = breakpoints
-        )
-        
+
         # Action buttons
         create_btn = ft.ElevatedButton(
             content=ft.Text("Create New Project"),
             icon=ft.Icons.CREATE_NEW_FOLDER,
             on_click=self.on_create_project,
-            width=300,
-            height=60
+            width=240,
+            height=60,
         )
-        
+
         open_btn = ft.ElevatedButton(
             content=ft.Text("Open Project"),
             icon=ft.Icons.FOLDER_OPEN,
             on_click=self._handle_open_click,
-            width=300,
-            height=60
+            width=240,
+            height=60,
         )
 
-        buttons = ft.Column([
-            create_btn,
-            open_btn
-        ],
-        horizontal_alignment=ft.CrossAxisAlignment.START,
-        spacing=15
+        buttons_row = ft.Row(
+            [create_btn, open_btn],
+            spacing=16,
+            alignment=ft.MainAxisAlignment.CENTER,
         )
-        
+
+        # Left column — logo, title, buttons
+        left_column = ft.Container(
+            content=ft.Column(
+                header_controls + [ft.Container(height=20), buttons_row],
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                spacing=10,
+            ),
+            padding=ft.padding.only(top=40, bottom=20, left=20, right=20),
+            col=breakpoints,
+        )
+
         # Recent projects
         recent_items = []
         for project_path in self.recent_projects:
@@ -116,10 +117,10 @@ class StartView(ft.Container):
                         leading=ft.Icon(ft.Icons.DESCRIPTION),
                         title=ft.Text(path.name, weight=ft.FontWeight.BOLD),
                         subtitle=ft.Text(str(path.parent), size=12),
-                        on_click=lambda e, p=project_path: self.on_open_project(p)
+                        on_click=lambda e, p=project_path: self.on_open_project(p),
                     )
                 )
-        
+
         recent_section = ft.Container(
             content=ft.Column([
                 ft.Text(
@@ -136,33 +137,17 @@ class StartView(ft.Container):
                             italic=True,
                         )
                     ],
-                    spacing=5
-                )
+                    spacing=5,
+                ),
             ]),
-            padding=20,
-            # width=600
-            col=breakpoints
+            padding=ft.padding.only(top=40, bottom=20, left=20, right=20),
+            col=breakpoints,
         )
 
         layout = ft.ResponsiveRow(
-            [
-                header,
-                recent_section,
-            ],
-
+            [left_column, recent_section],
         )
-        
-        # Main layout
-        # return ft.Column([
-        #     header,
-        #     ft.Container(height=20),
-        #     buttons,
-        #     ft.Container(height=40),
-        #     recent_section
-        # ],
-        # horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-        # scroll=ft.ScrollMode.AUTO
-        # )
+
         return layout
     
     def _handle_open_click(self, e):

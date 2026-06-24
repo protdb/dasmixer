@@ -46,8 +46,8 @@ SITE = Path(_site)
 # Data files to bundle
 # ---------------------------------------------------------------------------
 datas = [
-    # Project assets (icons, logos)
-    (str(SPEC_DIR / "assets"), "assets"),
+    # Project assets (icons, logos) — bundled inside dasmixer.gui package
+    (str(SPEC_DIR / "dasmixer-gui" / "src" / "dasmixer" / "gui" / "assets"), "dasmixer/gui/assets"),
 
     # Jinja2 HTML templates for report export
     # base.py resolves: Path(__file__).parent / 'templates' → _internal/dasmixer/api/reporting/templates/

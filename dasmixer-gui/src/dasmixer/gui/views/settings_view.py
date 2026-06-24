@@ -14,6 +14,7 @@ def _apply_logging_config(cfg) -> None:
     """Configure root logger based on AppConfig settings."""
     import logging
     from datetime import datetime
+    from pathlib import Path
 
     root = logging.getLogger()
 

@@ -62,7 +62,7 @@ class ManageSamplesView(ft.View):
             leading=ft.IconButton(
                 icon=ft.Icons.ARROW_BACK,
                 tooltip="Back to Samples tab",
-                on_click=lambda e: self.page.run_task(self._on_back_clicked) if self.page else None,
+                on_click=lambda e: e.page.run_task(self._on_back_clicked),
             ),
             title=ft.Text("Manage Samples", size=18, weight=ft.FontWeight.BOLD),
         )
@@ -458,9 +458,9 @@ class ManageSamplesView(ft.View):
             actions=[
                 ft.TextButton("Cancel", on_click=on_cancel),
                 ft.ElevatedButton(
-                    "Delete",
+                    content=ft.Text("Delete"),
                     style=ft.ButtonStyle(bgcolor=ft.Colors.RED_600, color=ft.Colors.WHITE),
-                    on_click=lambda e: self.page.run_task(on_delete, e),
+                    on_click=lambda e: e.page.run_task(on_delete, e),
                 ),
             ],
         )

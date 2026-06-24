@@ -38,8 +38,8 @@ def get_asset_path(relative: str) -> Path:
     PyInstaller frozen environments.
 
     In a PyInstaller bundle (sys.frozen == True) assets are extracted to
-    sys._MEIPASS at startup. In development the project root (two levels up
-    from this file: dasmixer/gui/utils.py → project root) is used.
+    sys._MEIPASS at startup. In development the assets directory lives
+    alongside this file at ``dasmixer/gui/assets/``.
 
     Args:
         relative: Asset path relative to the ``assets/`` directory root,
@@ -52,8 +52,8 @@ def get_asset_path(relative: str) -> Path:
     if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
         base = Path(sys._MEIPASS)
     else:
-        # Two parents up: dasmixer/gui/utils.py → dasmixer/ → project root
-        base = Path(__file__).resolve().parent.parent.parent
+        # Same directory as this file: dasmixer/gui/utils.py → dasmixer/gui/
+        base = Path(__file__).resolve().parent
     return base / "assets" / relative
 
 
