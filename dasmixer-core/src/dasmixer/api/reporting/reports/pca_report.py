@@ -57,6 +57,8 @@ def _build_pca_figure(
         colors: {subset_name: hex_color}.
         explained: explained variance ratio array (at least 2 elements).
     """
+    import plotly.graph_objects as go
+
     fig = go.Figure()
     for subset in subset_labels.unique():
         mask = (subset_labels == subset).values
@@ -97,6 +99,8 @@ def _build_roc_figure(
         roc_data: list of {subset, fpr, tpr, auc}.
         colors: {subset_name: hex_color}.
     """
+    import plotly.graph_objects as go
+
     fig = go.Figure()
     # Diagonal reference line
     fig.add_trace(go.Scatter(

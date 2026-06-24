@@ -177,7 +177,7 @@ class IonCoverageAction(BaseAction):
                     dialog.update_progress(None, "Loading...", "Reading first batch...")
                     batch_objects = await self.project.get_identifications_with_spectra_batch(
                         tool_id=tool_id,
-                        offset=offset,
+                        offset=0 if only_missing else offset,
                         limit=batch_size,
                         only_missing=only_missing,
                         spectra_file_ids=spectra_file_ids,
@@ -188,7 +188,8 @@ class IonCoverageAction(BaseAction):
 
                     worker_batch = [obj.to_worker_dict() for obj in batch_objects]
                     del batch_objects  # free spectrum arrays from memory
-                    offset += batch_size
+                    if not only_missing:
+                        offset += batch_size
 
                     pending_results = await _compute_batch(
                         loop, executor, worker_batch, ptm_list, max_ptm
@@ -200,7 +201,7 @@ class IonCoverageAction(BaseAction):
                         next_read_task = asyncio.create_task(
                             self.project.get_identifications_with_spectra_batch(
                                 tool_id=tool_id,
-                                offset=offset,
+                                offset=0 if only_missing else offset,
                                 limit=batch_size,
                                 only_missing=only_missing,
                                 spectra_file_ids=spectra_file_ids,
@@ -215,7 +216,8 @@ class IonCoverageAction(BaseAction):
 
                         total_processed += len(pending_results)
                         del pending_results
-                        offset += batch_size
+                        if not only_missing:
+                            offset += batch_size
 
                         progress_value = (total_processed / total_count) if total_count > 0 else None
                         dialog.update_progress(

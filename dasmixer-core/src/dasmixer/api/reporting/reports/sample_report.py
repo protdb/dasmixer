@@ -1,7 +1,8 @@
 """Sample report implementation."""
 
+from __future__ import annotations
+
 import pandas as pd
-import plotly.graph_objects as go
 from dasmixer.api.reporting._icons import Icons
 
 from ..base import BaseReport
@@ -24,6 +25,8 @@ class SampleReport(BaseReport):
         params: dict
     ) -> tuple[list[tuple[str, go.Figure]], list[tuple[str, pd.DataFrame, bool]]]:
         """Generate report."""
+        import plotly.graph_objects as go
+
         max_samples = int(params['max_samples'])
         include_table = bool(params['include_table'])
         chart_type = str(params['chart_type'])

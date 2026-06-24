@@ -1,9 +1,14 @@
 """Spectrum plotting functions with ion annotations."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 import pandas as pd
 import numpy as np
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
+
+if TYPE_CHECKING:
+    import plotly.graph_objects as go
+    from plotly.subplots import make_subplots
 
 
 def get_ion_type_color(ion_type: str) -> str:
@@ -63,6 +68,8 @@ def plot_ion_match(
     
     For now, this creates a simple spectrum visualization.
     """
+    import plotly.graph_objects as go
+
     # Create simple spectrum plot
     fig = go.Figure()
     
@@ -127,6 +134,9 @@ def generate_spectrum_plot(
         >>> fig = generate_spectrum_plot("Sample Spectrum", df)
         >>> fig.show()
     """
+    import plotly.graph_objects as go
+    from plotly.subplots import make_subplots
+
     # Normalize inputs to lists
     if isinstance(headers, str):
         headers = [headers]
