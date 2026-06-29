@@ -1,6 +1,6 @@
 [project]
 name = "dasmixer-gui"
-version = "0.6.0rc1"
+version = "0.6.0"
 description = "DASMixer GUI — Flet-based desktop application"
 authors = [
     {name = "gluck", email = "glucksistemi@gmail.com"}
@@ -9,7 +9,7 @@ readme = "README.md"
 requires-python = "<4.0, >=3.11"
 urls = {Homepage = "https://github.com/protdb/dasmixer"}
 dependencies = [
-    "dasmixer-core[all] ==0.6.0rc1",
+    "dasmixer-core[all] ==0.6.0",
     "flet[all] >=0.80.4,<0.81.0",
     "pywebview[gtk] >=6.1,<7 ; sys_platform == 'linux'",
     "pywebview >=6.1,<7 ; sys_platform == 'win32'",
