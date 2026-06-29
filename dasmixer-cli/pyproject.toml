@@ -1,0 +1,28 @@
+[project]
+name = "dasmixer-cli"
+version = "0.6.0rc1"
+description = "DASMixer CLI — command-line tools for project management"
+authors = [
+    {name = "gluck", email = "glucksistemi@gmail.com"}
+]
+readme = "README.md"
+requires-python = "<4.0, >=3.11"
+urls = {Homepage = "https://github.com/protdb/dasmixer"}
+dependencies = [
+    "dasmixer-core ==0.6.0rc1",
+]
+
+[project.scripts]
+dasmixer-cli = "dasmixer.cli.main:app"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+packages = [
+    {include = "dasmixer/cli", from = "src"},
+]
+
+[tool.poetry.dependencies]
+dasmixer-core = {path = "../dasmixer-core", develop = true}

@@ -1,0 +1,61 @@
+[project]
+name = "dasmixer-core"
+version = "0.6.0rc1"
+description = "DASMixer core library — project API, calculations, and data import"
+authors = [
+    {name = "gluck", email = "glucksistemi@gmail.com"}
+]
+readme = "README.md"
+requires-python = "<4.0, >=3.11"
+urls = {Homepage = "https://github.com/protdb/dasmixer"}
+dependencies = [
+    "pandas >=2.3.3,<3.0.0",
+    "numpy >=2.4.1,<3.0.0",
+    "aiosqlite >=0.22.1,<0.23.0",
+    "pydantic >=2.12.5,<3.0.0",
+    "pydantic-settings >=2.12.0,<3.0.0",
+    "typer >=0.21.1,<0.22.0",
+    "pyteomics >=4.7.5,<5.0.0",
+    "peptacular >=2.5.1,<3.0.0",
+    "uniprot-meta-tool >=0.2.1,<0.3.0",
+    "aiofiles >=25.1.0,<26.0.0",
+    "aiocsv >=1.4.0,<2.0.0",
+    "parse >=1.20.2,<2.0.0",
+    "tabulate >=0.9.0,<0.10.0",
+    "scikit-learn >=1.8.0,<2.0.0",
+    "jinja2 >=3.1.6,<4.0.0",
+    "docxtpl >=0.20.2,<0.21.0",
+    "html-for-docx >=1.1.3,<2.0.0",
+    "openpyxl >=3.1.5,<4.0.0",
+    "xlrd >=2.0.2,<3.0.0",
+    "smart-round >=1.0.1,<2.0.0",
+    "mztabwriter[pandas] >=0.1.0,<0.2.0",
+]
+
+[project.optional-dependencies]
+plotly = [
+    "plotly >=6.5.2,<7.0.0",
+    "kaleido >=1.2.0,<2.0.0",
+]
+proteins = [
+    "npysearch >=1.3.1,<2.0.0 ; sys_platform != 'win32'",
+    "npysearch-win >=1.3.1,<2.0.0 ; sys_platform == 'win32'",
+]
+all = [
+    "dasmixer-core[plotly,proteins]",
+]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+packages = [
+    {include = "dasmixer/api", from = "src"},
+    {include = "dasmixer/utils", from = "src"},
+    {include = "dasmixer/versions.py", from = "src"},
+]
+
+[tool.poetry.dependencies]
+npysearch = {version = ">=1.3.1,<2", optional = true, markers = "sys_platform != 'win32'"}
+npysearch-win = {version = ">=1.3.1,<2", optional = true, markers = "sys_platform == 'win32'"}

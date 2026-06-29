@@ -1,68 +1,22 @@
 [project]
-name = "dasmixer"
-version = "0.4.0"
-description = ""
-authors = [
-    {name = "gluck",email = "glucksistemi@gmail.com"}
-]
-readme = "README.md"
+name = "dasmixer-workspace"
+version = "0.6.0rc1"
+description = "DASMixer development workspace (not for distribution)"
 requires-python = "<4.0, >=3.11"
-dependencies = [
-    "flet[all] (>=0.80.4,<0.81.0)",
-    "typer (>=0.21.1,<0.22.0)",
-    "pandas (>=2.3.3,<3.0.0)",
-    "pydantic (>=2.12.5,<3.0.0)",
-    "pydantic-settings (>=2.12.0,<3.0.0)",
-    "openpyxl (>=3.1.5,<4.0.0)",
-    "xlrd (>=2.0.2,<3.0.0)",
-    "plotly (>=6.5.2,<7.0.0)",
-    "kaleido (>=1.2.0,<2.0.0)",
-    "pyteomics (>=4.7.5,<5.0.0)",
-    "peptacular (>=2.5.1,<3.0.0)",
-    "uniprot-meta-tool (>=0.2.1,<0.3.0)",
-    "aiosqlite (>=0.22.1,<0.23.0)",
-    "numpy (>=2.4.1,<3.0.0)",
-    "parse (>=1.20.2,<2.0.0)",
-    "aiofiles (>=25.1.0,<26.0.0)",
-    "aiocsv (>=1.4.0,<2.0.0)",
-    "pywebview[gtk] (>=6.1,<7.0) ; sys_platform == \"linux\"",
-    "tabulate (>=0.9.0,<0.10.0)",
-    "scikit-learn (>=1.8.0,<2.0.0)",
-    "jinja2 (>=3.1.6,<4.0.0)",
-    "docxtpl (>=0.20.2,<0.21.0)",
-    "html-for-docx (>=1.1.3,<2.0.0)",
-    "smart-round (>=1.0.1,<2.0.0)",
-    "mztabwriter[pandas] (>=0.1.0,<0.2.0)",
-    # npysearch: custom Windows wheels for Python 3.12/3.14; PyPI for other platforms
-#    "npysearch @ https://github.com/protdb/npysearch/releases/download/v1.3.2/npysearch-1.3.2-cp314-cp314-win_amd64.whl ; sys_platform == 'win32' and python_version == '3.14'",
-#    "npysearch @ https://github.com/protdb/npysearch/releases/download/v1.3.2/npysearch-1.3.2-cp312-cp312-win_amd64.whl ; sys_platform == 'win32' and python_version == '3.12'",
-    "npysearch (>=1.3.1,<2.0.0) # ; sys_platform != 'win32'",
-    # pywebview for Windows (gtk extra is Linux-only)
-    "pywebview (>=6.1,<7.0) ; sys_platform == 'win32'",
-    # pythonnet: required by pywebview on Windows.
-    # Python 3.14/win32: use pre-release 3.1.0rc0 (supports <3.15, no stable release for 3.14).
-    # Python 3.11-3.13/win32: use stable 3.0.5.
-    "pythonnet (==3.1.0rc0) ; sys_platform == 'win32' and python_version >= '3.14' and python_version < '3.15'",
-    "pythonnet (==3.0.5) ; sys_platform == 'win32' and python_version < '3.14'",
-]
-
-
-[project.scripts]
-dasmixer = "dasmixer.main:app"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
+# Poetry workspace: all packages are in subdirectories.
+# Run `poetry install` from this root to install all packages in editable mode.
+[tool.poetry]
+packages = []
+
+[tool.poetry.dependencies]
+python = "<4.0, >=3.11"
+
 [dependency-groups]
 dev = [
-    "pytest (>=9.0.2,<10.0.0)"
-]
-
-# Enrich pythonnet with allow-prereleases so that the rc0 pre-release can be installed.
-# The version constraints are declared in project.dependencies above.
-[tool.poetry.dependencies]
-pythonnet = [
-    {version = "==3.1.0rc0", python = ">=3.14,<3.15", markers = "sys_platform == 'win32'", allow-prereleases = true},
-    {version = "==3.0.5", python = ">=3.11,<3.14", markers = "sys_platform == 'win32'"},
+    "pytest >=9.0.2,<10.0.0",
 ]

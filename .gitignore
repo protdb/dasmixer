@@ -1,3 +1,10 @@
-/build/*
-/dist/*
+/build/
 /dist/
+/dasmixer-cli/dist/
+/dasmixer-core/dist/
+/dasmixer-gui/dist/
+/metapackage/dist/
+/TEST_DATA/test.fasta
+/TEST_DATA/KC_042_evidence.csv
+/TEST_DATA/KC_042_denovo.csv
+/TEST_DATA/KC_042.mgf
