@@ -155,10 +155,10 @@ class ProteinsTab(ft.Container):
                 ft.Column([
                     self.sections['detection'],
                     self.sections['enrich']
-                ], spacing=10, col=default_col, height=380),
+                ], spacing=10, col=default_col, height=420),
                 ft.Column([
                     self.sections['lfq']
-                ], spacing=10, col=default_col, height=380)
+                ], spacing=10, col=default_col, height=420)
             ]),
 
             ft.Container(height=10),

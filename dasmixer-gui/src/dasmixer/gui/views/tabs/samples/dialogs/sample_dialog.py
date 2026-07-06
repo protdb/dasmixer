@@ -49,7 +49,7 @@ class SampleDialog:
         additions_text = ""
         if self.sample.additions:
             try:
-                additions_text = json.dumps(self.sample.additions, indent=2)
+                additions_text = json.dumps(self.sample.additions, indent=2, ensure_ascii=False)
             except:
                 additions_text = str(self.sample.additions)
         

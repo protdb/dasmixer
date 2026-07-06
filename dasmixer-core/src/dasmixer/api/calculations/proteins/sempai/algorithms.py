@@ -221,23 +221,25 @@ def calculate_ibaq_value(intensities: List[float], observable_peptides: int) -> 
     return total_intensity / observable_peptides
 
 
-def calculate_top3_value(intensities: List[float]) -> float:
+def calculate_top3_value(intensities: List[float]) -> Optional[float]:
     """
     Calculate Top3 value (average of top 3 peptide intensities).
+    
+    Returns None if fewer than 3 peptides are available.
     
     Args:
         intensities: List of peptide intensities
         
     Returns:
-        Top3 value (average of top 3, or all if less than 3)
+        Top3 value (average of top 3), or None if fewer than 3 peptides
     """
-    if not intensities:
-        return 0.0
+    if not intensities or len(intensities) < 3:
+        return None
     
     # Sort intensities in descending order
     sorted_intensities = sorted(intensities, reverse=True)
     
-    # Take top 3 (or all if less than 3)
+    # Take top 3
     top_intensities = sorted_intensities[:3]
     
     # Calculate average
@@ -300,22 +302,36 @@ def calculate_absolute_concentrations_albumin_standard(
     albumin_gl: float
 ) -> List[float]:
     """
-    Calculate absolute concentrations using albumin as internal standard.
+    DEPRECATED: Use calculate_absolute_concentrations_reference_standard instead.
+    Kept for backward compatibility.
+    """
+    return calculate_absolute_concentrations_reference_standard(
+        relative_values, albumin_relative, albumin_gl
+    )
+
+
+def calculate_absolute_concentrations_reference_standard(
+    relative_values: List[float],
+    reference_relative: float,
+    reference_gl: float
+) -> List[float]:
+    """
+    Calculate absolute concentrations using a reference protein as internal standard.
     
     Formula: C_{i,mass} = C_{reference,mass} * (relative_value_i / relative_value_reference)
     
     Args:
         relative_values: Normalized relative abundance values
-        albumin_relative: Relative abundance of albumin
-        albumin_gl: Known albumin concentration in g/L
+        reference_relative: Relative abundance of the reference protein
+        reference_gl: Known reference protein concentration in g/L
         
     Returns:
         Absolute concentrations in g/L
     """
-    if albumin_relative <= 0:
+    if reference_relative <= 0:
         return [0.0] * len(relative_values)
     
-    scaling_factor = albumin_gl / albumin_relative
+    scaling_factor = reference_gl / reference_relative
     return [rv * scaling_factor for rv in relative_values]
 
 
@@ -331,16 +347,16 @@ def calculate_combined_absolute_concentrations(
     
     Args:
         relative_values: Normalized relative abundance values
-        albumin_relative: Relative abundance of albumin
-        albumin_gl: Known albumin concentration in g/L
+        albumin_relative: Relative abundance of the reference protein
+        albumin_gl: Known reference protein concentration in g/L
         total_protein_gl: Total protein concentration in g/L
         alpha: Weight factor (0 ≤ α ≤ 1)
         
     Returns:
         Absolute concentrations in g/L
     """
-    # Albumin-based concentrations
-    albumin_based = calculate_absolute_concentrations_albumin_standard(
+    # Reference protein-based concentrations
+    albumin_based = calculate_absolute_concentrations_reference_standard(
         relative_values, albumin_relative, albumin_gl
     )
     

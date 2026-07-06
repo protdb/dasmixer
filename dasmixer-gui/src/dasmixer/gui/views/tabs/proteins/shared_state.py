@@ -28,6 +28,7 @@ class ProteinsTabState:
     min_peptide_length: int = 7
     max_peptide_length: int = 30
     max_cleavage_sites: int = 2
+    lfq_abs_enabled: bool = False
     
     # Table state
     selected_sample: str | None = None  # For filtering table

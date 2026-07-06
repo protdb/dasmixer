@@ -24,6 +24,7 @@ def _build_sample_header(
     tools_count: int,
     min_proteins: int,
     min_idents: int,
+    any_has_additionals: bool = False,
 ) -> ft.Control:
     sf_count = stats.get('spectra_files_count', 0)
     if_count = stats.get('ident_files_count', 0)
@@ -72,6 +73,15 @@ def _build_sample_header(
             tooltip=ft.Tooltip(message=f"{empty_if} identification file(s) have zero identifications"),
         ))
 
+    # Additionals indicator
+    additionals = sample.additions
+    has_additionals = bool(additionals)
+    add_symbol = "☑" if has_additionals else "☐"
+    add_color = ft.Colors.GREY_800
+    if any_has_additionals and not has_additionals:
+        add_color = ft.Colors.AMBER_600  # warning: others have, this one doesn't
+    controls.append(ft.Text(f"Add: {add_symbol}", size=11, color=add_color))
+
     return ft.Row(controls, spacing=6, wrap=False)
 
 
@@ -87,6 +97,7 @@ class SampleViewPanel(ft.Container):
         min_idents: int,
         on_action: Callable,
         on_selection_changed: Callable[[int, bool], None] | None = None,
+        any_has_additionals: bool = False,
     ):
         super().__init__()
         self._sample = sample
@@ -96,6 +107,7 @@ class SampleViewPanel(ft.Container):
         self._min_idents = min_idents
         self._on_action = on_action
         self._on_selection_changed = on_selection_changed
+        self._any_has_additionals = any_has_additionals
 
         self._checkbox = ft.Checkbox(
             value=False,
@@ -131,6 +143,7 @@ class SampleViewPanel(ft.Container):
             _build_sample_header(
                 self._sample, self._stats,
                 self._tools_count, self._min_proteins, self._min_idents,
+                self._any_has_additionals,
             )
         )
         body = await self._build_body()
@@ -146,11 +159,12 @@ class SampleViewPanel(ft.Container):
         )
         return self._expansion_panel
 
-    def update_stats(self, stats: dict, min_proteins: int, min_idents: int) -> None:
+    def update_stats(self, stats: dict, min_proteins: int, min_idents: int, any_has_additionals: bool = False) -> None:
         """Update statistics and thresholds for the panel."""
         self._stats = stats
         self._min_proteins = min_proteins
         self._min_idents = min_idents
+        self._any_has_additionals = any_has_additionals
 
     async def _build_body(self) -> ft.Control:
         detail = await self._on_action('get_detail', self._sample.id)

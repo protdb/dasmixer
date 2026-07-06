@@ -1,8 +1,9 @@
-"""Label-Free Quantification action."""
+"""Label-Free Quantification action with absolute concentration support."""
 
 import asyncio
 
 import flet as ft
+import pandas as pd
 
 from dasmixer.utils import logger
 from dasmixer.api.project.project import Project
@@ -16,7 +17,7 @@ class LFQAction(BaseAction):
     Calculate Label-Free Quantification for protein identifications.
 
     Extracted from LFQSection.calculate_lfq().
-    Supports optional per-sample calculation.
+    Supports optional per-sample calculation and absolute concentrations.
     """
 
     def __init__(self, project: Project, page: ft.Page):
@@ -26,6 +27,7 @@ class LFQAction(BaseAction):
         self,
         state: ProteinsTabState,
         sample_id: int | None = None,
+        abs_enabled: bool = False,
     ) -> int:
         """
         Run LFQ calculation.
@@ -33,6 +35,7 @@ class LFQAction(BaseAction):
         Args:
             state: ProteinsTabState with LFQ parameters.
             sample_id: If provided, only calculate for this sample.
+            abs_enabled: Whether absolute concentrations are enabled.
 
         Returns:
             Total number of quantification records saved.
@@ -48,12 +51,8 @@ class LFQAction(BaseAction):
         dialog.show()
 
         try:
-            # Clear old results (per sample or globally)
+            # Clear old results (per sample or globally, per algorithm)
             dialog.update_progress(None, "Clearing old quantifications...")
-            if sample_id is not None:
-                await self.project.clear_protein_quantifications_for_sample(sample_id)
-            else:
-                await self.project.clear_protein_quantifications()
 
             # Determine which samples to process
             dialog.update_progress(None, "Loading samples...")
@@ -75,21 +74,80 @@ class LFQAction(BaseAction):
             total_samples = len(samples_df)
             total_saved = 0
 
+            # Load abs settings if abs_enabled
+            abs_settings = {}
+            if abs_enabled:
+                abs_settings = {
+                    'total_field': await self.project.get_setting('lfq_abs_total_protein_field') or '',
+                    'ref_field': await self.project.get_setting('lfq_abs_reference_protein_field') or '',
+                    'ref_id': await self.project.get_setting('lfq_abs_reference_protein_id') or 'P02768',
+                    'use_defaults': (await self.project.get_setting('lfq_abs_use_defaults')) == 'True',
+                    'default_ref': float(await self.project.get_setting('lfq_abs_default_reference_value') or '40.0'),
+                    'default_total': float(await self.project.get_setting('lfq_abs_default_total_protein_value') or '75.0'),
+                }
+
+            # Get samples with their additionals
+            all_samples = await self.project.get_samples()
+
             for idx, row in samples_df.iterrows():
                 s_id = row['id']
                 dialog.update_progress(
                     (idx + 1) / total_samples,
                     f"Processing sample {idx + 1} of {total_samples}"
                 )
+
+                # Clear only this algorithm's quantifications for the sample
+                for method in selected_methods:
+                    await self.project.clear_protein_quantifications_for_sample_and_algorithm(
+                        int(s_id), method
+                    )
+
+                # Compute concentration values for this sample
+                total_protein_gl = None
+                reference_protein_gl = None
+
+                if abs_enabled:
+                    # Find this sample
+                    sample_obj = next((s for s in all_samples if s.id == s_id), None)
+                    if sample_obj and sample_obj.additions:
+                        additions = sample_obj.additions
+                        total_field = abs_settings.get('total_field', '')
+                        ref_field = abs_settings.get('ref_field', '')
+                        use_defaults = abs_settings.get('use_defaults', False)
+
+                        if total_field:
+                            raw = additions.get(total_field)
+                            if raw is not None:
+                                try:
+                                    total_protein_gl = float(raw)
+                                except (TypeError, ValueError):
+                                    pass
+                            if total_protein_gl is None and use_defaults:
+                                total_protein_gl = abs_settings.get('default_total')
+
+                        if ref_field:
+                            raw = additions.get(ref_field)
+                            if raw is not None:
+                                try:
+                                    reference_protein_gl = float(raw)
+                                except (TypeError, ValueError):
+                                    pass
+                            if reference_protein_gl is None and use_defaults:
+                                reference_protein_gl = abs_settings.get('default_ref')
+
                 result_df = await calculate_lfq(
                     project=self.project,
-                    sample_id=s_id,
+                    sample_id=int(s_id),
                     methods=selected_methods,
                     enzyme=state.enzyme,
                     min_length=state.min_peptide_length,
                     max_length=state.max_peptide_length,
                     max_cleavage_sites=state.max_cleavage_sites,
                     empai_base=state.empai_base_value,
+                    abs_enabled=abs_enabled,
+                    total_protein_gl=total_protein_gl,
+                    reference_protein_gl=reference_protein_gl,
+                    reference_protein_id=abs_settings.get('ref_id', 'P02768') if abs_enabled else 'P02768',
                 )
                 if len(result_df) > 0:
                     await self.project.add_protein_quantifications_batch(result_df)

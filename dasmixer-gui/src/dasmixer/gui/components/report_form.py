@@ -217,6 +217,82 @@ class StringSelector(ReportParamBase):
         return self._control
 
 
+class LFQSelector(ReportParamBase):
+    """
+    Составной компонент для выбора LFQ-метода и типа значения.
+
+    Состоит из:
+    - Dropdown: выбор алгоритма (emPAI / iBAQ / NSAF / Top3)
+    - RadioGroup: rel / g/l / mol/l
+
+    get_value() возвращает tuple[str, str]:
+        - [0]: алгоритм ('emPAI', 'iBAQ', 'NSAF', 'Top3')
+        - [1]: имя колонки в БД ('rel_value', 'abs_value_gl', 'abs_value_mol')
+    """
+
+    def __init__(
+        self,
+        label: str = "LFQ",
+        default_method: str = "emPAI",
+        default_value_type: str = "rel",
+    ):
+        super().__init__(label=label, default=(default_method, default_value_type))
+        self._method_dropdown: ft.Dropdown | None = None
+        self._value_radio: ft.RadioGroup | None = None
+
+    async def build(self, project: "Project") -> ft.Control:
+        """Строит Dropdown + RadioGroup."""
+        method_options = [
+            ft.DropdownOption(key="emPAI", text="emPAI"),
+            ft.DropdownOption(key="iBAQ", text="iBAQ"),
+            ft.DropdownOption(key="NSAF", text="NSAF"),
+            ft.DropdownOption(key="Top3", text="Top3"),
+        ]
+        default_method, default_value_type = self.default
+
+        self._method_dropdown = ft.Dropdown(
+            label=self.label + " method",
+            options=method_options,
+            value=default_method,
+            expand=True,
+        )
+
+        self._value_radio = ft.RadioGroup(
+            content=ft.Row([
+                ft.Radio(value="rel", label="rel"),
+                ft.Radio(value="gl", label="g/l"),
+                ft.Radio(value="mol", label="mol/l"),
+            ]),
+            value=default_value_type,
+        )
+
+        self._control = ft.Column([
+            self._method_dropdown,
+            self._value_radio,
+        ], spacing=6)
+        return self._control
+
+    def get_value(self) -> tuple[str, str]:
+        """Возвращает (algorithm, column_name)."""
+        col_map = {
+            "rel": "rel_value",
+            "gl": "abs_value_gl",
+            "mol": "abs_value_mol",
+        }
+        method = self._method_dropdown.value if self._method_dropdown else self.default[0]
+        value_type = self._value_radio.value if self._value_radio else self.default[1]
+        return (method, col_map.get(value_type, "rel_value"))
+
+    def set_value(self, value) -> None:
+        """Restore value from stored data."""
+        if isinstance(value, (tuple, list)) and len(value) == 2:
+            self.default = (value[0], value[1])
+        if self._method_dropdown:
+            self._method_dropdown.value = value[0]
+        if self._value_radio:
+            self._value_radio.value = value[1]
+
+
 # ---------------------------------------------------------------------------
 # ReportForm (GUI extension)
 # ---------------------------------------------------------------------------

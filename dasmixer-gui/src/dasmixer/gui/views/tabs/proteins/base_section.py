@@ -66,38 +66,33 @@ class BaseSection(ft.Container, ABC):
         pass
     
     def show_error(self, message: str):
-        """Show error snackbar using context."""
-        try:
-            page = ft.context.page
-            show_snack(page, message, ft.Colors.RED_400)
-            page.update()
-        except RuntimeError:
-            # Fallback if not in Flet context
-            logger.exception(f"ERROR: {message}")
+        """Show error snackbar."""
+        if self.page:
+            show_snack(self.page, message, ft.Colors.RED_400)
+            self.page.update()
+        else:
+            logger.error(f"ERROR: {message}")
     
     def show_success(self, message: str):
-        """Show success snackbar using context."""
-        try:
-            page = ft.context.page
-            show_snack(page, message, ft.Colors.GREEN_400)
-            page.update()
-        except RuntimeError:
+        """Show success snackbar."""
+        if self.page:
+            show_snack(self.page, message, ft.Colors.GREEN_400)
+            self.page.update()
+        else:
             logger.debug(f"SUCCESS: {message}")
     
     def show_info(self, message: str):
-        """Show info snackbar using context."""
-        try:
-            page = ft.context.page
-            show_snack(page, message, ft.Colors.BLUE_400)
-            page.update()
-        except RuntimeError:
+        """Show info snackbar."""
+        if self.page:
+            show_snack(self.page, message, ft.Colors.BLUE_400)
+            self.page.update()
+        else:
             logger.debug(f"INFO: {message}")
     
     def show_warning(self, message: str):
-        """Show warning snackbar using context."""
-        try:
-            page = ft.context.page
-            show_snack(page, message, ft.Colors.ORANGE_400)
-            page.update()
-        except RuntimeError:
+        """Show warning snackbar."""
+        if self.page:
+            show_snack(self.page, message, ft.Colors.ORANGE_400)
+            self.page.update()
+        else:
             logger.debug(f"WARNING: {message}")

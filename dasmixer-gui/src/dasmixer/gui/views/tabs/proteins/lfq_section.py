@@ -6,7 +6,8 @@ import asyncio
 from .base_section import BaseSection
 from dasmixer.utils import logger
 from dasmixer.gui.views.tabs.peptides.dialogs.progress_dialog import ProgressDialog
-from dasmixer.api.calculations.proteins.sempai import SUPPORTED_ENZYMES
+from dasmixer.gui.views.tabs.proteins.dialogs.lfq_abs_references_dialog import LFQAbsReferencesDialog
+from dasmixer.api.calculations.proteins.sempai import SUPPORTED_ENZYMES, ProteomicSample
 from dasmixer.api.calculations.proteins.lfq import calculate_lfq
 
 
@@ -27,6 +28,8 @@ class LFQSection(BaseSection):
             parent_tab: Reference to parent ProteinsTab
         """
         self.parent_tab = parent_tab
+        self.abs_checkbox: ft.Checkbox | None = None
+        self.set_references_btn: ft.ElevatedButton | None = None
         super().__init__(project, state)
     
     def _build_content(self) -> ft.Control:
@@ -124,6 +127,21 @@ class LFQSection(BaseSection):
         )
         logger.debug('Calculate button built...')
         
+        # Absolute concentrations
+        self.abs_checkbox = ft.Checkbox(
+            label="Abs. concentrations",
+            value=False,
+            on_change=self._on_abs_changed
+        )
+        logger.debug('Abs checkbox built...')
+        
+        self.set_references_btn = ft.ElevatedButton(
+            content=ft.Text("Set references"),
+            icon=ft.Icons.SETTINGS,
+            on_click=lambda e: self.page.run_task(self._on_set_references_clicked, e),
+        )
+        logger.debug('Set references button built...')
+        
         return ft.Column([
             ft.Text("Label-Free Quantification", size=18, weight=ft.FontWeight.BOLD),
             ft.Container(height=10),
@@ -149,6 +167,8 @@ class LFQSection(BaseSection):
                 self.max_cleavage_field
             ]),
             ft.Container(height=10),
+            ft.Row([self.abs_checkbox, self.set_references_btn], spacing=10),
+            ft.Container(height=5),
             self.calculate_btn
         ], spacing=10)
     
@@ -188,6 +208,9 @@ class LFQSection(BaseSection):
         if max_cleav is not None:
             self.state.max_cleavage_sites = int(max_cleav)
             self.max_cleavage_field.value = max_cleav
+        
+        # Load abs settings
+        await self._load_abs_settings()
         
         # Update checkboxes
         self.empai_checkbox.value = self.state.lfq_methods['emPAI']
@@ -296,9 +319,38 @@ class LFQSection(BaseSection):
 
         from dasmixer.gui.actions.lfq_action import LFQAction
         action = LFQAction(self.project, self.page)
-        await action.run(state=self.state)
+        await action.run(
+            state=self.state,
+            abs_enabled=self.state.lfq_abs_enabled,
+        )
 
         # Update counts and refresh table
         self.state.protein_quantification_count = await self.project.get_protein_quantification_count()
         if hasattr(self.parent_tab, 'sections') and 'table' in self.parent_tab.sections:
             await self.parent_tab.sections['table'].load_data()
+
+    async def _on_abs_changed(self, e):
+        """Handle absolute concentrations checkbox change."""
+        enabled = e.control.value if hasattr(e, 'control') else self.abs_checkbox.value
+        self.state.lfq_abs_enabled = enabled
+        await self.project.set_setting('lfq_abs_enabled', str(enabled))
+        if self.page:
+            self.update()
+
+    async def _on_set_references_clicked(self, e):
+        """Open the LFQ absolute references dialog."""
+        if self.page is None:
+            return
+        dialog = LFQAbsReferencesDialog(self.project, self.page)
+        await dialog.show()
+        # Reload settings
+        await self._load_abs_settings()
+
+    async def _load_abs_settings(self):
+        """Load absolute concentration settings from project."""
+        abs_enabled = await self.project.get_setting('lfq_abs_enabled')
+        self.state.lfq_abs_enabled = abs_enabled == 'True' if abs_enabled is not None else False
+        if self.abs_checkbox:
+            self.abs_checkbox.value = self.state.lfq_abs_enabled
+        if self.page:
+            self.update()

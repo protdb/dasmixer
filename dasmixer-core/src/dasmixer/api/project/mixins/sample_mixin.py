@@ -116,7 +116,30 @@ class SampleMixin:
         """
         row = await self._fetchone(query, (name,))
         return Sample.from_dict(row) if row else None
-    
+
+    async def get_additionals_keys(self) -> list[str]:
+        """
+        Возвращает отсортированный список всех уникальных ключей из поля additions
+        по всем образцам проекта.
+
+        Returns:
+            Отсортированный список строк-ключей.
+            Пустой список, если нет данных или все additionals пусты/None.
+        """
+        import json
+        rows = await self._fetchall(
+            "SELECT additions FROM sample WHERE additions IS NOT NULL AND additions != 'null' AND additions != '{}'"
+        )
+        keys: set[str] = set()
+        for row in rows:
+            try:
+                data = json.loads(row['additions'])
+                if isinstance(data, dict):
+                    keys.update(data.keys())
+            except (json.JSONDecodeError, TypeError):
+                pass
+        return sorted(keys)
+
     async def update_sample(self, sample: Sample) -> None:
         """Update existing sample."""
         if sample.id is None:

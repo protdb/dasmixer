@@ -3,6 +3,7 @@
 import flet as ft
 import plotly.graph_objects as go
 import numpy as np
+import pandas as pd
 
 from dasmixer.gui.components.base_plot_view import BasePlotView
 from dasmixer.api.project.project import Project
@@ -27,7 +28,9 @@ class ProteinConcentrationPlotView(BasePlotView):
             'remove_outliers': False,
             'outlier_range': 3.0,
             'show_all_dots': False,
-            'selected_subsets': []
+            'selected_subsets': [],
+            'value_type': 'rel',
+            'multiplier': 'x1'
         }
     
     def _build_plot_settings_view(self) -> ft.Control:
@@ -36,10 +39,10 @@ class ProteinConcentrationPlotView(BasePlotView):
         self.algorithm_dropdown = ft.Dropdown(
             label="Algorithm",
             options=[
-                ft.dropdown.Option(key="emPAI", text="emPAI"),
-                ft.dropdown.Option(key="iBAQ", text="iBAQ"),
-                ft.dropdown.Option(key="NSAF", text="NSAF"),
-                ft.dropdown.Option(key="Top3", text="Top3")
+                ft.DropdownOption(key="emPAI", text="emPAI"),
+                ft.DropdownOption(key="iBAQ", text="iBAQ"),
+                ft.DropdownOption(key="NSAF", text="NSAF"),
+                ft.DropdownOption(key="Top3", text="Top3")
             ],
             value=self.plot_settings.get('algorithm', 'emPAI'),
             width=200
@@ -49,8 +52,8 @@ class ProteinConcentrationPlotView(BasePlotView):
         self.plot_type_dropdown = ft.Dropdown(
             label="Plot Type",
             options=[
-                ft.dropdown.Option(key="boxplot", text="Boxplot"),
-                ft.dropdown.Option(key="violin", text="Violin Plot")
+                ft.DropdownOption(key="boxplot", text="Boxplot"),
+                ft.DropdownOption(key="violin", text="Violin Plot")
             ],
             value=self.plot_settings.get('plot_type', 'boxplot'),
             width=200
@@ -79,6 +82,32 @@ class ProteinConcentrationPlotView(BasePlotView):
             value=self.plot_settings.get('show_all_dots', False)
         )
         
+        # Value type radio
+        self.value_type_radio = ft.RadioGroup(
+            content=ft.Row([
+                ft.Radio(value="rel", label="rel"),
+                ft.Radio(value="gl", label="g/l"),
+                ft.Radio(value="mol", label="mol/l"),
+            ]),
+            value=self.plot_settings.get('value_type', 'rel'),
+            on_change=self._on_value_type_changed,
+        )
+
+        # Multiplier dropdown
+        self.multiplier_dropdown = ft.Dropdown(
+            label="Multiplier",
+            options=[
+                ft.DropdownOption(key="x1", text="×1"),
+                ft.DropdownOption(key="x1e3", text="×10³ (milli)"),
+                ft.DropdownOption(key="x1e6", text="×10⁶ (micro)"),
+                ft.DropdownOption(key="x1e9", text="×10⁹ (nano)"),
+                ft.DropdownOption(key="x1e12", text="×10¹² (femto)"),
+            ],
+            value=self.plot_settings.get('multiplier', 'x1'),
+            width=200,
+            disabled=(self.plot_settings.get('value_type', 'rel') == 'rel'),
+        )
+        
         # Subsets selection (will be populated on load)
         self.subset_checkboxes = []
         self.subsets_column = ft.Column([], spacing=5)
@@ -97,6 +126,12 @@ class ProteinConcentrationPlotView(BasePlotView):
             ft.Text("Display Options:", weight=ft.FontWeight.BOLD, size=13),
             self.include_title_checkbox,
             self.show_all_dots_checkbox,
+            ft.Container(height=10),
+            
+            ft.Text("Value Type:", weight=ft.FontWeight.BOLD, size=13),
+            self.value_type_radio,
+            ft.Container(height=4),
+            self.multiplier_dropdown,
             ft.Container(height=10),
             
             ft.Text("Outlier Removal:", weight=ft.FontWeight.BOLD, size=13),
@@ -135,6 +170,13 @@ class ProteinConcentrationPlotView(BasePlotView):
                 show_snack(self.page, f"Error loading subsets: {ex}", ft.Colors.RED_400)
                 self.page.update()
     
+    def _on_value_type_changed(self, e):
+        """Handle value type radio change."""
+        value_type = e.control.value
+        self.multiplier_dropdown.disabled = (value_type == 'rel')
+        if self.page:
+            self.page.update()
+    
     async def _update_settings_from_ui(self):
         """Update settings from UI controls."""
         self.plot_settings['algorithm'] = self.algorithm_dropdown.value
@@ -143,6 +185,8 @@ class ProteinConcentrationPlotView(BasePlotView):
         self.plot_settings['remove_outliers'] = self.remove_outliers_checkbox.value
         self.plot_settings['outlier_range'] = float(self.outlier_range_field.value or 3.0)
         self.plot_settings['show_all_dots'] = self.show_all_dots_checkbox.value
+        self.plot_settings['value_type'] = self.value_type_radio.value
+        self.plot_settings['multiplier'] = self.multiplier_dropdown.value
         
         # Get selected subsets
         selected_subsets = []
@@ -164,6 +208,28 @@ class ProteinConcentrationPlotView(BasePlotView):
         protein_id = entity_id
         algorithm = self.plot_settings.get('algorithm', 'emPAI')
         
+        # Multiplier map
+        multiplier_map = {
+            "x1":    (1.0,   ""),
+            "x1e3":  (1e3,   "m"),
+            "x1e6":  (1e6,   "μ"),
+            "x1e9":  (1e9,   "n"),
+            "x1e12": (1e12,  "f"),
+        }
+        value_type = self.plot_settings.get('value_type', 'rel')
+        multiplier_key = self.plot_settings.get('multiplier', 'x1')
+        mult_factor, mult_prefix = multiplier_map.get(multiplier_key, (1.0, ""))
+        
+        # Determine data column based on value type
+        if value_type == 'rel' or value_type not in ('gl', 'mol'):
+            data_column = 'rel_value'
+            y_label = algorithm
+        else:
+            column_name = 'abs_value_gl' if value_type == 'gl' else 'abs_value_mol'
+            data_column = column_name
+            unit = 'g/l' if value_type == 'gl' else 'mol/l'
+            y_label = f"{algorithm}, {mult_prefix}{unit}"
+        
         # Get quantification data
         df = await self.project.get_protein_quantification_data(
             method=algorithm,
@@ -184,7 +250,7 @@ class ProteinConcentrationPlotView(BasePlotView):
         # Remove outliers if needed
         if self.plot_settings.get('remove_outliers', False):
             outlier_range = self.plot_settings.get('outlier_range', 3.0)
-            df = self._remove_outliers(df, 'rel_value', outlier_range)
+            df = self._remove_outliers(df, data_column, outlier_range)
         
         # Get subset colors
         subset_colors = await self._get_subset_colors()
@@ -199,14 +265,14 @@ class ProteinConcentrationPlotView(BasePlotView):
             
             if plot_type == 'boxplot':
                 fig.add_trace(go.Box(
-                    y=subset_df['rel_value'],
+                    y=subset_df[data_column].apply(lambda x: x * mult_factor if x is not None and not (isinstance(x, float) and pd.isna(x)) else None),
                     name=subset_name,
                     marker_color=color,
                     boxmean='sd'
                 ))
             else:  # violin
                 fig.add_trace(go.Violin(
-                    y=subset_df['rel_value'],
+                    y=subset_df[data_column].apply(lambda x: x * mult_factor if x is not None and not (isinstance(x, float) and pd.isna(x)) else None),
                     name=subset_name,
                     marker_color=color,
                     box_visible=True,
@@ -220,7 +286,7 @@ class ProteinConcentrationPlotView(BasePlotView):
                 color = subset_colors.get(subset_name, '#888888')
                 
                 fig.add_trace(go.Scatter(
-                    y=subset_df['rel_value'],
+                    y=subset_df[data_column].apply(lambda x: x * mult_factor if x is not None and not (isinstance(x, float) and pd.isna(x)) else None),
                     x=[subset_name] * len(subset_df),
                     mode='markers',
                     marker=dict(size=4, color=color, opacity=0.5),
@@ -232,7 +298,7 @@ class ProteinConcentrationPlotView(BasePlotView):
         title = f"Protein {protein_id} - {algorithm}" if self.plot_settings.get('include_title', True) else None
         fig.update_layout(
             title=title,
-            yaxis_title=f"{algorithm} Concentration",
+            yaxis_title=y_label,
             xaxis_title="Subset",
             template='plotly_white'
         )

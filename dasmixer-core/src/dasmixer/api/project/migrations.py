@@ -37,6 +37,13 @@ MIGRATIONS: list[dict] = [
             ALTER TABLE identification_file ADD COLUMN selection_field_value TEXT;
         """,
     },
+    {
+        "version": "0.7.0",
+        "sql": """
+            ALTER TABLE protein_quantification_result RENAME COLUMN abs_value TO abs_value_mol;
+            ALTER TABLE protein_quantification_result ADD COLUMN abs_value_gl REAL;
+        """,
+    },
 ]
 
 

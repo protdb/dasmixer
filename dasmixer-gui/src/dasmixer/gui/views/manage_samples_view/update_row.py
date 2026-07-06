@@ -11,11 +11,13 @@ class UpdateRow(ft.Container):
     def __init__(
         self,
         on_update_clicked: Callable[[], Awaitable[None]],
+        on_import_additional: Callable[[], Awaitable[None]] | None = None,
     ):
         super().__init__(
             padding=ft.padding.symmetric(horizontal=16, vertical=8),
         )
         self._on_update_clicked = on_update_clicked
+        self._on_import_additional = on_import_additional
 
         self._min_proteins_field = ft.TextField(
             label="Min proteins",
@@ -40,6 +42,11 @@ class UpdateRow(ft.Container):
             icon=ft.Icons.REFRESH,
             on_click=lambda e: self.page.run_task(self._on_update_clicked) if self.page else None,
         )
+        self._import_additional_btn = ft.ElevatedButton(
+            content=ft.Text("Import additional data"),
+            icon=ft.Icons.UPLOAD_FILE,
+            on_click=lambda e: self.page.run_task(self._on_import_additional) if self.page and self._on_import_additional else None,
+        )
 
         self.content = ft.Row(
             [
@@ -47,6 +54,7 @@ class UpdateRow(ft.Container):
                 self._update_loader,
                 self._min_proteins_field,
                 self._min_idents_field,
+                self._import_additional_btn,
             ],
             spacing=10,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,

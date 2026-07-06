@@ -72,7 +72,10 @@ class ManageSamplesView(ft.View):
     # ------------------------------------------------------------------
 
     def _build_body(self) -> ft.Control:
-        self._update_row = UpdateRow(on_update_clicked=self._on_update_clicked)
+        self._update_row = UpdateRow(
+            on_update_clicked=self._on_update_clicked,
+            on_import_additional=self._on_import_additional_clicked,
+        )
 
         self._mass_ops_row = MassOperationsRow(
             on_select_all=self._on_select_all,
@@ -127,6 +130,15 @@ class ManageSamplesView(ft.View):
 
     async def _on_back_clicked(self):
         await self._on_back_cb()
+
+    async def _on_import_additional_clicked(self):
+        """Open ImportAdditionalData dialog."""
+        from .dialogs.import_additional_dialog import ImportAdditionalDialog
+        dialog = ImportAdditionalDialog(self.project, self.page)
+        await dialog.show()
+        # Reload panels to show updated additionals indicators
+        self._samples, all_cached, self._tools_count = await self._data_manager.load_all()
+        await self._rebuild_panels(all_cached=all_cached)
 
     # ------------------------------------------------------------------
     # Data loading

@@ -251,7 +251,8 @@ class PCAReport(BaseReport):
         if isinstance(selected_subsets, str):
             selected_subsets = [s.strip() for s in selected_subsets.split(",") if s.strip()]
 
-        lfq_type = str(params.get("lfq_type", "emPAI"))
+        lfq_value = params.get("lfq", ("emPAI", "rel_value"))
+        lfq_type = lfq_value[0] if isinstance(lfq_value, (tuple, list)) else str(lfq_value)
         show_labels = params.get("show_labels", False)
 
         wide, meta = await self._get_quant_matrix(lfq_type, selected_subsets)
