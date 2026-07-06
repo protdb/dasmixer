@@ -41,8 +41,14 @@ def get_current_version() -> str:
 
 
 def validate_version(version: str) -> None:
-    if not re.match(r'^\d+\.\d+\.\d+', version):
-        typer.echo(f"Error: invalid version format: {version}", err=True)
+    # PEP 440 canonical version regex
+    if not re.match(
+        r'^([1-9][0-9]*!)?(0|[1-9][0-9]*)(\.(0|[1-9][0-9]*))*'
+        r'((a|b|rc)(0|[1-9][0-9]*))?(\.post(0|[1-9][0-9]*))?'
+        r'(\.dev(0|[1-9][0-9]*))?$',
+        version,
+    ):
+        typer.echo(f"Error: invalid PEP 440 version format: {version}", err=True)
         raise typer.Exit(1)
 
 
