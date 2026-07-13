@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Literal
 
 from dasmixer.api.calculations.ppm import SeqFixer, SeqMatchParams
+from dasmixer.api.calculations.ppm.seqfixer import _expand_unlocalized
 from dasmixer.utils.seqfixer_utils import PTMS, FixedPTM
 from dasmixer.api.calculations.spectra.ion_match import IonMatchParameters, match_predictions, MatchResult
 
@@ -114,13 +115,48 @@ def process_single_ident(
     seq_results = fixer.get_ppm(sequence, pepmass, mgf_charge)
     if not seq_results.override:
         ppm_result = seq_results.original
-        match_result = match_predictions(
-            params=params,
-            mz=mz_array,
-            intensity=intensity_array,
-            charges=fragment_charges,
-            sequence=sequence,
-        )
+        # Unlocalized modification (ProForma '?' notation): expand into positioned
+        # variants and pick the one with the best ion coverage.
+        if '?' in sequence:
+            positioned_variants = _expand_unlocalized(sequence, fixer.ptm_list)
+            best_seq = positioned_variants[0]
+            match_result = match_predictions(
+                params=params,
+                mz=mz_array,
+                intensity=intensity_array,
+                charges=fragment_charges,
+                sequence=best_seq,
+            )
+            for variant in positioned_variants[1:]:
+                candidate = match_predictions(
+                    params=params,
+                    mz=mz_array,
+                    intensity=intensity_array,
+                    charges=fragment_charges,
+                    sequence=variant,
+                )
+                if candidate.intensity_percent > match_result.intensity_percent:
+                    match_result = candidate
+                    best_seq = variant
+            # Keep ppm/theor_mass from original (calculated correctly by pyteomics
+            # proforma), only update the sequence to the winning positioned variant.
+            ppm_result = SeqMatchParams(
+                sequence=best_seq,
+                seq_neutral_mass=ppm_result.seq_neutral_mass,
+                pepmass=ppm_result.pepmass,
+                charge=ppm_result.charge,
+                ppm=ppm_result.ppm,
+                abs_ppm=ppm_result.abs_ppm,
+                isotope_offset=ppm_result.isotope_offset,
+            )
+        else:
+            match_result = match_predictions(
+                params=params,
+                mz=mz_array,
+                intensity=intensity_array,
+                charges=fragment_charges,
+                sequence=sequence,
+            )
     else:
         all_matches = []
         for override in seq_results.override:
@@ -233,10 +269,18 @@ def process_identificatons_batch(
             results.append(result)
 
         except Exception as exc:
+            import sys
             elapsed = time.monotonic() - t0
+            tb_str = traceback.format_exc()
             log.error(
                 "ERROR  ident_id=%s  spectre_id=%s  elapsed=%.3fs  exc=%s\n%s",
-                ident_id, spectre_id, elapsed, exc, traceback.format_exc(),
+                ident_id, spectre_id, elapsed, exc, tb_str,
+            )
+            # Unconditional stderr fallback — visible regardless of logger config
+            print(
+                f"[dasmixer worker pid={os.getpid()}] ERROR ident_id={ident_id} "
+                f"spectre_id={spectre_id} seq={sequence!r}: {exc}\n{tb_str}",
+                file=sys.stderr, flush=True,
             )
             results.append({
                 "id": ident_id,
@@ -244,7 +288,7 @@ def process_identificatons_batch(
                 "ppm": None,
                 "theor_mass": None,
                 "override_charge": None,
-                "intensity_coverage": None,
+                "intensity_coverage": 0,   # 0 instead of None to prevent infinite re-processing
                 "ions_matched": None,
                 "ion_match_type": None,
                 "top_peaks_covered": None,
