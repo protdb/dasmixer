@@ -6,6 +6,7 @@ import os
 import zipfile
 from typing import Awaitable, Callable
 
+import numpy as np
 from pyteomics import mgf
 
 
@@ -29,31 +30,61 @@ def _build_spectrum_params(
 ) -> dict:
     """
     Формирует dict params для одного MGF-спектра.
-    spec_row — полный dict спектра из get_spectrum_full().
+    spec_row — полный dict спектра из get_spectrum_full() (включая all_params как dict).
     ident — dict предпочитаемой идентификации или None.
+
+    Алгоритм:
+    1. Из all_params берутся только дополнительные поля (не начинающиеся с "_",
+       и не входящие в EXPLICIT_KEYS: mass, charge, pepmass, title, scans, seq).
+    2. title — из spec_row["title"].
+    3. pepmass — (mass, intensity) из spec_row["pepmass"] и spec_row["intensity"].
+    4. charge — из spec_row["charge"], переопределяется из ident если write_spectra_charge.
+    5. scans — из all_params или fallback из spec_row["scans"].
+    6. seq — из идентификации если write_seq, иначе из all_params.
+    7. offset — из идентификации если write_offset.
     """
-    params: dict = {
-        "title": spec_row.get("title", ""),
-        "pepmass": (spec_row.get("pepmass", 0.0), None),
-    }
+    EXPLICIT_KEYS = {"mass", "charge", "pepmass", "title", "scans", "seq"}
+
+    params = {}
+
+    all_params = spec_row.get("all_params") or {}
+    for key, value in all_params.items():
+        if key.startswith("_"):
+            continue
+        if key in EXPLICIT_KEYS:
+            continue
+        params[key] = value
+
+    params["title"] = spec_row.get("title", "")
+
+    mass = spec_row.get("pepmass", 0.0)
+    intensity = spec_row.get("intensity")
+    params["pepmass"] = (float(mass), float(intensity) if intensity is not None else None)
 
     charge = spec_row.get("charge")
-
     if write_spectra_charge and ident is not None:
         override = ident.get("override_charge")
         if override is not None:
             charge = int(override)
-
     if charge is not None:
         params["charge"] = [int(charge)]
 
+    scans_in_all_params = all_params.get("scans")
+    if scans_in_all_params is not None:
+        params["scans"] = scans_in_all_params
+    else:
+        scans_from_db = spec_row.get("scans")
+        if scans_from_db is not None:
+            params["scans"] = int(scans_from_db)
+
     if write_seq and ident is not None:
-        if seq_type == "canonical":
-            seq_val = ident.get("canonical_sequence") or ""
-        else:
-            seq_val = ident.get("sequence") or ""
+        seq_val = ident.get("canonical_sequence" if seq_type == "canonical" else "sequence") or ""
         if seq_val:
             params["seq"] = seq_val
+    else:
+        seq_in_all_params = all_params.get("seq")
+        if seq_in_all_params:
+            params["seq"] = seq_in_all_params
 
     if write_offset and ident is not None:
         offset_val = ident.get("isotope_offset")
@@ -122,6 +153,7 @@ async def _write_mgf_to_file(
     """
     Читает спектры батчами по spectrum_ids, формирует MGF и пишет в output_file.
     """
+    output_file.write("# Exported from DASMixer\n")
     for i in range(0, len(spectrum_ids), batch_size):
         batch_ids = spectrum_ids[i: i + batch_size]
         batch_spectra = []
@@ -141,11 +173,22 @@ async def _write_mgf_to_file(
                 write_offset, write_spectra_charge, write_seq, seq_type,
             )
 
-            batch_spectra.append({
+            # Восстановить charge array для пиков
+            charge_arr = full_spec.get("charge_array")
+            if charge_arr is None:
+                common_val = full_spec.get("charge_array_common_value")
+                if common_val is not None and mz_arr is not None:
+                    charge_arr = np.full(len(mz_arr), float(common_val))
+
+            spectrum_dict = {
                 "params": params,
                 "m/z array": mz_arr,
                 "intensity array": int_arr,
-            })
+            }
+            if charge_arr is not None:
+                spectrum_dict["charge array"] = charge_arr
+
+            batch_spectra.append(spectrum_dict)
 
         if batch_spectra:
             mgf.write(batch_spectra, output=output_file)
@@ -165,7 +208,7 @@ async def _get_spectrum_ids(
     if by == "all":
         query = (
             f"SELECT id FROM spectre "
-            f"WHERE spectre_file_id IN ({placeholders}) ORDER BY id"
+            f"WHERE spectre_file_id IN ({placeholders}) ORDER BY seq_no"
         )
         rows = await project.execute_query(query, sf_ids)
     elif by == "all_preferred":
@@ -173,7 +216,7 @@ async def _get_spectrum_ids(
             f"SELECT DISTINCT s.id FROM spectre s "
             f"INNER JOIN identification i ON i.spectre_id = s.id "
             f"WHERE s.spectre_file_id IN ({placeholders}) AND i.is_preferred = 1 "
-            f"ORDER BY s.id"
+            f"ORDER BY s.seq_no"
         )
         rows = await project.execute_query(query, sf_ids)
     else:
@@ -185,7 +228,7 @@ async def _get_spectrum_ids(
             f"INNER JOIN identification i ON i.spectre_id = s.id "
             f"WHERE s.spectre_file_id IN ({placeholders}) "
             f"AND i.is_preferred = 1 AND i.tool_id = ? "
-            f"ORDER BY s.id"
+            f"ORDER BY s.seq_no"
         )
         rows = await project.execute_query(query, sf_ids + [tool_id])
 
