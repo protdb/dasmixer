@@ -405,6 +405,7 @@ class SeqFixer:
         isotope_mode: IsotopeMode = "13C",
         force_isotope_offset_lookover: bool = False,
         max_ptm_sites: int = 10,
+        unallocated_only: bool = False,
     ) -> None:
         self.ptm_list = ptm_list
         self.max_ptm = max_ptm
@@ -414,6 +415,7 @@ class SeqFixer:
         self.max_isotope_offset = max_isotope_offset
         self.isotope_step = self.ISOTOPE_MASSES[isotope_mode]
         self.force_isotope_offset_lookover = force_isotope_offset_lookover
+        self.unallocated_only = unallocated_only
 
     # ── public API ───────────────────────────────────────────────────────────
 
@@ -462,7 +464,10 @@ class SeqFixer:
         # ── Step 3: isotope offset + PTM enumeration ──────────────────────────
         # Use best_charge from charge scan (minimum abs_ppm) as the working
         # charge; this is safe even when mgf_charge is None.
-        ptm_sites = _collect_ptm_sites(canonical_split, self.ptm_list)
+        if self.unallocated_only:
+            ptm_sites = []  # do not enumerate new attach_to-based positions
+        else:
+            ptm_sites = _collect_ptm_sites(canonical_split, self.ptm_list)
         ptm_hits = self._scan_offsets_and_ptms(
             canonical_split=canonical_split,
             canonical_params=canonical_params,

@@ -9,6 +9,7 @@ from dasmixer.api.calculations.ppm import SeqFixer, SeqMatchParams
 from dasmixer.api.calculations.ppm.seqfixer import _expand_unlocalized
 from dasmixer.utils.seqfixer_utils import PTMS, FixedPTM
 from dasmixer.api.calculations.spectra.ion_match import IonMatchParameters, match_predictions, MatchResult
+from dasmixer.utils.ppm import calculate_theor_mass, get_ppm_for_masses
 
 # ---------------------------------------------------------------------------
 # Per-worker file logger
@@ -111,7 +112,47 @@ def process_single_ident(
     intensity_array,
     mgf_charge: int | None = None,
     selection_criteria: str = "intensity_percent",
+    trust_ppm: bool = False,
+    existing_ppm: float | None = None,
 ) -> dict:
+    # ── Trust PPM branch: skip SeqFixer entirely if we trust the imported ppm ──
+    if trust_ppm and existing_ppm is not None:
+        neutral = calculate_theor_mass(sequence)
+        if mgf_charge is not None:
+            charge = mgf_charge
+            theor_mass = neutral
+        else:
+            # No spectrum charge — pick charge from fixer.override_charges
+            # that gives the smallest abs_ppm relative to existing_ppm.
+            best_charge = fixer.override_charges[0]
+            best_abs = float("inf")
+            for z in range(fixer.override_charges[0], fixer.override_charges[1] + 1):
+                ppm = get_ppm_for_masses(pepmass, neutral, z)
+                if abs(ppm) < best_abs:
+                    best_abs = abs(ppm)
+                    best_charge = z
+            charge = best_charge
+            theor_mass = neutral
+
+        match_result = match_predictions(
+            params=params,
+            mz=mz_array,
+            intensity=intensity_array,
+            charges=fragment_charges,
+            sequence=sequence,
+        )
+        return {
+            "sequence": sequence,
+            "ppm": existing_ppm,
+            "theor_mass": theor_mass,
+            "override_charge": charge,
+            "isotope_offset": 0,
+            "intensity_coverage": match_result.intensity_percent,
+            "ions_matched": match_result.max_ion_matches,
+            "ion_match_type": match_result.top_matched_ion_type,
+            "top_peaks_covered": match_result.top10_intensity_matches,
+        }
+
     seq_results = fixer.get_ppm(sequence, pepmass, mgf_charge)
     if not seq_results.override:
         ppm_result = seq_results.original
@@ -204,6 +245,8 @@ def process_identificatons_batch(
     max_ptm: int = 5,
     seq_criteria: Literal["peaks", "top_peaks", "coverage"] = "coverage",
     max_ptm_sites: int = 10,
+    trust_ppm: bool = False,
+    unallocated_only: bool = False,
 ) -> list[dict]:
     log = _get_worker_logger()
     log.info("=== batch START  size=%d  pid=%d ===", len(batch), os.getpid())
@@ -228,6 +271,7 @@ def process_identificatons_batch(
         max_isotope_offset=max_isotope_offset,
         force_isotope_offset_lookover=force_isotope_offset_lookover,
         max_ptm_sites=max_ptm_sites,
+        unallocated_only=unallocated_only,
     )
 
     results = []
@@ -257,6 +301,8 @@ def process_identificatons_batch(
                 intensity_array,
                 mgf_charge=charge,
                 selection_criteria=seq_criteria,
+                trust_ppm=trust_ppm,
+                existing_ppm=item.get('ppm'),
             )
             elapsed = time.monotonic() - t0
             log.debug(

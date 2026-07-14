@@ -178,7 +178,11 @@ async def _write_mgf_to_file(
             if charge_arr is None:
                 common_val = full_spec.get("charge_array_common_value")
                 if common_val is not None and mz_arr is not None:
-                    charge_arr = np.full(len(mz_arr), float(common_val))
+                    charge_arr = np.full(len(mz_arr), int(common_val))
+            else:
+                # charge_array хранится как float (из-за astype(float) в MGFParser),
+                # конвертируем обратно в int для вывода (целые числа в колонке заряда)
+                charge_arr = np.where(np.isnan(charge_arr), 0, charge_arr).astype(int)
 
             spectrum_dict = {
                 "params": params,

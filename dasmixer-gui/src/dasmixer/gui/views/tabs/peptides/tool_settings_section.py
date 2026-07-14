@@ -96,6 +96,14 @@ class ToolSettingsSection(BaseSection):
                 label="Trust all identifications",
                 value=settings.get('ignore_criteria', False)
             ),
+            'trust_ppm': ft.Checkbox(
+                label="Trust PPM",
+                value=settings.get('trust_ppm', False)
+            ),
+            'recalculate_ptms': ft.Checkbox(
+                label="Recalculate PTMs",
+                value=settings.get('recalculate_ptms', True)
+            ),
             'max_ppm': ft.TextField(
                 label="Max PPM",
                 value=str(settings.get('max_ppm', 50)),
@@ -163,7 +171,7 @@ class ToolSettingsSection(BaseSection):
             ),
             # ── Leucine combinatorics ──────────────────────────────────────
             'leucine_combinatorics': ft.Checkbox(
-                label="Use Leucine Combinatorics (I/L)",
+                label="I/L Combinatorics",
                 value=settings.get('leucine_combinatorics', False),
             ),
             # ── PTM selection ──────────────────────────────────────────────
@@ -210,7 +218,7 @@ class ToolSettingsSection(BaseSection):
         }
 
     def _build_tool_card(self, tool, controls: dict) -> ft.Container:
-        """Build a visual card for one tool's settings."""
+        """Build a visual card for one tool's settings with 4 sections."""
         tool_id = tool.id
 
         ptm_button = ft.OutlinedButton(
@@ -223,84 +231,176 @@ class ToolSettingsSection(BaseSection):
             ),
         )
 
-        return ft.Container(
+        # ── Block 1: Top block (no header) — 4 checkboxes 2×2 ──────────────
+        block1 = ft.Column([
+            ft.Row([
+                controls['ignore_criteria'],
+                controls['trust_ppm'],
+            ], spacing=10),
+            ft.Row([
+                controls['use_protein_from_file'],
+                controls['recalculate_ptms'],
+            ], spacing=10),
+        ], spacing=6)
+
+        # ── Block 2: "Preferred settings:" ─────────────────────────────────
+        block2_controls = ft.Column([
+            ft.Row([
+                controls['max_ppm'],
+                controls['min_score'],
+                controls['min_ion_intensity_coverage'],
+            ], spacing=10),
+            ft.Row([
+                controls['min_peptide_length'],
+                controls['max_peptide_length'],
+            ], spacing=10),
+            ft.Row([
+                controls['min_top_peaks'],
+                controls['min_ions_covered'],
+                controls['min_spectre_peaks'],
+            ], spacing=10),
+            controls['denovo_correction'],
+        ], spacing=8)
+
+        block2 = ft.Column([
+            ft.Text("Preferred settings:", size=13, weight=ft.FontWeight.W_500, color=ft.Colors.GREY_700),
+            block2_controls,
+        ], spacing=6)
+
+        # ── Block 3: "PTM" ─────────────────────────────────────────────────
+        block3_controls = ft.Column([
+            ft.Row([controls['max_ptm']], spacing=10),
+            ft.Row(
+                controls=[
+                    ft.Container(
+                        content=controls['ptm_display'],
+                        expand=True,
+                        border=ft.border.all(1, ft.Colors.GREY_300),
+                        border_radius=4,
+                        padding=ft.padding.symmetric(horizontal=8, vertical=6),
+                    ),
+                    ptm_button,
+                ],
+                spacing=8,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            ),
+        ], spacing=8)
+
+        block3 = ft.Column([
+            ft.Text("PTM", size=13, weight=ft.FontWeight.W_500, color=ft.Colors.GREY_700),
+            block3_controls,
+        ], spacing=6)
+
+        # ── Block 4: "Protein search" ───────────────────────────────────────
+        block4_controls = ft.Column([
+            ft.Row([
+                controls['min_protein_identity'],
+                controls['leucine_combinatorics'],
+            ], spacing=10),
+            ft.Text(
+                "Match Correction Criteria",
+                size=13,
+                weight=ft.FontWeight.W_500,
+                color=ft.Colors.GREY_700,
+            ),
+            ft.Row([
+                controls['match_correction_ppm'],
+                controls['match_correction_intensity'],
+                controls['match_correction_ions'],
+                controls['match_correction_top10'],
+            ], spacing=15),
+            controls['save_aa_substitutions'],
+        ], spacing=8)
+
+        block4 = ft.Column([
+            ft.Text("Protein search", size=13, weight=ft.FontWeight.W_500, color=ft.Colors.GREY_700),
+            block4_controls,
+        ], spacing=6)
+
+        # ── Apply border-top to blocks 2, 3, 4 ──────────────────────────────
+        divider_border = ft.border.only(top=ft.BorderSide(1, ft.Colors.GREY_300))
+        block2.border = divider_border
+        block2.padding = ft.padding.only(top=8)
+        block3.border = divider_border
+        block3.padding = ft.padding.only(top=8)
+        block4.border = divider_border
+        block4.padding = ft.padding.only(top=8)
+
+        # ── Store references for enable/disable (G4) ────────────────────────
+        # We store the inner controls column (not the block wrapper with header)
+        # so that disable/enable affects all controls inside.
+        controls['_preferred_controls'] = block2_controls
+        controls['_ptm_controls'] = block3_controls
+        controls['_protein_controls'] = block4_controls
+
+        # ── Blocking logic (G5, G6) ─────────────────────────────────────────
+        def _update_blocking():
+            """Apply disable/enable to all three lockable blocks."""
+            # ignore_criteria → Block 2
+            disabled2 = bool(controls['ignore_criteria'].value)
+            for c in block2_controls.controls:
+                if isinstance(c, ft.Row):
+                    for child in c.controls:
+                        child.disabled = disabled2
+                else:
+                    c.disabled = disabled2
+            block2_controls.disabled = disabled2
+
+            # use_protein_from_file → Block 4
+            disabled4 = bool(controls['use_protein_from_file'].value)
+            for c in block4_controls.controls:
+                if isinstance(c, ft.Row):
+                    for child in c.controls:
+                        child.disabled = disabled4
+                else:
+                    c.disabled = disabled4
+            block4_controls.disabled = disabled4
+
+            # recalculate_ptms → Block 3 (INVERTED: disabled when True)
+            disabled3 = not bool(controls['recalculate_ptms'].value)
+            for c in block3_controls.controls:
+                if isinstance(c, ft.Row):
+                    for child in c.controls:
+                        child.disabled = disabled3
+                else:
+                    c.disabled = disabled3
+            block3_controls.disabled = disabled3
+
+        def _on_blocking_change(e):
+            _update_blocking()
+            # Update the entire card container
+            card_container.update()
+
+        # Wire up on_change handlers
+        controls['ignore_criteria'].on_change = _on_blocking_change
+        controls['use_protein_from_file'].on_change = _on_blocking_change
+        controls['recalculate_ptms'].on_change = _on_blocking_change
+
+        # Set initial disabled state (G6)
+        _update_blocking()
+
+        card_container = ft.Container(
             content=ft.Column([
                 ft.Text(
                     f"{tool.name} ({tool.type})",
                     size=16,
                     weight=ft.FontWeight.BOLD,
                 ),
-                ft.Row([
-                    controls['ignore_criteria']
-                ]),
-                # Row 1: basic quality
-                ft.Row([
-                    controls['max_ppm'],
-                    controls['min_score'],
-                    controls['min_ion_intensity_coverage'],
-                ], spacing=10),
-                # Row 2: peptide length
-                ft.Row([
-                    controls['min_peptide_length'],
-                    controls['max_peptide_length'],
-                ], spacing=10),
-                # Row 3: ion / peak thresholds
-                ft.Row([
-                    controls['min_top_peaks'],
-                    controls['min_ions_covered'],
-                    controls['min_spectre_peaks'],
-                ], spacing=10),
-                # Row 4: protein matching flags
-                controls['use_protein_from_file'],
-                ft.Row([
-                    controls['min_protein_identity'],
-                    controls['denovo_correction'],
-                ], spacing=10),
-                # Row 5: leucine combinatorics
-                controls['leucine_combinatorics'],
-                # Row 6: PTM selection + max_ptm
-                ft.Row([
-                    controls['max_ptm'],
-                ], spacing=10),
-                ft.Row(
-                    controls=[
-                        ft.Container(
-                            content=controls['ptm_display'],
-                            expand=True,
-                            border=ft.border.all(1, ft.Colors.GREY_300),
-                            border_radius=4,
-                            padding=ft.padding.symmetric(horizontal=8, vertical=6),
-                        ),
-                        ptm_button,
-                    ],
-                    spacing=8,
-                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                ),
-                # Row 7: Match correction criteria
-                ft.Text(
-                    "Match Correction Criteria",
-                    size=13,
-                    weight=ft.FontWeight.W_500,
-                    color=ft.Colors.GREY_700,
-                ),
-                ft.Row([
-                    controls['match_correction_ppm'],
-                    controls['match_correction_intensity'],
-                    controls['match_correction_ions'],
-                    controls['match_correction_top10'],
-                ], spacing=15),
-                # Row 8: Save AA substitutions
-                controls['save_aa_substitutions'],
-            ], spacing=10),
+                block1,
+                block2,
+                block3,
+                block4,
+            ], spacing=8),
             padding=15,
             border=ft.border.all(1, ft.Colors.BLUE_200),
             border_radius=8,
             bgcolor=ft.Colors.BLUE_50,
-            col = {
+            col={
                 ft.ResponsiveRowBreakpoint.LG: 6,
                 ft.ResponsiveRowBreakpoint.MD: 12
             }
         )
+        return card_container
 
     # ------------------------------------------------------------------
     # PTM dialog
@@ -447,6 +547,9 @@ class ToolSettingsSection(BaseSection):
         match_correction_criteria = [k for k, cb in criteria_map.items() if cb.value]
 
         tool.settings = {
+            'ignore_criteria': bool(controls['ignore_criteria'].value),
+            'trust_ppm': bool(controls['trust_ppm'].value),
+            'recalculate_ptms': bool(controls['recalculate_ptms'].value),
             'max_ppm': float(controls['max_ppm'].value),
             'min_score': float(controls['min_score'].value),
             'min_ion_intensity_coverage': float(controls['min_ion_intensity_coverage'].value),
@@ -500,6 +603,8 @@ class ToolSettingsSection(BaseSection):
 
             tool_settings[tool_id] = {
                 'ignore_criteria': bool(controls['ignore_criteria'].value),
+                'trust_ppm': bool(controls['trust_ppm'].value),
+                'recalculate_ptms': bool(controls['recalculate_ptms'].value),
                 'max_ppm': float(controls['max_ppm'].value),
                 'min_score': float(controls['min_score'].value),
                 'min_ion_intensity_coverage': float(controls['min_ion_intensity_coverage'].value),

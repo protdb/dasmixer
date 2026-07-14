@@ -192,6 +192,7 @@ class IdentificationWithSpectrum:
     canonical_sequence: str
     charge: int | None = None
     peaks_count: int | None = None
+    ppm: float | None = None
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> 'IdentificationWithSpectrum':
@@ -211,6 +212,7 @@ class IdentificationWithSpectrum:
         canonical_sequence = data.get('canonical_sequence')
         charge = data.get('charge')
         peaks_count = data.get('peaks_count')
+        ppm = data.get('ppm')
         return cls(
             id=id_,
             spectre_id=spectre_id,
@@ -222,6 +224,7 @@ class IdentificationWithSpectrum:
             canonical_sequence=canonical_sequence,
             charge=int(charge) if charge is not None else None,
             peaks_count=int(peaks_count) if peaks_count is not None else None,
+            ppm=float(ppm) if ppm is not None else None,
         )
 
     def to_worker_dict(self) -> dict[str, Any]:
@@ -242,4 +245,5 @@ class IdentificationWithSpectrum:
             'canonical_sequence': self.canonical_sequence,
             'charge': self.charge,
             'peaks_count': self.peaks_count,
+            'ppm': self.ppm,
         }
