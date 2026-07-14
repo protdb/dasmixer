@@ -211,7 +211,7 @@ class PCAReport(BaseReport):
     parameters = None
 
     async def _get_quant_matrix(
-        self, lfq_type: str, selected_subsets: list[str]
+        self, lfq_type: str, lfq_measure: str, selected_subsets: list[str]
     ) -> tuple[pd.DataFrame, pd.DataFrame]:
         """
         Build wide sample × protein matrix and return (wide_df, meta_df).
@@ -233,7 +233,7 @@ class PCAReport(BaseReport):
         wide = df.pivot_table(
             index="sample",
             columns="protein_id",
-            values="rel_value",
+            values=lfq_measure,
             aggfunc="mean",
         )
         meta = (
@@ -252,10 +252,13 @@ class PCAReport(BaseReport):
             selected_subsets = [s.strip() for s in selected_subsets.split(",") if s.strip()]
 
         lfq_value = params.get("lfq", ("emPAI", "rel_value"))
-        lfq_type = lfq_value[0] if isinstance(lfq_value, (tuple, list)) else str(lfq_value)
+        if not isinstance(lfq_value, (tuple, list)):
+            lfq_value = (lfq_value, "rel_value")
+        lfq_type = lfq_value[0]
+        lfq_measure = lfq_value[1]
         show_labels = params.get("show_labels", False)
 
-        wide, meta = await self._get_quant_matrix(lfq_type, selected_subsets)
+        wide, meta = await self._get_quant_matrix(lfq_type, lfq_measure, selected_subsets)
 
         # Align meta to wide rows (some samples might have no quant data)
         meta = meta.reindex(wide.index)

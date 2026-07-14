@@ -89,6 +89,10 @@ class SampleReportForm(ReportForm):
     chart_type = EnumSelector(values=["bar", "scatter"], label="Chart type")
 
 
+class MedianReportForm(ReportForm):
+    subsets = MultiSubsetSelector()
+    lfq = LFQSelector(label="LFQ")
+
 # ---------------------------------------------------------------------------
 # Monkey-patch: bind form classes to report classes
 # ---------------------------------------------------------------------------

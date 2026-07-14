@@ -70,11 +70,19 @@ async def calculate_lfq(
 
     # Build Protein objects for sempai
     proteins = []
+    skipped_no_seq = 0
     for _, row in idents.iterrows():
         protein_id = row['protein_id']
         peptides = all_peptides[all_peptides['protein_id'] == protein_id]
 
         if len(peptides) == 0:
+            continue
+
+        if protein_id not in fasta:
+            logger.warning(
+                f'No FASTA sequence for protein {protein_id} — skipping LFQ for this protein'
+            )
+            skipped_no_seq += 1
             continue
 
         proteins.append(
@@ -89,6 +97,13 @@ async def calculate_lfq(
         )
     logger.debug(proteins)
     if len(proteins) == 0:
+        if skipped_no_seq > 0:
+            raise ValueError(
+                f'Cannot calculate LFQ for sample {sample_id}: '
+                f'no protein sequences available '
+                f'({skipped_no_seq} protein(s) skipped — FASTA sequence missing, '
+                f'possibly deprecated UniProt entries)'
+            )
         cols = ['protein_identification_id', 'algorithm', 'rel_value']
         if abs_enabled:
             cols += ['abs_value_mol', 'abs_value_gl']
