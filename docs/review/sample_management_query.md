@@ -186,3 +186,147 @@ id,parent,notused,detail
 - Текущий запрос (раздел 2) **принят к использованию** в 0.7.0a4 как явное улучшение по сравнению с N+1 (полный пересчёт с 13 сек вместо кратно большего времени при поштучных `get_sample_stats()` в цикле по 130 sample'ам).
 - Дальнейшая оптимизация (раздел 5) выносится в отдельный тикет/спецификацию и не блокирует релиз 0.7.0a4.
 - При открытии тикета на оптимизацию — начать с пункта 3 (тривиально) и пункта 2 (индекс без миграции схемы), затем пункт 1 (денормализация) как наиболее трудоёмкий, но потенциально самый эффективный вариант.
+
+---
+
+## 7. Решение (проверено на реальной БД)
+
+**Дата проверки:** Июль 2026
+**БД:** `/home/gluck/Urology6.dasmix` — 131 sample, 131 spectre_file, 262 identification_file, 2 623 066 identification, 11 193 protein_identification_result, 2 tool.
+**Без правок кода и схемы** (включая индексы) — только проверка концепции на стороне Python.
+
+### 7.1. Идея
+
+Главный вклад в 30 секунд даёт CTE `ident_counts` (≈26 с из 30): полное сканирование `identification` (2.6M строк) плюс построчный nested-loop JOIN через `spectre → spectre_file` для получения `sample_id` (которого физически нет в `identification`), плюс `USE TEMP B-TREE FOR GROUP BY`.
+
+Подсказка: группировка по полю, **присутствующему в `identification`** (`ident_file_id`, есть covering index `idx_ident_file`), выполняется за доли секунды. Связь `ident_file_id → sample_id` живёт в маленьких таблицах `identification_file` (262) и `spectre_file` (131) — её можно достать отдельно и схлопнуть суммы до `sample_id` уже в pandas.
+
+Архитектурно это:
+- **1 «тяжёлый» запрос** по `identification` без JOIN'ов;
+- **несколько тривиальных запросов** по маленьким таблицам (по 2–4 мс);
+- **схлопывание** в Python через `groupby("sample_id").sum()`.
+
+### 7.2. Запросы
+
+Тяжёлый (единственный, сканирующий `identification`):
+
+```sql
+SELECT
+    ident_file_id,
+    COUNT(*)                                                   AS identifications_count,
+    SUM(is_preferred)                                          AS preferred_count,
+    SUM(CASE WHEN intensity_coverage IS NOT NULL THEN 1 ELSE 0 END) AS coverage_known_count
+FROM identification
+GROUP BY ident_file_id;
+```
+
+Lookup'ы (все ≤262 строк, мгновенные):
+
+```sql
+-- ident_file_id → sample_id
+SELECT idf.id AS ident_file_id, sf.sample_id
+FROM identification_file idf
+JOIN spectre_file sf ON idf.spectre_file_id = sf.id;
+
+-- spectra_files_count
+SELECT sample_id, COUNT(*) FROM spectre_file GROUP BY sample_id;
+
+-- ident_files_count
+SELECT sf.sample_id, COUNT(*)
+FROM identification_file idf JOIN spectre_file sf ON idf.spectre_file_id = sf.id
+GROUP BY sf.sample_id;
+
+-- protein_ids_count (в protein_identification_result sample_id уже есть напрямую)
+SELECT sample_id, COUNT(*) FROM protein_identification_result GROUP BY sample_id;
+
+-- tools_count (константа, считается один раз — устраняет 5-кратный SCAN tool)
+SELECT COUNT(*) FROM tool;
+
+-- каркас выборок
+SELECT smp.id AS sample_id, smp.name, smp.subset_id, sub.name AS subset_name,
+       smp.outlier, smp.additions
+FROM sample smp LEFT JOIN subset sub ON smp.subset_id = sub.id;
+```
+
+### 7.3. Схлопывание в Python
+
+```python
+# 1. К тяжёлому результату подцепляем sample_id (по ident_file_id).
+merged = ident_by_file.merge(file_to_sample, on="ident_file_id", how="left")
+
+# 2. Суммируем все ident-метрики до уровня sample.
+ident_by_sample = (
+    merged.groupby("sample_id", as_index=False)[
+        ["identifications_count", "preferred_count", "coverage_known_count"]
+    ].sum()
+)
+
+# 3. empty_ident_files_count — бесплатно из уже загруженного множества:
+#    это ident_file'ы, чьих id нет среди ident_file_id в identification.
+non_empty_ids = set(ident_by_file["ident_file_id"].astype("int64"))
+file_to_sample["is_empty"] = ~file_to_sample["ident_file_id"].astype("int64").isin(non_empty_ids)
+empty_by_sample = (
+    file_to_sample[file_to_sample["is_empty"]]
+        .groupby("sample_id", as_index=False).size()
+        .rename(columns={"size": "empty_ident_files_count"})
+)
+
+# 4. Собираем финальный DataFrame через последовательность LEFT JOIN'ов на
+#    sample_id (samples как каркас) и заполняем NaN нулями.
+df = (
+    samples
+        .merge(sf_by_sample,       on="sample_id", how="left")
+        .merge(if_by_sample,       on="sample_id", how="left")
+        .merge(empty_by_sample,    on="sample_id", how="left")
+        .merge(ident_by_sample,    on="sample_id", how="left")
+        .merge(prot_by_sample,     on="sample_id", how="left")
+)
+# tools_count — константа:
+df["tools_count"] = tools_count
+```
+
+### 7.4. Замеры (3 последовательных прогона, кэш ФС тёплый)
+
+```
+run    total  heavy_sql  small_sql   python   rows
+0      0.551      0.534      0.004    0.013    131
+1      0.608      0.594      0.003    0.010    131
+2      0.614      0.600      0.004    0.010    131
+```
+
+| Вариант | Время |
+|---|---|
+| Оригинальный запрос (раздел 2) | **30.3 с** |
+| Новый подход (тяжёлый SQL + Python-схлопывание) | **0.55–0.61 с** |
+| Ускорение | **≈ 50×** (требовалось ≥6×) |
+
+Вклад `heavy_sql` (группировка по `ident_file_id`) доминирует, всё остальное — единицы миллисекунд.
+
+### 7.5. Корректность
+
+Группировка по `ident_file_id` эквивалентна группировке по `sample_id`, т.к. по схеме (`identification_file.spectre_file_id → spectre_file.sample_id → sample`) один `identification_file` однозначно соответствует ровно одному `sample`. Следовательно, суммы по `ident_file_id` корректно схлопываются до `sample_id` через `groupby("sample_id").sum()`.
+
+`empty_ident_files_count`: `identification_file` без единой `identification` просто не появляется среди `ident_file_id` в тяжёлом результате — что эквивалентно `NOT EXISTS` в оригинале. Вычисляется в Python через set difference без дополнительного сканирования `identification`.
+
+**Проверка идентичности:** результат нового подхода сверен с CSV эталона (вывод оригинального запроса) по всем 11 числовым колонкам для 131 sample — `ALL NUMERIC COLUMNS MATCH`.
+
+### 7.6. Выводы по гипотезам раздела 5
+
+| Гипотеза | Итог |
+|---|---|
+| 1. Денормализация `sample_id` в `identification` | **Не нужна.** Группировка по `ident_file_id` + Python-схлопывание убирает двойной JOIN целиком, существующего `idx_ident_file` достаточно. Миграция схемы не требуется. |
+| 2. Покрывающий индекс `identification(spectre_id, is_preferred, intensity_coverage)` | **Не нужен.** После отказа от JOIN по `spectre_id` покрывать нечего; `idx_ident_file` уже покрывает группировку. |
+| 3. Вынести `(SELECT COUNT(*) FROM tool)` из тела запроса | **Подтверждено.** Считается один раз в Python, 5-кратный `SCAN tool` устранён. |
+| 4. `NOT EXISTS → LEFT JOIN ... IS NULL` | **Не нужен.** `empty_ident_files_count` считается в Python бесплатно из уже загруженного множества `ident_file_id`. |
+| 5. Materialized view / инкрементальное обновление | **Избыточно** для текущих объёмов. Поддержка усложнит код записи; 0.6 с на полный пересчёт приемлемо даже для крупных проектов в ближайшей перспективе. |
+
+### 7.7. Что переносится в код (отдельный заход)
+
+В `Project.get_all_samples_stats()` (или эквивалент) нужно внести:
+
+1. Заменить единый SQL-запрос на последовательность из 7 запросов выше (или собрать их в один вызов `_fetchall`/`_execute_query_df` с разделителями — по вкусу реализации). В async-варианте (`aiosqlite`) 6 тривиальных запросов можно выполнить параллельно через `asyncio.gather`; тяжёлый — последовательно.
+2. Схлопывание через pandas (как в 7.3).
+3. `tools_count` — отдельный вызов `get_tools_count()` (метод уже существует), не в теле запроса.
+4. Форма возвращаемого `DataFrame` оставить идентичной текущему результату оригинального запроса (колонки и порядок — как в разделе 2.1), чтобы не ломать `_build_sample_header()` и апсерт в `sample_status_cache`.
+
+Прототип (со всеми замерами и assertion'ом идентичности) лежит в `/tmp/optimize_sample_stats.py` и `/tmp/bench_sample_stats.py` — использовать как эталон при реализации.
