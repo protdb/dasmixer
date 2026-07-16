@@ -7,6 +7,7 @@ with their flet-based parameter forms.
 
 from dasmixer.api.reporting.reports.pca_report import PCAReport
 from dasmixer.api.reporting.reports.volcano_report import VolcanoReport
+from dasmixer.api.reporting.reports.median_report import MedianReport
 from dasmixer.api.reporting.reports.toolmatch_report import ToolMatchReport
 from dasmixer.api.reporting.reports.coverage_report import ToolCoverageReport
 from dasmixer.api.reporting.reports.upset import UpsetReport
@@ -103,3 +104,4 @@ ToolMatchReport.parameters = ToolMatchReportForm
 ToolCoverageReport.parameters = ToolCoverageReportForm
 UpsetReport.parameters = UpSetReportForm
 SampleReport.parameters = SampleReportForm
+MedianReport.parameters = MedianReportForm

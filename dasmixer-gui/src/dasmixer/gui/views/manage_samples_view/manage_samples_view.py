@@ -5,6 +5,8 @@ Refactored into a thin orchestrator that delegates to:
 - UpdateRow for the update/loader/threshold row
 - SampleViewPanel for individual sample panels (with checkbox)
 - MassOperationsRow for mass-operation buttons
+- SamplesFilterRow for in-memory filtering
+- SamplesPaginationRow for in-memory pagination
 """
 
 import asyncio
@@ -19,8 +21,10 @@ from dasmixer.utils import logger
 
 from .data_manager import SampleDataManager
 from .update_row import UpdateRow
-from .sample_panel import SampleViewPanel
+from .sample_panel import SampleViewPanel, compute_sample_status
 from .mass_operations_row import MassOperationsRow
+from .filters_row import SamplesFilterRow
+from .pagination_row import SamplesPaginationRow
 
 
 class ManageSamplesView(ft.View):
@@ -40,6 +44,9 @@ class ManageSamplesView(ft.View):
 
         # State
         self._samples: list[Sample] = []
+        self._all_stats: dict[int, dict] = {}
+        self._filtered_samples: list[Sample] = []
+        self._page_samples: list[Sample] = []
         self._tools_count: int = 0
         self._panel_index: dict[int, int] = {}
         self._selected_ids: set[int] = set()
@@ -48,6 +55,8 @@ class ManageSamplesView(ft.View):
         self._panels_list: ft.ExpansionPanelList | None = None
         self._update_row: UpdateRow | None = None
         self._mass_ops_row: MassOperationsRow | None = None
+        self._filters_row: SamplesFilterRow | None = None
+        self._pagination_row: SamplesPaginationRow | None = None
         self._panel_controls: list[SampleViewPanel] = []
 
         self.appbar = self._build_appbar()
@@ -73,6 +82,7 @@ class ManageSamplesView(ft.View):
 
     def _build_body(self) -> ft.Control:
         self._update_row = UpdateRow(
+            project=self.project,
             on_update_clicked=self._on_update_clicked,
             on_import_additional=self._on_import_additional_clicked,
         )
@@ -87,17 +97,29 @@ class ManageSamplesView(ft.View):
             on_drop_empty=self._on_drop_empty_files,
         )
 
+        self._filters_row = SamplesFilterRow(
+            subsets=[],
+            on_apply=self._on_apply_filters,
+        )
+
+        self._pagination_row = SamplesPaginationRow(
+            on_page_changed=self._recompute_page,
+        )
+
         self._panels_list = ft.ExpansionPanelList(
             expand_icon_color=ft.Colors.BLUE_400,
             elevation=2,
             divider_color=ft.Colors.GREY_300,
             controls=[],
+            on_change=self._on_panel_expansion_changed,
         )
 
         return ft.Column(
             [
                 self._update_row,
                 self._mass_ops_row,
+                self._filters_row,
+                self._pagination_row,
                 ft.Container(
                     content=self._panels_list,
                     padding=ft.padding.symmetric(horizontal=16),
@@ -120,6 +142,9 @@ class ManageSamplesView(ft.View):
         if self._panels_list is not None:
             self._panels_list.controls.clear()
         self._samples.clear()
+        self._all_stats.clear()
+        self._filtered_samples.clear()
+        self._page_samples.clear()
         self._panel_index.clear()
         self._panel_controls.clear()
         self._selected_ids.clear()
@@ -136,9 +161,8 @@ class ManageSamplesView(ft.View):
         from .dialogs.import_additional_dialog import ImportAdditionalDialog
         dialog = ImportAdditionalDialog(self.project, self.page)
         await dialog.show()
-        # Reload panels to show updated additionals indicators
-        self._samples, all_cached, self._tools_count = await self._data_manager.load_all()
-        await self._rebuild_panels(all_cached=all_cached)
+        self._samples, self._all_stats, self._tools_count = await self._data_manager.load_all()
+        await self._recompute_filtered()
 
     # ------------------------------------------------------------------
     # Data loading
@@ -146,59 +170,102 @@ class ManageSamplesView(ft.View):
 
     async def _load_data(self):
         """Load panels: use cache where available, fetch fresh for uncached."""
-        self._samples, all_cached, self._tools_count = await self._data_manager.load_all()
+        try:
+            await self._update_row.load_thresholds()
+
+            self._samples, self._all_stats, self._tools_count = await self._data_manager.load_all()
+
+            subsets = await self.project.get_subsets()
+            self._filters_row.subset_dropdown.options = [
+                ft.DropdownOption(key="all", text="All Subsets")
+            ] + [
+                ft.DropdownOption(key=str(s.id), text=s.name) for s in subsets
+            ]
+            if self._filters_row.page:
+                self._filters_row.subset_dropdown.update()
+
+            await self._load_filter_persist()
+            await self._recompute_filtered()
+
+            if self._samples:
+                uncached_ids = [
+                    int(s.id)
+                    for s in self._samples
+                    if s.id is not None and int(s.id) not in self._all_stats
+                ]
+                for sample_id in uncached_ids:
+                    await self._refresh_single_stats_in_place(sample_id, save_cache=True)
+        except Exception:
+            logger.exception("ManageSamplesView._load_data error")
+            if self.page:
+                show_snack(self.page, "Error loading samples data", ft.Colors.RED_400)
+                self.page.update()
+
+    # ------------------------------------------------------------------
+    # Filters
+    # ------------------------------------------------------------------
+
+    async def _on_apply_filters(self):
+        """Apply filters and reset pagination to page 0."""
+        filters = self._filters_row.get_filters()
+        await self.project.set_setting('manage_samples_filter_name', filters['name'])
+        await self.project.set_setting('manage_samples_filter_status', filters['status'])
+        await self.project.set_setting('manage_samples_filter_subset_id', filters['subset_id'])
+        await self.project.set_setting('manage_samples_filter_outlier', filters['outlier'])
+        self._pagination_row.current_page = 0
+        await self._recompute_filtered()
+
+    async def _load_filter_persist(self) -> None:
+        """Load persisted filters from project_settings and apply to UI."""
+        filters = {
+            'name': await self.project.get_setting('manage_samples_filter_name', ''),
+            'status': await self.project.get_setting('manage_samples_filter_status', 'all'),
+            'subset_id': await self.project.get_setting('manage_samples_filter_subset_id', 'all'),
+            'outlier': await self.project.get_setting('manage_samples_filter_outlier', 'all'),
+        }
+        self._filters_row.set_filters(filters)
+
+    # ------------------------------------------------------------------
+    # Filtering and pagination pipeline
+    # ------------------------------------------------------------------
+
+    async def _recompute_filtered(self):
+        """Apply in-memory filters to self._samples → self._filtered_samples.
+        Then recompute page. Called after data load or filter change."""
+        filters = self._filters_row.get_filters()
         min_proteins, min_idents = self._update_row.get_thresholds()
 
-        if self._panels_list is None:
-            return
+        name_term = filters['name'].lower()
+        status_filter = filters['status']
+        subset_filter = filters['subset_id']
+        outlier_filter = filters['outlier']
 
-        self._panels_list.controls.clear()
-        self._panel_index.clear()
-        self._panel_controls.clear()
-
-        if not self._samples:
-            self._panels_list.controls.append(
-                ft.ExpansionPanel(
-                    header=ft.ListTile(
-                        title=ft.Text(
-                            "No samples yet. Import spectra to add samples.",
-                            color=ft.Colors.GREY_600, italic=True,
-                        )
-                    ),
-                    content=ft.Container(),
-                    can_tap_header=False,
-                )
-            )
-        else:
-            for idx, sample in enumerate(self._samples):
+        result = []
+        for sample in self._samples:
+            if name_term and name_term not in (sample.name or '').lower():
+                continue
+            if subset_filter != 'all' and str(sample.subset_id) != subset_filter:
+                continue
+            if outlier_filter == 'yes' and not sample.outlier:
+                continue
+            if outlier_filter == 'no' and sample.outlier:
+                continue
+            if status_filter != 'all':
                 sid = int(sample.id or 0)
-                stats = all_cached.get(sid) or {}
-                panel_ctrl = SampleViewPanel(
-                    sample=sample,
-                    stats=stats,
-                    tools_count=self._tools_count,
-                    min_proteins=min_proteins,
-                    min_idents=min_idents,
-                    on_action=self._on_panel_action,
-                    on_selection_changed=self._on_selection_changed,
-                )
-                panel = await panel_ctrl.build()
-                self._panel_index[sid] = idx
-                self._panel_controls.append(panel_ctrl)
-                self._panels_list.controls.append(panel)
+                stats = self._all_stats.get(sid) or {}
+                status = compute_sample_status(stats, self._tools_count, min_proteins, min_idents)
+                if status != status_filter:
+                    continue
+            result.append(sample)
 
-        if self._panels_list.page:
-            self._panels_list.update()
+        self._filtered_samples = result
+        await self._recompute_page()
 
-        # Background-refresh uncached samples
-        if self._samples:
-            uncached_ids = [
-                int(s.id)
-                for s in self._samples
-                if s.id is not None and int(s.id) not in all_cached
-            ]
-            for sample_id in uncached_ids:
-                await self._refresh_single_stats_in_place(sample_id, save_cache=True)
+    async def _recompute_page(self):
+        """Apply pagination to self._filtered_samples → self._page_samples,
+        then rebuild panels. Called after filter change or page change."""
+        self._page_samples = self._pagination_row.slice(self._filtered_samples)
+        await self._rebuild_panels_from_page()
 
     # ------------------------------------------------------------------
     # Update — full recalc
@@ -208,46 +275,8 @@ class ManageSamplesView(ft.View):
         if self._update_row:
             self._update_row.set_loading(True)
         try:
-            self._samples, all_cached, self._tools_count = await self._data_manager.refresh_all_fresh()
-            min_proteins, min_idents = self._update_row.get_thresholds()
-
-            if self._panels_list is None:
-                return
-
-            self._panels_list.controls.clear()
-            self._panel_index.clear()
-            self._panel_controls.clear()
-
-            if not self._samples:
-                self._panels_list.controls.append(
-                    ft.ExpansionPanel(
-                        header=ft.ListTile(
-                            title=ft.Text("No samples yet.", color=ft.Colors.GREY_600, italic=True)
-                        ),
-                        content=ft.Container(),
-                        can_tap_header=False,
-                    )
-                )
-            else:
-                for idx, sample in enumerate(self._samples):
-                    sid = int(sample.id or 0)
-                    stats = all_cached.get(sid) or {}
-                    panel_ctrl = SampleViewPanel(
-                        sample=sample,
-                        stats=stats,
-                        tools_count=self._tools_count,
-                        min_proteins=min_proteins,
-                        min_idents=min_idents,
-                        on_action=self._on_panel_action,
-                        on_selection_changed=self._on_selection_changed,
-                    )
-                    panel = await panel_ctrl.build()
-                    self._panel_index[sid] = idx
-                    self._panel_controls.append(panel_ctrl)
-                    self._panels_list.controls.append(panel)
-
-            if self._panels_list.page:
-                self._panels_list.update()
+            self._samples, self._all_stats, self._tools_count = await self._data_manager.refresh_all_fresh()
+            await self._recompute_filtered()
         except Exception:
             logger.exception("ManageSamplesView._on_update_clicked error")
             if self.page:
@@ -277,6 +306,10 @@ class ManageSamplesView(ft.View):
                 self._samples[i] = refreshed_sample
                 break
 
+        idx = self._panel_index.get(sample_id)
+        if idx is not None and idx < len(self._panel_controls):
+            self._panel_controls[idx].invalidate_detail_cache()
+
         await self._refresh_single_stats_in_place(sample_id, save_cache=True)
 
     async def _refresh_single_stats_in_place(self, sample_id: int, save_cache: bool = False) -> None:
@@ -286,6 +319,8 @@ class ManageSamplesView(ft.View):
 
         _, stats = await self._data_manager.refresh_single(sample_id, save_cache=save_cache)
 
+        self._all_stats[sample_id] = stats
+
         idx = self._panel_index.get(sample_id)
         if idx is None or self._panels_list is None:
             return
@@ -293,11 +328,35 @@ class ManageSamplesView(ft.View):
         min_proteins, min_idents = self._update_row.get_thresholds()
 
         if idx < len(self._panel_controls):
-            self._panel_controls[idx].update_stats(stats, min_proteins, min_idents)
-            new_panel = await self._panel_controls[idx].build()
+            panel_ctrl = self._panel_controls[idx]
+            was_expanded = panel_ctrl._is_expanded
+            panel_ctrl.invalidate_detail_cache()
+            panel_ctrl.update_stats(stats, min_proteins, min_idents)
+            new_panel = await panel_ctrl.build()
             self._panels_list.controls[idx] = new_panel
+            if was_expanded and self._panels_list.page:
+                await panel_ctrl.on_expand()
             if self._panels_list.page:
                 self._panels_list.update()
+
+    # ------------------------------------------------------------------
+    # Panel expansion handler
+    # ------------------------------------------------------------------
+
+    def _on_panel_expansion_changed(self, e: ft.ControlEvent):
+        """ExpansionPanelList.on_change fires with e.data = index of the toggled panel."""
+        try:
+            idx = int(e.data)
+        except (TypeError, ValueError):
+            return
+        if idx < 0 or idx >= len(self._panel_controls):
+            return
+        panel_ctrl = self._panel_controls[idx]
+        is_now_expanded = self._panels_list.controls[idx].expanded
+        if is_now_expanded:
+            self.page.run_task(panel_ctrl.on_expand)
+        else:
+            panel_ctrl.on_collapse()
 
     # ------------------------------------------------------------------
     # Panel action dispatcher
@@ -355,6 +414,8 @@ class ManageSamplesView(ft.View):
             self._selected_ids.discard(sample_id)
 
     def _on_select_all(self):
+        """Select all samples on the current page (not all samples in the project).
+        _selected_ids preserves selections across page changes."""
         self._selected_ids.clear()
         for ctrl in self._panel_controls:
             self._selected_ids.add(ctrl.sample_id)
@@ -493,8 +554,9 @@ class ManageSamplesView(ft.View):
                 logger.exception(f"Error deleting sample id={sid}: {ex}")
 
         self._samples = [s for s in self._samples if s.id not in sids]
+        self._all_stats = {sid: st for sid, st in self._all_stats.items() if sid not in sids}
         self._selected_ids.clear()
-        await self._rebuild_panels_from_cache()
+        await self._recompute_filtered()
         show_snack(self.page, f"Deleted {count} sample(s)", ft.Colors.GREEN_400)
         self.page.update()
 
@@ -517,25 +579,15 @@ class ManageSamplesView(ft.View):
 
     async def _on_mass_op_complete(self):
         """Reload data and rebuild panels after a mass operation."""
-        self._samples, all_cached, self._tools_count = await self._data_manager.load_all()
-        await self._rebuild_panels(all_cached=all_cached)
+        self._samples, self._all_stats, self._tools_count = await self._data_manager.load_all()
+        await self._recompute_filtered()
 
     # ------------------------------------------------------------------
-    # Rebuild panels helper
+    # Rebuild panels from page
     # ------------------------------------------------------------------
 
-    async def _rebuild_panels_from_cache(self):
-        all_cached = {}
-        for sample in self._samples:
-            sid = int(sample.id or 0)
-            try:
-                stats = await self.project.get_sample_stats(sid)
-                all_cached[sid] = stats
-            except Exception:
-                pass
-        await self._rebuild_panels(all_cached=all_cached)
-
-    async def _rebuild_panels(self, all_cached: dict | None = None):
+    async def _rebuild_panels_from_page(self):
+        """Build ExpansionPanel controls only for self._page_samples."""
         if self._panels_list is None:
             return
         min_proteins, min_idents = self._update_row.get_thresholds()
@@ -543,20 +595,23 @@ class ManageSamplesView(ft.View):
         self._panel_index.clear()
         self._panel_controls.clear()
 
-        if not self._samples:
+        if not self._page_samples:
             self._panels_list.controls.append(
                 ft.ExpansionPanel(
                     header=ft.ListTile(
-                        title=ft.Text("No samples yet.", color=ft.Colors.GREY_600, italic=True)
+                        title=ft.Text(
+                            "No samples match the current filters.",
+                            color=ft.Colors.GREY_600, italic=True,
+                        )
                     ),
                     content=ft.Container(),
                     can_tap_header=False,
                 )
             )
         else:
-            for idx, sample in enumerate(self._samples):
+            for idx, sample in enumerate(self._page_samples):
                 sid = int(sample.id or 0)
-                stats = (all_cached or {}).get(sid) or {}
+                stats = self._all_stats.get(sid) or {}
                 panel_ctrl = SampleViewPanel(
                     sample=sample,
                     stats=stats,
@@ -690,7 +745,8 @@ class ManageSamplesView(ft.View):
             await self.project.delete_sample(sample.id)
             self._show_success(f"Deleted sample: {sample.name}")
             self._samples = [s for s in self._samples if s.id != sample.id]
-            await self._rebuild_panels_from_cache()
+            self._all_stats = {sid: st for sid, st in self._all_stats.items() if sid != sample.id}
+            await self._recompute_filtered()
         except Exception as ex:
             self._show_error(f"Error: {ex}")
 

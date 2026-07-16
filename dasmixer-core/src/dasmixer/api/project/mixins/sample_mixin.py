@@ -358,6 +358,75 @@ class SampleMixin:
         )
         return dict(row) if row else None
 
+    async def get_all_samples_stats(self) -> dict[int, dict]:
+        """
+        Return aggregated statistics for ALL samples in a single SQL query.
+
+        Replaces the N+1 pattern of calling get_sample_stats() in a loop.
+        Always computes for the whole project (no pagination/filtering here —
+        see docs/review/sample_management_query.md for the rationale: LIMIT/OFFSET
+        gives negligible speedup on this query, since aggregation must scan
+        the identification table fully anyway).
+
+        Returns:
+            dict mapping sample_id (int) → stats dict with the same keys as
+            get_sample_stats(): spectra_files_count, ident_files_count,
+            identifications_count, preferred_count, coverage_known_count,
+            protein_ids_count, empty_ident_files_count.
+        """
+        query = """
+            WITH sf_counts AS (
+                SELECT sample_id, COUNT(*) AS spectra_files_count
+                FROM spectre_file
+                GROUP BY sample_id
+            ),
+            if_counts AS (
+                SELECT
+                    sf.sample_id,
+                    COUNT(*) AS ident_files_count,
+                    SUM(
+                        CASE WHEN NOT EXISTS (
+                            SELECT 1 FROM identification i WHERE i.ident_file_id = idf.id
+                        ) THEN 1 ELSE 0 END
+                    ) AS empty_ident_files_count
+                FROM identification_file idf
+                JOIN spectre_file sf ON idf.spectre_file_id = sf.id
+                GROUP BY sf.sample_id
+            ),
+            ident_counts AS (
+                SELECT
+                    sf.sample_id,
+                    COUNT(*) AS identifications_count,
+                    SUM(CASE WHEN i.is_preferred = 1 THEN 1 ELSE 0 END) AS preferred_count,
+                    SUM(CASE WHEN i.intensity_coverage IS NOT NULL THEN 1 ELSE 0 END) AS coverage_known_count
+                FROM identification i
+                JOIN spectre s ON i.spectre_id = s.id
+                JOIN spectre_file sf ON s.spectre_file_id = sf.id
+                GROUP BY sf.sample_id
+            ),
+            protein_counts AS (
+                SELECT sample_id, COUNT(*) AS protein_ids_count
+                FROM protein_identification_result
+                GROUP BY sample_id
+            )
+            SELECT
+                smp.id AS sample_id,
+                COALESCE(sfc.spectra_files_count, 0)     AS spectra_files_count,
+                COALESCE(ifc.ident_files_count, 0)       AS ident_files_count,
+                COALESCE(ifc.empty_ident_files_count, 0) AS empty_ident_files_count,
+                COALESCE(ic.identifications_count, 0)    AS identifications_count,
+                COALESCE(ic.preferred_count, 0)          AS preferred_count,
+                COALESCE(ic.coverage_known_count, 0)     AS coverage_known_count,
+                COALESCE(pc.protein_ids_count, 0)        AS protein_ids_count
+            FROM sample smp
+            LEFT JOIN sf_counts sfc     ON sfc.sample_id = smp.id
+            LEFT JOIN if_counts ifc     ON ifc.sample_id = smp.id
+            LEFT JOIN ident_counts ic   ON ic.sample_id = smp.id
+            LEFT JOIN protein_counts pc ON pc.sample_id = smp.id
+        """
+        rows = await self._fetchall(query)
+        return {int(row['sample_id']): dict(row) for row in rows}
+
     async def get_all_cached_sample_stats(self) -> dict[int, dict]:
         """
         Return cached stats for ALL samples as {sample_id: stats_dict}.
@@ -402,6 +471,45 @@ class SampleMixin:
             )
         )
         # No save() here — caller decides when to save (batch or immediate)
+
+    async def upsert_sample_status_cache_batch(self, all_stats: dict[int, dict]) -> None:
+        """
+        Batch insert/replace cached stats for multiple samples in one executemany().
+
+        Args:
+            all_stats: dict mapping sample_id → stats dict (same shape as
+                       get_all_samples_stats() / get_sample_stats() result).
+        """
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc).isoformat()
+
+        rows = [
+            (
+                int(sid),
+                int(stats.get('spectra_files_count', 0)),
+                int(stats.get('ident_files_count', 0)),
+                int(stats.get('identifications_count', 0)),
+                int(stats.get('preferred_count', 0)),
+                int(stats.get('coverage_known_count', 0)),
+                int(stats.get('protein_ids_count', 0)),
+                int(stats.get('empty_ident_files_count', 0)),
+                now,
+            )
+            for sid, stats in all_stats.items()
+        ]
+        if not rows:
+            return
+
+        await self._executemany(
+            """INSERT OR REPLACE INTO sample_status_cache
+               (sample_id, spectra_files_count, ident_files_count,
+                identifications_count, preferred_count, coverage_known_count,
+                protein_ids_count, empty_ident_files_count, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            rows
+        )
+        # No save() here — caller decides when to save (consistent with
+        # upsert_sample_status_cache()).
 
     async def invalidate_sample_status_cache(self, sample_id: int) -> None:
         """Remove cached stats for a single sample (forces recalc on next refresh)."""

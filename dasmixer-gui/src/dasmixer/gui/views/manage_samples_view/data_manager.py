@@ -33,16 +33,12 @@ class SampleDataManager:
 
     async def refresh_all_fresh(self) -> tuple[list[Sample], dict[int, dict], int]:
         """Full recalculation of all samples (Update mode).
-        Calls get_sample_stats for each, upserts cache, saves project.
+        Uses a single aggregated SQL query instead of N calls to get_sample_stats().
         Returns (samples, cached_stats, tools_count)."""
         samples = await self.project.get_samples()
         tools_count = await self.project.get_tools_count()
-        all_cached: dict[int, dict] = {}
-        for sample in samples:
-            sid = int(sample.id or 0)
-            stats = await self.project.get_sample_stats(sid)
-            await self.project.upsert_sample_status_cache(sid, stats)
-            all_cached[sid] = stats
+        all_cached = await self.project.get_all_samples_stats()
+        await self.project.upsert_sample_status_cache_batch(all_cached)
         await self.project.save()
         return samples, all_cached, tools_count
 

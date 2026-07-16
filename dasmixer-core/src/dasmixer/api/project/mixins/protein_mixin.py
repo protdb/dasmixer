@@ -375,6 +375,8 @@ class ProteinMixin:
                 sb.name as subset,
                 i.protein_id,
                 p.fasta_name,
+                p.name as protein_name,
+                p.gene as gene,
                 i.peptide_count,
                 i.uq_evidence_count,
                 i.coverage,

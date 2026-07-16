@@ -34,6 +34,15 @@ class IdentificationMixin:
         )
         
         ident_file_id = cursor.lastrowid
+
+        # Cache invalidation: a new identification file changes ident_files_count
+        # (and potentially empty_ident_files_count) for the owning sample.
+        row = await self._fetchone(
+            "SELECT sample_id FROM spectre_file WHERE id = ?", (spectra_file_id,)
+        )
+        if row:
+            await self.invalidate_sample_status_cache(int(row['sample_id']))
+
         await self.save()
         
         logger.info(f"Added identification file: {file_path} (id={ident_file_id})")

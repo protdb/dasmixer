@@ -1,6 +1,6 @@
 [project]
 name = "dasmixer-workspace"
-version = "0.7.0a3"
+version = "0.7.0a4"
 description = "DASMixer development workspace (not for distribution)"
 requires-python = "<4.0, >=3.11"
 

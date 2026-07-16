@@ -1,6 +1,6 @@
 [project]
 name = "dasmixer"
-version = "0.7.0a3"
+version = "0.7.0a4"
 description = "DASMixer — Mass Spectrometry Data Integration Tool (metapackage)"
 authors = [
     {name = "gluck", email = "glucksistemi@gmail.com"}

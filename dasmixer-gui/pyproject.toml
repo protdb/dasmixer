@@ -1,6 +1,6 @@
 [project]
 name = "dasmixer-gui"
-version = "0.7.0a3"
+version = "0.7.0a4"
 description = "DASMixer GUI — Flet-based desktop application"
 authors = [
     {name = "gluck", email = "glucksistemi@gmail.com"}
