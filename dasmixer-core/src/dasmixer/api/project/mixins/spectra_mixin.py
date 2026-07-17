@@ -46,10 +46,6 @@ class SpectraMixin:
         
         spectra_file_id = cursor.lastrowid
 
-        # Cache invalidation: a new spectra file changes spectra_files_count
-        # for this sample — force recompute on next read.
-        await self.invalidate_sample_status_cache(sample_id)
-
         await self.save()
 
         logger.info(f"Added spectra file: {path} (id={spectra_file_id}, sample_id={sample_id})")

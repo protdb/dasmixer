@@ -189,7 +189,6 @@ class DropFileDialog:
     async def _execute_delete(self, files: list[dict]) -> None:
         """Execute deletion of files."""
         deleted = 0
-        affected_samples: set[int] = set()
         for f in files:
             try:
                 if f['type'] == 'Spectra':
@@ -200,16 +199,8 @@ class DropFileDialog:
             except Exception as ex:
                 logger.exception(f"Error deleting file id={f['id']}: {ex}")
 
-        # Refresh affected samples
-        for sid in self.selected_sample_ids:
-            try:
-                from dasmixer.api.project.dataclasses import Sample
-                sample = await self.project.get_sample(sid)
-                if sample:
-                    await self.project.upsert_sample_status_cache(sid, await self.project.get_sample_stats(sid))
-            except Exception:
-                pass
-
+        # Cache refresh is handled by on_complete → _reload_all_with_loader(),
+        # which recomputes fresh stats for all samples in one fast query.
         await self.project.save()
 
         show_snack(self.page, f"Deleted {deleted} file(s)", ft.Colors.GREEN_400)

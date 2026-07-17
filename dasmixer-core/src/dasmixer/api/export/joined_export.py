@@ -15,7 +15,7 @@ def _sanitize(name: str) -> str:
 
 async def _get_sample_details(project) -> pd.DataFrame:
     """Формирует DataFrame со статистикой по всем образцам."""
-    stats_map = await project.get_all_cached_sample_stats()
+    stats_map = await project.get_all_samples_stats()
     samples = await project.get_samples()
     rows = []
     for sample in samples:

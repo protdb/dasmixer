@@ -161,18 +161,22 @@ class ManageSamplesView(ft.View):
         from .dialogs.import_additional_dialog import ImportAdditionalDialog
         dialog = ImportAdditionalDialog(self.project, self.page)
         await dialog.show()
-        self._samples, self._all_stats, self._tools_count = await self._data_manager.load_all()
-        await self._recompute_filtered()
+        await self._reload_all_with_loader()
 
     # ------------------------------------------------------------------
     # Data loading
     # ------------------------------------------------------------------
 
-    async def _load_data(self):
-        """Load panels: use cache where available, fetch fresh for uncached."""
-        try:
-            await self._update_row.load_thresholds()
+    async def _reload_all_with_loader(self) -> None:
+        """Reload samples + fresh stats with the UpdateRow loader shown.
 
+        Used for initial load, after import/mass-op — every path that needs
+        the full fresh dataset. The aggregated query is fast enough (~0.6s)
+        that we no longer read from sample_status_cache.
+        """
+        if self._update_row:
+            self._update_row.set_loading(True)
+        try:
             self._samples, self._all_stats, self._tools_count = await self._data_manager.load_all()
 
             subsets = await self.project.get_subsets()
@@ -184,22 +188,24 @@ class ManageSamplesView(ft.View):
             if self._filters_row.page:
                 self._filters_row.subset_dropdown.update()
 
-            await self._load_filter_persist()
             await self._recompute_filtered()
-
-            if self._samples:
-                uncached_ids = [
-                    int(s.id)
-                    for s in self._samples
-                    if s.id is not None and int(s.id) not in self._all_stats
-                ]
-                for sample_id in uncached_ids:
-                    await self._refresh_single_stats_in_place(sample_id, save_cache=True)
         except Exception:
-            logger.exception("ManageSamplesView._load_data error")
+            logger.exception("ManageSamplesView._reload_all_with_loader error")
             if self.page:
                 show_snack(self.page, "Error loading samples data", ft.Colors.RED_400)
                 self.page.update()
+        finally:
+            if self._update_row:
+                self._update_row.set_loading(False)
+
+    async def _load_data(self):
+        """Initial load on did_mount: load thresholds + fresh stats with loader."""
+        try:
+            await self._update_row.load_thresholds()
+            await self._load_filter_persist()
+        except Exception:
+            logger.exception("ManageSamplesView._load_data (thresholds/filters) error")
+        await self._reload_all_with_loader()
 
     # ------------------------------------------------------------------
     # Filters
@@ -293,12 +299,12 @@ class ManageSamplesView(ft.View):
     async def refresh_single_panel(self, sample_id: int) -> None:
         sample = next((s for s in self._samples if s.id == sample_id), None)
         if sample is None:
-            await self._load_data()
+            await self._reload_all_with_loader()
             return
 
-        refreshed_sample, stats = await self._data_manager.refresh_single(sample_id, save_cache=True)
+        refreshed_sample, stats = await self._data_manager.refresh_single(sample_id)
         if refreshed_sample is None:
-            await self._load_data()
+            await self._reload_all_with_loader()
             return
 
         for i, s in enumerate(self._samples):
@@ -310,14 +316,14 @@ class ManageSamplesView(ft.View):
         if idx is not None and idx < len(self._panel_controls):
             self._panel_controls[idx].invalidate_detail_cache()
 
-        await self._refresh_single_stats_in_place(sample_id, save_cache=True)
+        await self._refresh_single_stats_in_place(sample_id)
 
-    async def _refresh_single_stats_in_place(self, sample_id: int, save_cache: bool = False) -> None:
+    async def _refresh_single_stats_in_place(self, sample_id: int) -> None:
         sample = next((s for s in self._samples if s.id == sample_id), None)
         if sample is None:
             return
 
-        _, stats = await self._data_manager.refresh_single(sample_id, save_cache=save_cache)
+        _, stats = await self._data_manager.refresh_single(sample_id)
 
         self._all_stats[sample_id] = stats
 
@@ -579,8 +585,7 @@ class ManageSamplesView(ft.View):
 
     async def _on_mass_op_complete(self):
         """Reload data and rebuild panels after a mass operation."""
-        self._samples, self._all_stats, self._tools_count = await self._data_manager.load_all()
-        await self._recompute_filtered()
+        await self._reload_all_with_loader()
 
     # ------------------------------------------------------------------
     # Rebuild panels from page

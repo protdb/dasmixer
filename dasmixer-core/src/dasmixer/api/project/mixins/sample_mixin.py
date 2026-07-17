@@ -268,9 +268,10 @@ class SampleMixin:
 
     async def get_sample_status_summary(self, min_proteins: int = 30, min_idents: int = 1000) -> dict:
         """
-        Return aggregate sample status counters derived from sample_status_cache.
+        Return aggregate sample status counters computed fresh via
+        get_all_samples_stats() (no longer reads from sample_status_cache).
 
-        Status rules (same as SamplesSection._build_sample_header):
+        Status rules (same as compute_sample_status in sample_panel.py):
           - ERROR:   no spectra files  OR  has spectra but no ident files
           - OK:      has spectra + ident files + idents >= min_idents
                      + proteins ok (0 or >= min_proteins) + no empty ident files
@@ -281,31 +282,24 @@ class SampleMixin:
             ok         - samples in OK state
             warning    - samples in WARNING state
             error      - samples in ERROR state
-            uncached   - samples with no cache entry yet
+            uncached   - always 0 (kept for API compatibility; stats are
+                         computed fresh, so no "pending" state exists)
         """
-        # Get all samples count
-        row_total = await self._fetchone("SELECT COUNT(*) AS cnt FROM sample")
-        total = int(row_total['cnt']) if row_total else 0
+        all_stats = await self.get_all_samples_stats()
+        total = len(all_stats)
 
         if total == 0:
             return {'total': 0, 'ok': 0, 'warning': 0, 'error': 0, 'uncached': 0}
 
-        # Get tools count (needed for expected ident files check)
-        row_tools = await self._fetchone("SELECT COUNT(*) AS cnt FROM tool")
-        tools_count = int(row_tools['cnt']) if row_tools else 0
-
-        # Load all cached stats
-        rows = await self._fetchall("SELECT * FROM sample_status_cache")
-        cached_ids_count = len(rows)
-        uncached = total - cached_ids_count
+        tools_count = await self.get_tools_count()
 
         ok = warning = error = 0
-        for row in rows:
-            sf = int(row['spectra_files_count'] or 0)
-            if_c = int(row['ident_files_count'] or 0)
-            idents = int(row['identifications_count'] or 0)
-            proteins = int(row['protein_ids_count'] or 0)
-            empty_if = int(row['empty_ident_files_count'] or 0)
+        for stats in all_stats.values():
+            sf = int(stats.get('spectra_files_count', 0))
+            if_c = int(stats.get('ident_files_count', 0))
+            idents = int(stats.get('identifications_count', 0))
+            proteins = int(stats.get('protein_ids_count', 0))
+            empty_if = int(stats.get('empty_ident_files_count', 0))
 
             has_spectra = sf > 0
             has_ident = if_c > 0
@@ -326,7 +320,7 @@ class SampleMixin:
             'ok': ok,
             'warning': warning,
             'error': error,
-            'uncached': uncached,
+            'uncached': 0,
         }
 
     async def get_sample_counts_by_subset(self) -> dict[int, int]:
