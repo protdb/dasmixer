@@ -1,9 +1,7 @@
 """Ion matching functionality for peptide identification validation."""
-from copy import copy
 from dataclasses import dataclass
 from typing import Literal
 
-import numpy as np
 import pandas as pd
 from peptacular.fragmentation import Fragmenter, Fragment
 from peptacular.score import (
@@ -12,6 +10,8 @@ from peptacular.score import (
     get_match_coverage
 
 )
+
+from .quality_calculations import calculate_peptide_quality
 
 def _get_matched_intensity_percentage(
     fragment_matches: list[FragmentMatch], intensities: list[float]
@@ -87,6 +87,7 @@ class MatchResult:
     total_peaks: int
     max_ion_matches: int
     top_matched_ion_type: str
+    quality: float
 
 
 def match_predictions(
@@ -140,6 +141,7 @@ def match_predictions(
             total_peaks=total_peaks,
             max_ion_matches=0,
             top_matched_ion_type='',
+            quality=0.0
         )
 
     # Generate theoretical fragments
@@ -175,6 +177,11 @@ def match_predictions(
         top10_int = top_ints[-1]
     top10_intensity_matches = len([x for x in matches if x.intensity >= top10_int])
 
+    quality = calculate_peptide_quality(
+        matches,
+        sequence,
+        params.ions
+    )
 
     # Calculate intensity coverage
     coverage = _get_matched_intensity_percentage(
@@ -193,6 +200,7 @@ def match_predictions(
         total_peaks=total_peaks,
         max_ion_matches=max_matches,
         top_matched_ion_type=max_matches_type,
+        quality=quality
     )
 
 
@@ -228,7 +236,7 @@ def get_matches_dataframe(
         >>> result = match_predictions(params, mz_list, int_list, 2, "PEPTIDE")
         >>> df = get_matches_dataframe(result, mz_list, int_list)
         >>> # Use with plotting
-        >>> from api.spectra.plot_matches import generate_spectrum_plot
+        >>> from dasmixer.api.calculations.spectra.plot_matches import generate_spectrum_plot
         >>> fig = generate_spectrum_plot("My Spectrum", df)
     """
     # Create experimental data frame
@@ -240,6 +248,7 @@ def get_matches_dataframe(
     if not match_result.fragment_matches:
         # No matches - return experimental data with empty match columns
         exp_df['ion_type'] = None
+        exp_df['ion_pos'] = None
         exp_df['label'] = None
         exp_df['frag_seq'] = None
         exp_df['theor_mz'] = None
@@ -268,6 +277,7 @@ def get_matches_dataframe(
         match_data.append({
             'mz': match.mz,
             'ion_type': match.fragment.ion_type,
+            'ion_pos': ion_pos,
             'label': f'{match.fragment.ion_type}{ion_pos}{loss_label}{charge_str}',
             'frag_seq': match.fragment.sequence,
             'theor_mz': match.fragment.mz,

@@ -13,4 +13,5 @@ class SeqMatchParams:
 @dataclass
 class SeqResults:
     original: SeqMatchParams
+    original_ppm: float | None
     override: list[SeqMatchParams] | None

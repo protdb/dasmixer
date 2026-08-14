@@ -270,7 +270,7 @@ class IonCoverageAction(BaseAction):
             self.show_success(f"Ion coverage calculated for {total_processed} identifications")
 
         except Exception as exc:
-            logger.exception(ex)
+            logger.exception(exc)
             try:
                 dialog.close()
             except Exception:

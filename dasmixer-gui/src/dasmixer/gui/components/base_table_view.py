@@ -483,8 +483,8 @@ class BaseTableView(ft.Container):
             horizontal_lines=ft.BorderSide(1, ft.Colors.GREY_300),
             heading_row_color=ft.Colors.GREY_200,
             heading_row_height=40,
-            data_row_min_height=35,
-            data_row_max_height=100,
+            data_row_min_height=20,
+            data_row_max_height=50,
             column_spacing=20
         )
 

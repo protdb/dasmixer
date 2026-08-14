@@ -5,6 +5,9 @@
       <sourceFolder url="file://$MODULE_DIR$/dasmixer-cli/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/dasmixer-core/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/dasmixer-gui/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/dasmixer-cli" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/dasmixer-core" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/dasmixer-gui" isTestSource="false" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
