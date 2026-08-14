@@ -9,7 +9,8 @@ renames = ColumnRenames(
     scans='precursor.leID',
     canonical_sequence='peptide.seq',
     score='peptide.score',
-    src_file_protein_id='protein.Accession'
+    src_file_protein_id='protein.Accession',
+    ppm='peptidePrecursor.deltaMhpPPM'
 )
 
 ptm_renames = {

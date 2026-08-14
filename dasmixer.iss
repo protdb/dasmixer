@@ -3,7 +3,7 @@
 ; Non-commercial use only
 
 #define MyAppName "DASMixer"
-#define MyAppVersion "0.6.0"
+#define MyAppVersion "0.7.0"
 #define MyAppPublisher "IBMC, Moscow"
 #define MyAppURL "https://github.com/protdb/dasmixer"
 #define MyAppExeName "dasmixer.exe"

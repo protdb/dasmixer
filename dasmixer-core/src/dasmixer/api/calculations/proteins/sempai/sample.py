@@ -14,7 +14,7 @@ from .algorithms import (
     normalize_values,
     calculate_nsaf_normalized,
     calculate_absolute_concentrations_total_protein,
-    calculate_absolute_concentrations_albumin_standard,
+    calculate_absolute_concentrations_reference_standard,
     calculate_combined_absolute_concentrations,
     convert_concentrations_to_molar,
     convert_concentrations_to_mass,
@@ -37,6 +37,9 @@ class ProteomicSample:
         self,
         proteins: List[Protein],
         total_protein_gl: Optional[float] = None,
+        reference_protein_gl: Optional[float] = None,
+        reference_protein_accession: Optional[str] = None,
+        # backward-compat alias
         albumin_gl: Optional[float] = None,
     ):
         """
@@ -45,11 +48,20 @@ class ProteomicSample:
         Args:
             proteins: List of Protein objects in the sample
             total_protein_gl: Total protein concentration in g/L (orthogonal measurement)
-            albumin_gl: Albumin concentration in g/L (known standard)
+            reference_protein_gl: Reference protein concentration in g/L (known standard).
+                                  Replaces the old albumin_gl parameter.
+            reference_protein_accession: Accession of the reference protein used for
+                                         absolute quantification. If None, the reference
+                                         protein is auto-detected by accession keywords
+                                         (P02768, ALBU_HUMAN, ALB, ALBUMIN).
+            albumin_gl: Deprecated alias for reference_protein_gl. If both are provided,
+                        reference_protein_gl takes precedence.
         """
         self._proteins = proteins
         self._total_protein_gl = total_protein_gl
-        self._albumin_gl = albumin_gl
+        # support legacy albumin_gl kwarg
+        self._reference_protein_gl = reference_protein_gl if reference_protein_gl is not None else albumin_gl
+        self._reference_protein_accession = reference_protein_accession
         
         # Validate proteins
         if not proteins:
@@ -85,27 +97,54 @@ class ProteomicSample:
         self._total_protein_gl = value
     
     @property
+    def reference_protein_gl(self) -> Optional[float]:
+        """Get reference protein concentration in g/L."""
+        return self._reference_protein_gl
+
+    @reference_protein_gl.setter
+    def reference_protein_gl(self, value: Optional[float]) -> None:
+        """Set reference protein concentration."""
+        if value is not None and value <= 0:
+            raise ValidationError("Reference protein concentration must be positive")
+        self._reference_protein_gl = value
+
+    # backward-compat property
+    @property
     def albumin_gl(self) -> Optional[float]:
-        """Get albumin concentration in g/L."""
-        return self._albumin_gl
-    
+        """Deprecated alias for reference_protein_gl."""
+        return self._reference_protein_gl
+
     @albumin_gl.setter
     def albumin_gl(self, value: Optional[float]) -> None:
-        """Set albumin concentration."""
-        if value is not None and value <= 0:
-            raise ValidationError("Albumin concentration must be positive")
-        self._albumin_gl = value
-    
-    def _get_albumin_protein(self) -> Optional[Protein]:
-        """Find albumin protein in the sample."""
-        albumin_accessions = ['P02768', 'ALBU_HUMAN', 'ALB']
+        """Deprecated alias for reference_protein_gl."""
+        self.reference_protein_gl = value
+
+    def _get_reference_protein(self) -> Optional[Protein]:
+        """
+        Find the reference protein in the sample.
+
+        If reference_protein_accession was provided, look up that accession first.
+        Otherwise fall back to well-known albumin accessions / keywords.
+        """
+        # Explicit accession takes priority
+        if self._reference_protein_accession:
+            for protein in self._proteins:
+                if protein.accession == self._reference_protein_accession:
+                    return protein
+
+        # Auto-detect by well-known albumin identifiers
+        default_accessions = {'P02768', 'ALBU_HUMAN', 'ALB'}
         for protein in self._proteins:
-            if protein.accession in albumin_accessions:
+            if protein.accession in default_accessions:
                 return protein
-            # Also check if accession contains 'ALB' or 'albumin'
             if 'ALB' in protein.accession.upper() or 'ALBUMIN' in protein.accession.upper():
                 return protein
         return None
+
+    # backward-compat alias
+    def _get_albumin_protein(self) -> Optional[Protein]:
+        """Deprecated alias for _get_reference_protein."""
+        return self._get_reference_protein()
     
     def get_results(
         self,
@@ -236,64 +275,64 @@ class ProteomicSample:
         conc_type: Literal['all', 'gramm', 'mol']
     ) -> None:
         """Add absolute concentration calculations to results."""
-        
-        # Get albumin protein for albumin-based calculations
-        albumin_protein = self._get_albumin_protein()
-        
+
+        # Find reference protein for reference-based calculations
+        reference_protein = self._get_reference_protein()
+
         for method in methods:
             norm_vals = normalized_values[method]
-            
+
             # Total protein-based concentrations
             if self._total_protein_gl is not None:
                 abs_conc_total = calculate_absolute_concentrations_total_protein(
                     norm_vals, self._total_protein_gl
                 )
                 results[f'{method}_abs_total_gl'] = abs_conc_total
-                
+
                 if conc_type in ['all', 'mol']:
                     molecular_masses = [p.molecular_mass for p in self._proteins]
                     abs_conc_mol = convert_concentrations_to_molar(abs_conc_total, molecular_masses)
                     results[f'{method}_abs_total_mol'] = abs_conc_mol
-            
-            # Albumin-based concentrations
-            if self._albumin_gl is not None and albumin_protein is not None:
-                # Find albumin index
-                albumin_idx = None
+
+            # Reference protein-based concentrations
+            if self._reference_protein_gl is not None and reference_protein is not None:
+                # Find reference protein index
+                ref_idx = None
                 for i, protein in enumerate(self._proteins):
-                    if protein.accession == albumin_protein.accession:
-                        albumin_idx = i
+                    if protein.accession == reference_protein.accession:
+                        ref_idx = i
                         break
-                
-                if albumin_idx is not None:
-                    albumin_relative = norm_vals[albumin_idx]
-                    abs_conc_albumin = calculate_absolute_concentrations_albumin_standard(
-                        norm_vals, albumin_relative, self._albumin_gl
+
+                if ref_idx is not None:
+                    reference_relative = norm_vals[ref_idx]
+                    abs_conc_reference = calculate_absolute_concentrations_reference_standard(
+                        norm_vals, reference_relative, self._reference_protein_gl
                     )
-                    results[f'{method}_abs_albumin_gl'] = abs_conc_albumin
-                    
+                    results[f'{method}_abs_reference_gl'] = abs_conc_reference
+
                     if conc_type in ['all', 'mol']:
                         molecular_masses = [p.molecular_mass for p in self._proteins]
-                        abs_conc_mol = convert_concentrations_to_molar(abs_conc_albumin, molecular_masses)
-                        results[f'{method}_abs_albumin_mol'] = abs_conc_mol
-            
-            # Combined approach if both total and albumin are available
-            if (self._total_protein_gl is not None and 
-                self._albumin_gl is not None and 
-                albumin_protein is not None):
-                
-                albumin_idx = None
+                        abs_conc_mol = convert_concentrations_to_molar(abs_conc_reference, molecular_masses)
+                        results[f'{method}_abs_reference_mol'] = abs_conc_mol
+
+            # Combined approach if both total and reference are available
+            if (self._total_protein_gl is not None and
+                    self._reference_protein_gl is not None and
+                    reference_protein is not None):
+
+                ref_idx = None
                 for i, protein in enumerate(self._proteins):
-                    if protein.accession == albumin_protein.accession:
-                        albumin_idx = i
+                    if protein.accession == reference_protein.accession:
+                        ref_idx = i
                         break
-                
-                if albumin_idx is not None:
-                    albumin_relative = norm_vals[albumin_idx]
+
+                if ref_idx is not None:
+                    reference_relative = norm_vals[ref_idx]
                     abs_conc_combined = calculate_combined_absolute_concentrations(
-                        norm_vals, albumin_relative, self._albumin_gl, self._total_protein_gl
+                        norm_vals, reference_relative, self._reference_protein_gl, self._total_protein_gl
                     )
                     results[f'{method}_abs_combined_gl'] = abs_conc_combined
-                    
+
                     if conc_type in ['all', 'mol']:
                         molecular_masses = [p.molecular_mass for p in self._proteins]
                         abs_conc_mol = convert_concentrations_to_molar(abs_conc_combined, molecular_masses)
@@ -341,7 +380,8 @@ class ProteomicSample:
             'total_peptides': sum(len(p.peptides) for p in self._proteins),
             'proteins_with_intensities': sum(1 for p in self._proteins if p.intensities),
             'total_protein_gl': self._total_protein_gl,
-            'albumin_gl': self._albumin_gl,
+            'reference_protein_gl': self._reference_protein_gl,
+            'reference_protein_accession': self._reference_protein_accession,
         }
         
         # Add coverage statistics if possible
@@ -366,4 +406,5 @@ class ProteomicSample:
         """Detailed representation of sample."""
         return (f"ProteomicSample(proteins={len(self._proteins)}, "
                 f"total_protein_gl={self._total_protein_gl}, "
-                f"albumin_gl={self._albumin_gl})")
+                f"reference_protein_gl={self._reference_protein_gl}, "
+                f"reference_protein_accession={self._reference_protein_accession!r})")

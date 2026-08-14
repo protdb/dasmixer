@@ -7,6 +7,7 @@ with their flet-based parameter forms.
 
 from dasmixer.api.reporting.reports.pca_report import PCAReport
 from dasmixer.api.reporting.reports.volcano_report import VolcanoReport
+from dasmixer.api.reporting.reports.median_report import MedianReport
 from dasmixer.api.reporting.reports.toolmatch_report import ToolMatchReport
 from dasmixer.api.reporting.reports.coverage_report import ToolCoverageReport
 from dasmixer.api.reporting.reports.upset import UpsetReport
@@ -20,6 +21,7 @@ from dasmixer.gui.components.report_form import (
     FloatSelector,
     SubsetSelector,
     MultiSubsetSelector,
+    LFQSelector,
     EnumSelector,
 )
 
@@ -30,7 +32,7 @@ from dasmixer.gui.components.report_form import (
 
 class PCAReportForm(ReportForm):
     subsets = MultiSubsetSelector(label="Subsets to include")
-    lfq_type = EnumSelector(values=["emPAI", "iBAQ", "NSAF", "Top3"], label="LFQ method")
+    lfq = LFQSelector(label="LFQ", default_method="emPAI", default_value_type="rel")
     show_labels = BoolSelector(default=True, label="Show sample labels")
 
 
@@ -41,7 +43,7 @@ class PCAReportForm(ReportForm):
 class VolcanoReportForm(ReportForm):
     control_subset = SubsetSelector(label="Control subset")
     exptl_subsets = MultiSubsetSelector(label="Experimental subsets")
-    lfq_type = EnumSelector(values=["emPAI", "iBAQ", "NSAF", "Top3"], label="LFQ method")
+    lfq = LFQSelector(label="LFQ", default_method="emPAI", default_value_type="rel")
     stats_method = EnumSelector(values=["Mann-Whitney", "T-test"], label="Statistical method")
     fdc = EnumSelector(values=["BH", "BY", "Bonferroni"], label="FDR correction")
     percent_to_calculate = IntSelector(default=20, label="Min % samples with value")
@@ -88,6 +90,10 @@ class SampleReportForm(ReportForm):
     chart_type = EnumSelector(values=["bar", "scatter"], label="Chart type")
 
 
+class MedianReportForm(ReportForm):
+    subsets = MultiSubsetSelector()
+    lfq = LFQSelector(label="LFQ")
+
 # ---------------------------------------------------------------------------
 # Monkey-patch: bind form classes to report classes
 # ---------------------------------------------------------------------------
@@ -98,3 +104,4 @@ ToolMatchReport.parameters = ToolMatchReportForm
 ToolCoverageReport.parameters = ToolCoverageReportForm
 UpsetReport.parameters = UpSetReportForm
 SampleReport.parameters = SampleReportForm
+MedianReport.parameters = MedianReportForm

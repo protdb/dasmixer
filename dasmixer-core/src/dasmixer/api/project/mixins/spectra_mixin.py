@@ -45,8 +45,9 @@ class SpectraMixin:
         )
         
         spectra_file_id = cursor.lastrowid
+
         await self.save()
-        
+
         logger.info(f"Added spectra file: {path} (id={spectra_file_id}, sample_id={sample_id})")
         
         return spectra_file_id

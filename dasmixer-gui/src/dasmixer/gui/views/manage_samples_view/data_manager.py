@@ -1,50 +1,44 @@
-"""SampleDataManager — encapsulates sample stats caching and refresh operations."""
+"""SampleDataManager — encapsulates sample stats loading and refresh operations."""
 
 from dasmixer.api.project.project import Project
 from dasmixer.api.project.dataclasses import Sample
 
 
 class SampleDataManager:
-    """Manages sample data loading, caching, and refresh operations."""
+    """Manages sample data loading and refresh operations.
+
+    Note: sample_status_cache is no longer used for reads or writes by this
+    manager — get_all_samples_stats() is fast enough (~0.6s on 2.6M-row
+    projects) to compute fresh on every load. The cache table itself is kept
+    in the schema for backward compatibility but is not touched here.
+    """
 
     def __init__(self, project: Project):
         self.project = project
 
     async def load_all(self) -> tuple[list[Sample], dict[int, dict], int]:
-        """Load samples, all cached stats, and tools count.
-        Returns (samples, cached_stats_dict, tools_count)."""
+        """Load samples, fresh aggregated stats, and tools count.
+        Returns (samples, stats_dict, tools_count)."""
         samples = await self.project.get_samples()
         tools_count = await self.project.get_tools_count()
-        all_cached = await self.project.get_all_cached_sample_stats()
-        return samples, all_cached, tools_count
+        all_stats = await self.project.get_all_samples_stats()
+        return samples, all_stats, tools_count
 
-    async def refresh_single(self, sample_id: int, save_cache: bool = True) -> tuple:
-        """Recalculate stats for one sample, update cache.
-        Returns (sample, stats)."""
-        from dasmixer.api.project.dataclasses import Sample
+    async def refresh_single(self, sample_id: int) -> tuple:
+        """Recalculate stats for one sample.
+        Returns (sample, stats). Does NOT write to sample_status_cache."""
         sample = await self.project.get_sample(sample_id)
         if sample is None:
             return None, {}
         stats = await self.project.get_sample_stats(sample_id)
-        if save_cache:
-            await self.project.upsert_sample_status_cache(sample_id, stats)
-            await self.project.save()
         return sample, stats
 
     async def refresh_all_fresh(self) -> tuple[list[Sample], dict[int, dict], int]:
         """Full recalculation of all samples (Update mode).
-        Calls get_sample_stats for each, upserts cache, saves project.
-        Returns (samples, cached_stats, tools_count)."""
-        samples = await self.project.get_samples()
-        tools_count = await self.project.get_tools_count()
-        all_cached: dict[int, dict] = {}
-        for sample in samples:
-            sid = int(sample.id or 0)
-            stats = await self.project.get_sample_stats(sid)
-            await self.project.upsert_sample_status_cache(sid, stats)
-            all_cached[sid] = stats
-        await self.project.save()
-        return samples, all_cached, tools_count
+        Equivalent to load_all() now that the aggregated query is fast
+        enough to run on every load.
+        Returns (samples, stats_dict, tools_count)."""
+        return await self.load_all()
 
     async def get_sample_detail(self, sample_id: int) -> list[dict]:
         """Delegate to project.get_sample_detail."""

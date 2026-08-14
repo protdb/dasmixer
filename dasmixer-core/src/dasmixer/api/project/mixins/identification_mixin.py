@@ -34,8 +34,9 @@ class IdentificationMixin:
         )
         
         ident_file_id = cursor.lastrowid
+
         await self.save()
-        
+
         logger.info(f"Added identification file: {file_path} (id={ident_file_id})")
         
         return ident_file_id
@@ -277,6 +278,47 @@ class IdentificationMixin:
         rows = await self._fetchall(query, params)
         return pd.DataFrame(rows) if rows else pd.DataFrame()
 
+    async def get_all_idents_for_preferred(
+            self,
+            spectra_file_id: int,
+            tool_id: int,
+    ):
+        """
+        Return ALL identifications for a spectra file + tool without any quality
+        filters.  Used when ``ignore_criteria`` is set for the tool — every
+        identification from this tool is a candidate for preferred selection
+        regardless of PPM, score, coverage, length, etc.
+
+        Returns the same columns as ``get_idents_for_preferred`` so the two
+        DataFrames can be concatenated safely downstream.
+
+        Args:
+            spectra_file_id: spectre_file.id to filter by
+            tool_id: tool.id to filter by
+        """
+        query = """
+            SELECT
+                i.id, i.spectre_id, i.tool_id, i.ppm, i.intensity_coverage, i.score,
+                s.spectre_file_id,
+                m.matched_ppm, m.matched_coverage_percent
+            FROM identification i
+            LEFT JOIN spectre s ON i.spectre_id = s.id
+            LEFT JOIN (
+                SELECT
+                    identification_id,
+                    min(abs(matched_ppm)) AS matched_ppm,
+                    min(matched_coverage_percent) AS matched_coverage_percent
+                FROM peptide_match
+                GROUP BY identification_id
+            ) m ON i.id = m.identification_id
+            WHERE
+                s.spectre_file_id = ? AND
+                i.tool_id = ?
+        """
+        params = (int(spectra_file_id), int(tool_id))
+        rows = await self._fetchall(query, params)
+        return pd.DataFrame(rows) if rows else pd.DataFrame()
+
     async def update_identification_coverage(
         self,
         identification_id: int,
@@ -428,7 +470,8 @@ class IdentificationMixin:
                 s.charge,
                 i.tool_id,
                 i.sequence,
-                i.canonical_sequence
+                i.canonical_sequence,
+                i.ppm
             FROM identification i
             LEFT JOIN spectre s ON s.id = i.spectre_id
             WHERE i.tool_id = ?

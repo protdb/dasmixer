@@ -95,7 +95,15 @@ class IonCoverageAction(BaseAction):
                 max_ptm = int(max_ptm_ctrl.value) if max_ptm_ctrl else 5
             except (ValueError, AttributeError):
                 max_ptm = 5
-            tool_settings_map[tid] = {'ptm_list': ptm_list, 'max_ptm': max_ptm}
+            trust_ppm = bool(controls.get('trust_ppm').value) if controls.get('trust_ppm') else False
+            recalculate_ptms = bool(controls.get('recalculate_ptms').value) if controls.get('recalculate_ptms') else True
+            unallocated_only = not recalculate_ptms
+            tool_settings_map[tid] = {
+                'ptm_list': ptm_list,
+                'max_ptm': max_ptm,
+                'trust_ppm': trust_ppm,
+                'unallocated_only': unallocated_only,
+            }
 
         only_missing = not recalc_all
 
@@ -127,7 +135,8 @@ class IonCoverageAction(BaseAction):
         stopped_early = False
 
         async def _compute_batch(
-            loop, executor, worker_batch, ptm_list, max_ptm
+            loop, executor, worker_batch, ptm_list, max_ptm,
+            trust_ppm=False, unallocated_only=False,
         ) -> list:
             """Submit worker_batch to the process pool and gather results."""
             sub_batches = [
@@ -150,6 +159,8 @@ class IonCoverageAction(BaseAction):
                     max_ptm,
                     seq_criteria,
                     max_ptm_sites,
+                    trust_ppm,
+                    unallocated_only,
                 )
                 for sub_batch in sub_batches
             ]
@@ -192,7 +203,9 @@ class IonCoverageAction(BaseAction):
                         offset += batch_size
 
                     pending_results = await _compute_batch(
-                        loop, executor, worker_batch, ptm_list, max_ptm
+                        loop, executor, worker_batch, ptm_list, max_ptm,
+                        trust_ppm=t_settings.get('trust_ppm', False),
+                        unallocated_only=t_settings.get('unallocated_only', False),
                     )
                     del worker_batch
 
@@ -239,7 +252,9 @@ class IonCoverageAction(BaseAction):
                         next_worker_batch = [obj.to_worker_dict() for obj in next_batch_objects]
                         del next_batch_objects  # free spectrum arrays from memory
                         pending_results = await _compute_batch(
-                            loop, executor, next_worker_batch, ptm_list, max_ptm
+                            loop, executor, next_worker_batch, ptm_list, max_ptm,
+                            trust_ppm=t_settings.get('trust_ppm', False),
+                            unallocated_only=t_settings.get('unallocated_only', False),
                         )
                         del next_worker_batch
 

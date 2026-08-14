@@ -423,15 +423,15 @@ class Protein:
         return self._ibaq
     
     @property
-    def top3(self) -> float:
+    def top3(self) -> Optional[float]:
         """
         Get Top3 value (lazy evaluation).
         
-        Returns 0 if no intensities available.
+        Returns None if no intensities available or fewer than 3 peptides.
         """
         if self._top3 is None:
-            if not self._intensities:
-                self._top3 = 0.0
+            if not self._intensities or len(self._intensities) < 3:
+                self._top3 = None
             else:
                 self._top3 = calculate_top3_value(self._intensities)
         return self._top3

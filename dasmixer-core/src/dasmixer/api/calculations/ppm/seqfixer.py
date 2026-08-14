@@ -124,6 +124,7 @@ def _apply_positions_to_split(
 
 
 _MAX_PTM_COMBOS = 50_000  # hard cap to prevent combinatorial explosion
+_MAX_UNLOCALIZED_COMBOS = 256  # hard cap for unlocalized PTM expansion
 
 
 def _count_ptm_combos(n_sites: int, max_ptm: int, n_term_combos: int) -> int:
@@ -222,6 +223,139 @@ def _iter_ptm_combos(
     return results
 
 
+def _expand_unlocalized(sequence: str, ptm_list: list[FixedPTM]) -> list[str]:
+    """
+    Expand a ProForma sequence with unlocalized modifications (``[Mod]?SEQ``)
+    into a list of fully positioned ProForma strings.
+
+    Each unlocalized modification is placed on every possible site that is
+    allowed by the corresponding ``FixedPTM.attach_to`` rule.  When the
+    modification is not found in *ptm_list*, every position is considered a
+    valid site.
+
+    Duplicate modifications (e.g. ``[Deamidated][Deamidated]?``) are handled
+    via ``itertools.combinations`` so that each copy occupies a *distinct*
+    position.
+
+    Guard
+    -----
+    If the estimated total number of variants exceeds ``_MAX_UNLOCALIZED_COMBOS``
+    each modification group's site list is reduced to ``[first, last]`` only,
+    which gives the smallest possible coverage error while still producing
+    valid positioned sequences.
+
+    Returns
+    -------
+    list[str]
+        Positioned ProForma strings (at least one element).
+        Falls back to the canonical sequence (mods stripped) when no valid
+        placement can be found.
+    """
+    from math import comb as _comb
+    from itertools import product as _product, combinations as _combinations
+
+    split, params, canonical = _split_and_strip(sequence)
+    unlocalized: list = params.get("unlocalized_modifications") or []
+
+    if not unlocalized:
+        return [sequence]
+
+    # Build a lookup: ptm string code → FixedPTM
+    ptm_by_code: dict[str, FixedPTM] = {p.code: p for p in ptm_list}
+
+    # Group unlocalized mods by their string representation
+    # e.g. [Deamidated, Deamidated] → {"Deamidated": [mod, mod]}
+    from collections import Counter
+    code_counter: Counter = Counter(str(m) for m in unlocalized)
+    # preserve one representative GenericModification object per code
+    mod_objects: dict[str, object] = {}
+    for m in unlocalized:
+        code = str(m)
+        if code not in mod_objects:
+            mod_objects[code] = m
+
+    # For each unique mod code find candidate site indices in split
+    group_sites: dict[str, list[int]] = {}
+    for code in code_counter:
+        fixed = ptm_by_code.get(code)
+        if fixed is not None and fixed.attach_to is not None:
+            allowed = [fixed.attach_to] if isinstance(fixed.attach_to, str) else list(fixed.attach_to)
+            sites = [idx for idx, (aa, _) in enumerate(split) if aa in allowed]
+        else:
+            # Unknown PTM or no attach_to restriction — all positions allowed
+            sites = list(range(len(split)))
+        group_sites[code] = sites
+
+    # Estimate total combinations: product of C(|sites_i|, count_i) per group
+    def _estimate() -> int:
+        total = 1
+        for code, count in code_counter.items():
+            s = len(group_sites[code])
+            total *= _comb(s, count) if s >= count else 0
+        return total
+
+    # Guard: if too many combos, reduce each group to [first, last] sites
+    if _estimate() > _MAX_UNLOCALIZED_COMBOS:
+        _seqfixer_log.warning(
+            "Unlocalized PTM expansion: estimated %d variants exceeds limit %d. "
+            "Reducing each group to first+last sites only.",
+            _estimate(), _MAX_UNLOCALIZED_COMBOS,
+        )
+        for code in group_sites:
+            sites = group_sites[code]
+            if len(sites) > 2:
+                group_sites[code] = [sites[0], sites[-1]]
+
+    # Check feasibility: every group must have >= count sites
+    for code, count in code_counter.items():
+        if len(group_sites[code]) < count:
+            _seqfixer_log.warning(
+                "Unlocalized PTM '%s' (count=%d) has only %d valid sites — "
+                "falling back to canonical sequence.",
+                code, count, len(group_sites[code]),
+            )
+            return [canonical]
+
+    # Generate all positioned variants
+    # Each group contributes combinations(sites, count) of (idx, mod_object) tuples
+    group_combos: list[list[list[PossiblePTMPosition]]] = []
+    for code, count in code_counter.items():
+        mod_obj = mod_objects[code]
+        combos_for_group = [
+            [PossiblePTMPosition(idx, split[idx][0], mod_obj) for idx in idxs]
+            for idxs in _combinations(group_sites[code], count)
+        ]
+        group_combos.append(combos_for_group)
+
+    # Cleaned params: remove unlocalized_modifications so they don't appear twice
+    clean_params = deepcopy(params)
+    clean_params["unlocalized_modifications"] = []
+
+    results: list[str] = []
+    for group_selection in _product(*group_combos):
+        # Flatten positions from all groups
+        all_positions: list[PossiblePTMPosition] = [
+            pos for group in group_selection for pos in group
+        ]
+        # Reject if two modifications land on the same residue index
+        if len({p.idx for p in all_positions}) < len(all_positions):
+            continue
+        try:
+            seq_str = _apply_positions_to_split(split, all_positions, clean_params, None, None)
+            results.append(seq_str)
+        except Exception as exc:
+            _seqfixer_log.debug("_expand_unlocalized: failed to build variant: %s", exc)
+            continue
+
+    if not results:
+        _seqfixer_log.warning(
+            "No valid positioned variants for '%s' — falling back to canonical.", sequence
+        )
+        return [canonical]
+
+    return results
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Main class
 # ─────────────────────────────────────────────────────────────────────────────
@@ -271,6 +405,7 @@ class SeqFixer:
         isotope_mode: IsotopeMode = "13C",
         force_isotope_offset_lookover: bool = False,
         max_ptm_sites: int = 10,
+        unallocated_only: bool = False,
     ) -> None:
         self.ptm_list = ptm_list
         self.max_ptm = max_ptm
@@ -280,6 +415,7 @@ class SeqFixer:
         self.max_isotope_offset = max_isotope_offset
         self.isotope_step = self.ISOTOPE_MASSES[isotope_mode]
         self.force_isotope_offset_lookover = force_isotope_offset_lookover
+        self.unallocated_only = unallocated_only
 
     # ── public API ───────────────────────────────────────────────────────────
 
@@ -328,7 +464,10 @@ class SeqFixer:
         # ── Step 3: isotope offset + PTM enumeration ──────────────────────────
         # Use best_charge from charge scan (minimum abs_ppm) as the working
         # charge; this is safe even when mgf_charge is None.
-        ptm_sites = _collect_ptm_sites(canonical_split, self.ptm_list)
+        if self.unallocated_only:
+            ptm_sites = []  # do not enumerate new attach_to-based positions
+        else:
+            ptm_sites = _collect_ptm_sites(canonical_split, self.ptm_list)
         ptm_hits = self._scan_offsets_and_ptms(
             canonical_split=canonical_split,
             canonical_params=canonical_params,

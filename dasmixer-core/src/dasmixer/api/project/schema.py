@@ -184,13 +184,14 @@ CREATE INDEX IF NOT EXISTS idx_prot_ident_sample ON protein_identification_resul
 
 -- Protein quantification results
 CREATE TABLE IF NOT EXISTS protein_quantification_result (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    protein_identification_id INTEGER NOT NULL,
-    algorithm TEXT NOT NULL,
-    rel_value REAL,
-    abs_value REAL,
-    FOREIGN KEY (protein_identification_id) REFERENCES protein_identification_result(id) ON DELETE CASCADE
-);
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     protein_identification_id INTEGER NOT NULL,
+     algorithm TEXT NOT NULL,
+     rel_value REAL,
+     abs_value_mol REAL,
+     abs_value_gl REAL,
+     FOREIGN KEY (protein_identification_id) REFERENCES protein_identification_result(id) ON DELETE CASCADE
+ );
 
 CREATE INDEX IF NOT EXISTS idx_prot_quant_ident ON protein_quantification_result(protein_identification_id);
 CREATE INDEX IF NOT EXISTS idx_prot_quant_algo ON protein_quantification_result(algorithm);

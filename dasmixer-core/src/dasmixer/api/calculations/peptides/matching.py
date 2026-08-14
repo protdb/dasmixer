@@ -104,6 +104,19 @@ async def calculate_preferred_identifications_for_file(
     """
     Calculate preferred identification IDs for a single spectra file.
 
+    Selection logic:
+    1. For each tool fetch candidate identifications:
+       - ``ignore_criteria=True``  → all identifications without quality filters
+         (flagged as *trusted*).
+       - ``ignore_criteria=False`` → identifications that pass quality thresholds.
+    2. Build two pools: *trusted* (from ignore_criteria tools) and *normal*.
+    3. Per spectrum:
+       - If trusted candidates exist → pick the best among trusted by criterion.
+       - Otherwise → pick the best among normal candidates by criterion.
+    4. Within each pool the selection criterion is:
+       - ``criterion="ppm"``       → lowest |PPM|
+       - ``criterion="intensity"`` → highest intensity_coverage
+
     Args:
         project: Project instance
         spectra_file_id: ID of spectra file to process
@@ -116,46 +129,104 @@ async def calculate_preferred_identifications_for_file(
     if criterion not in ("ppm", "intensity"):
         raise ValueError(f"Invalid criterion: {criterion}. Must be 'ppm' or 'intensity'")
 
-    idents_not_merged = []
+    trusted_frames: list[pd.DataFrame] = []
+    normal_frames: list[pd.DataFrame] = []
+
     for tool_id, tool_params in tool_settings.items():
-        max_ppm = tool_params.get("max_ppm", 50)
-        min_score = tool_params.get("min_score", 0)
-        min_ion_intensity_coverage = tool_params["min_ion_intensity_coverage"]
-        min_len = tool_params.get("min_peptide_length", 7)
-        max_len = tool_params.get("max_peptide_length", 30)
-        min_peaks = tool_params.get("min_spectre_peaks", 1)
-        top_peaks_count = tool_params.get("min_top_peaks", 1)
-        min_ions = tool_params.get("min_ions_covered", 1)
-        denovo_correction = tool_params.get("denovo_correction", False)
-        denovo_correction_ppm = tool_params.get("denovo_correction_ppm", 50000)
+        ignore_criteria = tool_params.get("ignore_criteria", False)
 
-        idents = await project.get_idents_for_preferred(
-            spectra_file_id=spectra_file_id,
-            tool_id=tool_id,
-            min_score=min_score,
-            max_abs_ppm=max_ppm if not denovo_correction else denovo_correction_ppm,
-            intensity_coverage=min_ion_intensity_coverage,
-            canonical_length=(min_len, max_len),
-            spectre_peaks_count=min_peaks,
-            ions_matched=min_ions,
-            top_peaks_covered=top_peaks_count,
-        )
-        logger.debug(idents)
-        logger.debug(f"{tool_id} {spectra_file_id}")
-        if denovo_correction:
-            idents['min_ppm'] = idents.apply(
-                lambda row: min(abs(row['ppm']), abs(row['matched_ppm'])), axis=1
+        if ignore_criteria:
+            # No quality filtering — trust every identification from this tool
+            idents = await project.get_all_idents_for_preferred(
+                spectra_file_id=spectra_file_id,
+                tool_id=tool_id,
             )
-            idents = idents.query('min_ppm <= @max_ppm')
+            logger.debug(f"tool_id={tool_id} spectra_file_id={spectra_file_id} ignore_criteria=True rows={len(idents)}")
+            if not idents.empty:
+                # Compute sort key
+                if criterion == "ppm":
+                    idents['_sort_key'] = idents['ppm'].abs()
+                else:
+                    idents['_sort_key'] = idents['intensity_coverage']
+                trusted_frames.append(idents.copy())
         else:
-            try:
-                idents['min_ppm'] = idents['ppm'].abs()
-            except KeyError:
-                idents['min_ppm'] = None
-        idents_not_merged.append(idents.copy())
+            max_ppm = tool_params.get("max_ppm", 50)
+            min_score = tool_params.get("min_score", 0)
+            min_ion_intensity_coverage = tool_params["min_ion_intensity_coverage"]
+            min_len = tool_params.get("min_peptide_length", 7)
+            max_len = tool_params.get("max_peptide_length", 30)
+            min_peaks = tool_params.get("min_spectre_peaks", 1)
+            top_peaks_count = tool_params.get("min_top_peaks", 1)
+            min_ions = tool_params.get("min_ions_covered", 1)
+            denovo_correction = tool_params.get("denovo_correction", False)
+            denovo_correction_ppm = tool_params.get("denovo_correction_ppm", 50000)
 
-    df = pd.concat(idents_not_merged, ignore_index=True)
-    if df.empty:
-        return []
-    idx = df.groupby('spectre_id')['min_ppm'].idxmin()
-    return [int(x) for x in df.loc[idx, 'id']]
+            idents = await project.get_idents_for_preferred(
+                spectra_file_id=spectra_file_id,
+                tool_id=tool_id,
+                min_score=min_score,
+                max_abs_ppm=max_ppm if not denovo_correction else denovo_correction_ppm,
+                intensity_coverage=min_ion_intensity_coverage,
+                canonical_length=(min_len, max_len),
+                spectre_peaks_count=min_peaks,
+                ions_matched=min_ions,
+                top_peaks_covered=top_peaks_count,
+            )
+            logger.debug(f"tool_id={tool_id} spectra_file_id={spectra_file_id} rows={len(idents)}")
+            if not idents.empty:
+                if denovo_correction:
+                    idents['_sort_key'] = idents.apply(
+                        lambda row: min(abs(row['ppm']), abs(row['matched_ppm'])), axis=1
+                    )
+                    idents = idents[idents['_sort_key'] <= max_ppm]
+                else:
+                    if criterion == "ppm":
+                        idents['_sort_key'] = idents['ppm'].abs()
+                    else:
+                        idents['_sort_key'] = idents['intensity_coverage']
+                if not idents.empty:
+                    normal_frames.append(idents.copy())
+
+    # --- Build per-spectrum best identification ---
+    # Trusted pool takes priority; normal pool is used only where trusted is empty.
+    result_ids: list[int] = []
+
+    trusted_df = pd.concat(trusted_frames, ignore_index=True) if trusted_frames else pd.DataFrame()
+    normal_df = pd.concat(normal_frames, ignore_index=True) if normal_frames else pd.DataFrame()
+
+    # Collect all spectre_ids that have any candidate
+    all_spectre_ids: set[int] = set()
+    if not trusted_df.empty:
+        all_spectre_ids |= set(trusted_df['spectre_id'].astype(int))
+    if not normal_df.empty:
+        all_spectre_ids |= set(normal_df['spectre_id'].astype(int))
+
+    ascending = (criterion == "ppm")  # ppm → ascending (lower is better); intensity → descending
+
+    for spectre_id in all_spectre_ids:
+        # First try trusted pool
+        if not trusted_df.empty:
+            candidates = trusted_df[trusted_df['spectre_id'] == spectre_id]
+            if not candidates.empty:
+                sort_key = candidates['_sort_key'].dropna()
+                if not sort_key.empty:
+                    if ascending:
+                        best_id = int(candidates.loc[sort_key.idxmin(), 'id'])
+                    else:
+                        best_id = int(candidates.loc[sort_key.idxmax(), 'id'])
+                    result_ids.append(best_id)
+                    continue
+
+        # Fall back to normal pool
+        if not normal_df.empty:
+            candidates = normal_df[normal_df['spectre_id'] == spectre_id]
+            if not candidates.empty:
+                sort_key = candidates['_sort_key'].dropna()
+                if not sort_key.empty:
+                    if ascending:
+                        best_id = int(candidates.loc[sort_key.idxmin(), 'id'])
+                    else:
+                        best_id = int(candidates.loc[sort_key.idxmax(), 'id'])
+                    result_ids.append(best_id)
+
+    return result_ids

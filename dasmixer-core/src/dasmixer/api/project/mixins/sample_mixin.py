@@ -116,7 +116,30 @@ class SampleMixin:
         """
         row = await self._fetchone(query, (name,))
         return Sample.from_dict(row) if row else None
-    
+
+    async def get_additionals_keys(self) -> list[str]:
+        """
+        Возвращает отсортированный список всех уникальных ключей из поля additions
+        по всем образцам проекта.
+
+        Returns:
+            Отсортированный список строк-ключей.
+            Пустой список, если нет данных или все additionals пусты/None.
+        """
+        import json
+        rows = await self._fetchall(
+            "SELECT additions FROM sample WHERE additions IS NOT NULL AND additions != 'null' AND additions != '{}'"
+        )
+        keys: set[str] = set()
+        for row in rows:
+            try:
+                data = json.loads(row['additions'])
+                if isinstance(data, dict):
+                    keys.update(data.keys())
+            except (json.JSONDecodeError, TypeError):
+                pass
+        return sorted(keys)
+
     async def update_sample(self, sample: Sample) -> None:
         """Update existing sample."""
         if sample.id is None:
@@ -245,9 +268,10 @@ class SampleMixin:
 
     async def get_sample_status_summary(self, min_proteins: int = 30, min_idents: int = 1000) -> dict:
         """
-        Return aggregate sample status counters derived from sample_status_cache.
+        Return aggregate sample status counters computed fresh via
+        get_all_samples_stats() (no longer reads from sample_status_cache).
 
-        Status rules (same as SamplesSection._build_sample_header):
+        Status rules (same as compute_sample_status in sample_panel.py):
           - ERROR:   no spectra files  OR  has spectra but no ident files
           - OK:      has spectra + ident files + idents >= min_idents
                      + proteins ok (0 or >= min_proteins) + no empty ident files
@@ -258,31 +282,24 @@ class SampleMixin:
             ok         - samples in OK state
             warning    - samples in WARNING state
             error      - samples in ERROR state
-            uncached   - samples with no cache entry yet
+            uncached   - always 0 (kept for API compatibility; stats are
+                         computed fresh, so no "pending" state exists)
         """
-        # Get all samples count
-        row_total = await self._fetchone("SELECT COUNT(*) AS cnt FROM sample")
-        total = int(row_total['cnt']) if row_total else 0
+        all_stats = await self.get_all_samples_stats()
+        total = len(all_stats)
 
         if total == 0:
             return {'total': 0, 'ok': 0, 'warning': 0, 'error': 0, 'uncached': 0}
 
-        # Get tools count (needed for expected ident files check)
-        row_tools = await self._fetchone("SELECT COUNT(*) AS cnt FROM tool")
-        tools_count = int(row_tools['cnt']) if row_tools else 0
-
-        # Load all cached stats
-        rows = await self._fetchall("SELECT * FROM sample_status_cache")
-        cached_ids_count = len(rows)
-        uncached = total - cached_ids_count
+        tools_count = await self.get_tools_count()
 
         ok = warning = error = 0
-        for row in rows:
-            sf = int(row['spectra_files_count'] or 0)
-            if_c = int(row['ident_files_count'] or 0)
-            idents = int(row['identifications_count'] or 0)
-            proteins = int(row['protein_ids_count'] or 0)
-            empty_if = int(row['empty_ident_files_count'] or 0)
+        for stats in all_stats.values():
+            sf = int(stats.get('spectra_files_count', 0))
+            if_c = int(stats.get('ident_files_count', 0))
+            idents = int(stats.get('identifications_count', 0))
+            proteins = int(stats.get('protein_ids_count', 0))
+            empty_if = int(stats.get('empty_ident_files_count', 0))
 
             has_spectra = sf > 0
             has_ident = if_c > 0
@@ -303,7 +320,7 @@ class SampleMixin:
             'ok': ok,
             'warning': warning,
             'error': error,
-            'uncached': uncached,
+            'uncached': 0,
         }
 
     async def get_sample_counts_by_subset(self) -> dict[int, int]:
@@ -334,6 +351,155 @@ class SampleMixin:
             (int(sample_id),)
         )
         return dict(row) if row else None
+
+    async def get_all_samples_stats(self) -> dict[int, dict]:
+        """
+        Return aggregated statistics for ALL samples.
+
+        Replaces the N+1 pattern of calling get_sample_stats() in a loop.
+        Always computes for the whole project (no pagination/filtering here —
+        see docs/review/sample_management_query.md for the rationale).
+
+        Implementation note: the original single CTE-query grouped the 2.6M-row
+        `identification` table by `sample_id`, which is not present in that
+        table and required a double JOIN (identification → spectre →
+        spectre_file) executed row-by-row — ~30s on large projects.
+        The current implementation groups `identification` by `ident_file_id`
+        (covered by idx_ident_file, ~0.5s) and collapses the sums to
+        `sample_id` in Python via a tiny ident_file → sample lookup.
+        See docs/review/sample_management_query.md §7 for the full analysis.
+
+        Returns:
+            dict mapping sample_id (int) → stats dict with the same keys as
+            get_sample_stats(): spectra_files_count, ident_files_count,
+            identifications_count, preferred_count, coverage_known_count,
+            protein_ids_count, empty_ident_files_count.
+            Every sample in the project is present in the result (zero-filled
+            if it has no files).
+        """
+        import asyncio
+
+        # 1. Heavy query — group identification by ident_file_id (covered by
+        #    idx_ident_file). No JOINs: the JOIN to spectre/spectre_file was
+        #    the bottleneck in the original CTE.
+        ident_by_file_q = """
+            SELECT
+                ident_file_id,
+                COUNT(*) AS identifications_count,
+                SUM(is_preferred) AS preferred_count,
+                SUM(CASE WHEN intensity_coverage IS NOT NULL THEN 1 ELSE 0 END) AS coverage_known_count
+            FROM identification
+            GROUP BY ident_file_id
+        """
+        # 2. ident_file_id → sample_id (tiny: ~2× number of spectra files).
+        file_to_sample_q = """
+            SELECT idf.id AS ident_file_id, sf.sample_id AS sample_id
+            FROM identification_file idf
+            JOIN spectre_file sf ON idf.spectre_file_id = sf.id
+        """
+        # 3. spectra_files_count per sample.
+        sf_by_sample_q = """
+            SELECT sample_id, COUNT(*) AS spectra_files_count
+            FROM spectre_file
+            GROUP BY sample_id
+        """
+        # 4. ident_files_count per sample.
+        if_by_sample_q = """
+            SELECT sf.sample_id AS sample_id, COUNT(*) AS ident_files_count
+            FROM identification_file idf
+            JOIN spectre_file sf ON idf.spectre_file_id = sf.id
+            GROUP BY sf.sample_id
+        """
+        # 5. protein_ids_count per sample (sample_id is native in this table).
+        prot_by_sample_q = """
+            SELECT sample_id, COUNT(*) AS protein_ids_count
+            FROM protein_identification_result
+            GROUP BY sample_id
+        """
+        # 6. Sample backbone — so every sample appears in the result even
+        #    when it has no files at all.
+        samples_q = "SELECT id AS sample_id FROM sample"
+
+        (
+            ident_by_file_rows,
+            file_to_sample_rows,
+            sf_rows,
+            if_rows,
+            prot_rows,
+            sample_rows,
+        ) = await asyncio.gather(
+            self._fetchall(ident_by_file_q),
+            self._fetchall(file_to_sample_q),
+            self._fetchall(sf_by_sample_q),
+            self._fetchall(if_by_sample_q),
+            self._fetchall(prot_by_sample_q),
+            self._fetchall(samples_q),
+        )
+
+        # --- collapse in Python ---
+
+        # ident_file_id → ident metrics (only non-empty files appear here).
+        ident_metrics_by_file: dict[int, dict] = {}
+        for r in ident_by_file_rows:
+            ident_metrics_by_file[int(r['ident_file_id'])] = {
+                'identifications_count': int(r['identifications_count']),
+                'preferred_count': int(r['preferred_count']),
+                'coverage_known_count': int(r['coverage_known_count']),
+            }
+
+        # ident_file_id → sample_id (1:1 by schema: identification_file →
+        # spectre_file → sample is a chain of single-row FKs).
+        file_to_sample: dict[int, int] = {
+            int(r['ident_file_id']): int(r['sample_id'])
+            for r in file_to_sample_rows
+        }
+
+        # Initialize every sample with zeros (preserves the contract that all
+        # samples are present in the result).
+        result: dict[int, dict] = {}
+        for r in sample_rows:
+            sid = int(r['sample_id'])
+            result[sid] = {
+                'spectra_files_count': 0,
+                'ident_files_count': 0,
+                'empty_ident_files_count': 0,
+                'identifications_count': 0,
+                'preferred_count': 0,
+                'coverage_known_count': 0,
+                'protein_ids_count': 0,
+            }
+
+        # Fill the trivial per-sample counters.
+        for r in sf_rows:
+            result[int(r['sample_id'])]['spectra_files_count'] = int(r['spectra_files_count'])
+        for r in if_rows:
+            result[int(r['sample_id'])]['ident_files_count'] = int(r['ident_files_count'])
+        for r in prot_rows:
+            result[int(r['sample_id'])]['protein_ids_count'] = int(r['protein_ids_count'])
+
+        # Collapse ident metrics from ident_file_id → sample_id, and count
+        # empty ident files (those whose id is absent from `identification`).
+        # An ident_file is "empty" iff it has no rows in `identification` —
+        # i.e. its id is not a key in ident_metrics_by_file.
+        empty_by_sample: dict[int, int] = {}
+        for fid, sid in file_to_sample.items():
+            stats = result.get(sid)
+            if stats is None:
+                # Orphan: sample was deleted but ident_file left dangling.
+                # Should not happen due to ON DELETE CASCADE, but stay safe.
+                continue
+            metrics = ident_metrics_by_file.get(fid)
+            if metrics is None:
+                empty_by_sample[sid] = empty_by_sample.get(sid, 0) + 1
+            else:
+                stats['identifications_count'] += metrics['identifications_count']
+                stats['preferred_count'] += metrics['preferred_count']
+                stats['coverage_known_count'] += metrics['coverage_known_count']
+
+        for sid, cnt in empty_by_sample.items():
+            result[sid]['empty_ident_files_count'] = cnt
+
+        return result
 
     async def get_all_cached_sample_stats(self) -> dict[int, dict]:
         """
@@ -379,6 +545,45 @@ class SampleMixin:
             )
         )
         # No save() here — caller decides when to save (batch or immediate)
+
+    async def upsert_sample_status_cache_batch(self, all_stats: dict[int, dict]) -> None:
+        """
+        Batch insert/replace cached stats for multiple samples in one executemany().
+
+        Args:
+            all_stats: dict mapping sample_id → stats dict (same shape as
+                       get_all_samples_stats() / get_sample_stats() result).
+        """
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc).isoformat()
+
+        rows = [
+            (
+                int(sid),
+                int(stats.get('spectra_files_count', 0)),
+                int(stats.get('ident_files_count', 0)),
+                int(stats.get('identifications_count', 0)),
+                int(stats.get('preferred_count', 0)),
+                int(stats.get('coverage_known_count', 0)),
+                int(stats.get('protein_ids_count', 0)),
+                int(stats.get('empty_ident_files_count', 0)),
+                now,
+            )
+            for sid, stats in all_stats.items()
+        ]
+        if not rows:
+            return
+
+        await self._executemany(
+            """INSERT OR REPLACE INTO sample_status_cache
+               (sample_id, spectra_files_count, ident_files_count,
+                identifications_count, preferred_count, coverage_known_count,
+                protein_ids_count, empty_ident_files_count, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            rows
+        )
+        # No save() here — caller decides when to save (consistent with
+        # upsert_sample_status_cache()).
 
     async def invalidate_sample_status_cache(self, sample_id: int) -> None:
         """Remove cached stats for a single sample (forces recalc on next refresh)."""

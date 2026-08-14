@@ -4,14 +4,14 @@ import numpy as np
 import pandas as pd
 from dasmixer.api.reporting._icons import Icons
 from scipy.stats import false_discovery_control, mannwhitneyu, ttest_ind
-
+import plotly.graph_objects as go
 from ..base import BaseReport
 from dasmixer.utils.logger import logger
 from smart_round import format_dataframe
 
 
 class VolcanoReport(BaseReport):
-    name = "Volcano Report (not conected)"
+    name = "Volcano Report (independent)"
     description = "Reporting FC/p-value changes and Volcano plots"
     icon = Icons.VOLCANO
     parameters = None
@@ -121,7 +121,15 @@ class VolcanoReport(BaseReport):
         fc_threshold_log2 = np.log2(fc_threshold)
         p_threshold = float(params['p_threshold'])
 
-        df = await self.get_data(params['lfq_type'], all_subsets)
+        lfq_value = params.get('lfq', ('emPAI', 'rel_value'))
+        if isinstance(lfq_value, (tuple, list)) and len(lfq_value) == 2:
+            lfq_type = lfq_value[0]
+            lfq_measure = lfq_value[1]
+        else:
+            lfq_type = str(lfq_value)
+            lfq_measure = 'rel_value'
+
+        df = await self.get_data(lfq_type, all_subsets)
         subset_lenghts_df = df[['subset', 'sample']].drop_duplicates(ignore_index=True).groupby('subset').count().reset_index(names='subset')
         logger.debug(subset_lenghts_df)
         subset_lenghts = {}
@@ -145,7 +153,7 @@ class VolcanoReport(BaseReport):
         figure_data = []
 
         for protein in df['protein_id'].unique():
-            ctrl_values = df.query("protein_id==@protein & subset==@control_subset")['rel_value']
+            ctrl_values = df.query("protein_id==@protein & subset==@control_subset")[lfq_measure]
             if len(ctrl_values) == 0:
                 continue
             logger.debug(f"{protein} {ctrl_values}")
@@ -154,7 +162,7 @@ class VolcanoReport(BaseReport):
             fc_values = []
             samples_no = []
             for subset in exptl_subsets:
-                exptl_values = df.query("protein_id==@protein & subset==@subset")['rel_value']
+                exptl_values = df.query("protein_id==@protein & subset==@subset")[lfq_measure]
                 if len(exptl_values) == 0:
                     continue
                 pval = self.get_pval(ctrl_values, exptl_values, criteria)

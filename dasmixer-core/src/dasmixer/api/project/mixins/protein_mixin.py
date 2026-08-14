@@ -319,7 +319,8 @@ class ProteinMixin:
                 - protein_identification_id: int
                 - algorithm: str ('emPAI', 'iBAQ', 'NSAF', 'Top3')
                 - rel_value: float
-                - abs_value: float | None
+                - abs_value_mol: float | None
+                - abs_value_gl: float | None
         """
         rows_to_insert = []
         
@@ -328,14 +329,15 @@ class ProteinMixin:
                 int(row['protein_identification_id']),
                 row['algorithm'],
                 float(row['rel_value']) if row.get('rel_value') is not None else None,
-                float(row['abs_value']) if row.get('abs_value') is not None else None
+                float(row['abs_value_mol']) if row.get('abs_value_mol') is not None else None,
+                float(row['abs_value_gl']) if row.get('abs_value_gl') is not None else None
             ))
         
         if rows_to_insert:
             await self._executemany(
                 """INSERT INTO protein_quantification_result 
-                   (protein_identification_id, algorithm, rel_value, abs_value)
-                   VALUES (?, ?, ?, ?)""",
+                   (protein_identification_id, algorithm, rel_value, abs_value_mol, abs_value_gl)
+                   VALUES (?, ?, ?, ?, ?)""",
                 rows_to_insert
             )
             await self.save()
@@ -373,13 +375,16 @@ class ProteinMixin:
                 sb.name as subset,
                 i.protein_id,
                 p.fasta_name,
+                p.name as protein_name,
+                p.gene as gene,
                 i.peptide_count,
                 i.uq_evidence_count,
                 i.coverage,
                 i.intensity_sum,
                 q.algorithm,
                 q.rel_value,
-                q.abs_value
+                q.abs_value_mol,
+                q.abs_value_gl
             from
                 protein_quantification_result as q
                 left join protein_identification_result as i on q.protein_identification_id = i.id
@@ -549,9 +554,17 @@ class ProteinMixin:
                 pir.coverage AS coverage_percent,
                 pir.intensity_sum,
                 pqr_empai.rel_value AS EmPAI,
+                pqr_empai.abs_value_mol AS EmPAI_abs_mol,
+                pqr_empai.abs_value_gl AS EmPAI_abs_gl,
                 pqr_ibaq.rel_value AS iBAQ,
+                pqr_ibaq.abs_value_mol AS iBAQ_abs_mol,
+                pqr_ibaq.abs_value_gl AS iBAQ_abs_gl,
                 pqr_nsaf.rel_value AS NSAF,
-                pqr_top3.rel_value AS Top3
+                pqr_nsaf.abs_value_mol AS NSAF_abs_mol,
+                pqr_nsaf.abs_value_gl AS NSAF_abs_gl,
+                pqr_top3.rel_value AS Top3,
+                pqr_top3.abs_value_mol AS Top3_abs_mol,
+                pqr_top3.abs_value_gl AS Top3_abs_gl
             FROM protein_identification_result pir
             JOIN sample s ON pir.sample_id = s.id
             LEFT JOIN subset sub ON s.subset_id = sub.id
@@ -830,3 +843,24 @@ class ProteinMixin:
         """, (int(sample_id),))
         await self.save()
         logger.info(f"Cleared protein quantifications for sample_id={sample_id}")
+
+    async def clear_protein_quantifications_for_sample_and_algorithm(
+        self, sample_id: int, algorithm: str
+    ) -> None:
+        """
+        Удаляет записи protein_quantification_result для конкретного образца и алгоритма.
+        Оставляет записи для других алгоритмов нетронутыми.
+
+        Args:
+            sample_id: ID образца
+            algorithm: Название алгоритма ('emPAI', 'iBAQ', 'NSAF', 'Top3')
+        """
+        await self._execute("""
+            DELETE FROM protein_quantification_result
+            WHERE protein_identification_id IN (
+                SELECT id FROM protein_identification_result WHERE sample_id = ?
+            )
+            AND algorithm = ?
+        """, (int(sample_id), algorithm))
+        await self.save()
+        logger.info(f"Cleared {algorithm} quantifications for sample_id={sample_id}")

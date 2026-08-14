@@ -18,18 +18,11 @@ def _empty_stats() -> dict:
     }
 
 
-def _build_sample_header(
-    sample: Sample,
-    stats: dict,
-    tools_count: int,
-    min_proteins: int,
-    min_idents: int,
-) -> ft.Control:
+def compute_sample_status(stats: dict, tools_count: int, min_proteins: int, min_idents: int) -> str:
+    """Return 'OK' | 'WARNING' | 'ERROR' for a sample given its stats and thresholds."""
     sf_count = stats.get('spectra_files_count', 0)
     if_count = stats.get('ident_files_count', 0)
     idents = stats.get('identifications_count', 0)
-    preferred = stats.get('preferred_count', 0)
-    coverage = stats.get('coverage_known_count', 0)
     proteins = stats.get('protein_ids_count', 0)
     empty_if = stats.get('empty_ident_files_count', 0)
 
@@ -41,11 +34,42 @@ def _build_sample_header(
     proteins_ok = (proteins == 0) or (proteins >= min_proteins)
 
     if not has_spectra or (has_spectra and not has_ident):
-        marker_icon, marker_color = ft.Icons.ERROR_OUTLINE_OUTLINED, ft.Colors.RED_600
+        return 'ERROR'
     elif has_spectra and has_ident and ident_ok and idents_ok and proteins_ok and empty_if == 0:
+        return 'OK'
+    else:
+        return 'WARNING'
+
+
+def _build_sample_header(
+    sample: Sample,
+    stats: dict,
+    tools_count: int,
+    min_proteins: int,
+    min_idents: int,
+    any_has_additionals: bool = False,
+) -> ft.Control:
+    sf_count = stats.get('spectra_files_count', 0)
+    if_count = stats.get('ident_files_count', 0)
+    idents = stats.get('identifications_count', 0)
+    preferred = stats.get('preferred_count', 0)
+    coverage = stats.get('coverage_known_count', 0)
+    proteins = stats.get('protein_ids_count', 0)
+    empty_if = stats.get('empty_ident_files_count', 0)
+
+    status = compute_sample_status(stats, tools_count, min_proteins, min_idents)
+    if status == 'ERROR':
+        marker_icon, marker_color = ft.Icons.ERROR_OUTLINE_OUTLINED, ft.Colors.RED_600
+    elif status == 'OK':
         marker_icon, marker_color = ft.Icons.CHECK_CIRCLE_OUTLINE_OUTLINED, ft.Colors.GREEN_600
     else:
         marker_icon, marker_color = ft.Icons.WARNING_AMBER_OUTLINED, ft.Colors.AMBER_600
+
+    has_ident = if_count > 0
+    expected_if = tools_count * sf_count if sf_count > 0 else 0
+    ident_ok = (expected_if == 0) or (if_count == expected_if)
+    idents_ok = idents >= min_idents
+    proteins_ok = (proteins == 0) or (proteins >= min_proteins)
 
     controls: list[ft.Control] = [ft.Icon(marker_icon, color=marker_color, size=20)]
     if sample.outlier:
@@ -72,6 +96,15 @@ def _build_sample_header(
             tooltip=ft.Tooltip(message=f"{empty_if} identification file(s) have zero identifications"),
         ))
 
+    # Additionals indicator
+    additionals = sample.additions
+    has_additionals = bool(additionals)
+    add_symbol = "☑" if has_additionals else "☐"
+    add_color = ft.Colors.GREY_800
+    if any_has_additionals and not has_additionals:
+        add_color = ft.Colors.AMBER_600  # warning: others have, this one doesn't
+    controls.append(ft.Text(f"Add: {add_symbol}", size=11, color=add_color))
+
     return ft.Row(controls, spacing=6, wrap=False)
 
 
@@ -87,6 +120,7 @@ class SampleViewPanel(ft.Container):
         min_idents: int,
         on_action: Callable,
         on_selection_changed: Callable[[int, bool], None] | None = None,
+        any_has_additionals: bool = False,
     ):
         super().__init__()
         self._sample = sample
@@ -96,12 +130,18 @@ class SampleViewPanel(ft.Container):
         self._min_idents = min_idents
         self._on_action = on_action
         self._on_selection_changed = on_selection_changed
+        self._any_has_additionals = any_has_additionals
 
         self._checkbox = ft.Checkbox(
             value=False,
             on_change=self._on_checkbox_change,
         )
         self._expansion_panel: ft.ExpansionPanel | None = None
+
+        # Lazy loading state
+        self._body_cache: ft.Control | None = None
+        self._detail_cache: list[dict] | None = None
+        self._is_expanded: bool = False
 
     @property
     def sample_id(self) -> int:
@@ -121,7 +161,7 @@ class SampleViewPanel(ft.Container):
             self._on_selection_changed(self.sample_id, self._checkbox.value)
 
     async def build(self) -> ft.ExpansionPanel:
-        """Build the ExpansionPanel for this sample."""
+        """Build the ExpansionPanel for this sample (header only, body loaded lazily)."""
         header_row = ft.Row(
             [self._checkbox],
             spacing=4,
@@ -131,14 +171,14 @@ class SampleViewPanel(ft.Container):
             _build_sample_header(
                 self._sample, self._stats,
                 self._tools_count, self._min_proteins, self._min_idents,
+                self._any_has_additionals,
             )
         )
-        body = await self._build_body()
 
         self._expansion_panel = ft.ExpansionPanel(
             header=ft.ListTile(title=header_row),
             content=ft.Container(
-                content=body,
+                content=self._collapsed_placeholder(),
                 padding=ft.padding.only(left=16, right=16, bottom=16),
             ),
             expanded=False,
@@ -146,14 +186,52 @@ class SampleViewPanel(ft.Container):
         )
         return self._expansion_panel
 
-    def update_stats(self, stats: dict, min_proteins: int, min_idents: int) -> None:
+    def update_stats(self, stats: dict, min_proteins: int, min_idents: int, any_has_additionals: bool = False) -> None:
         """Update statistics and thresholds for the panel."""
         self._stats = stats
         self._min_proteins = min_proteins
         self._min_idents = min_idents
+        self._any_has_additionals = any_has_additionals
+
+    def _collapsed_placeholder(self) -> ft.Control:
+        """Lightweight placeholder shown while the panel is collapsed."""
+        return ft.Container(height=0)
+
+    async def on_expand(self) -> None:
+        """Called by ManageSamplesView when this panel becomes expanded.
+        Builds the body lazily, using cached detail data if available."""
+        if self._is_expanded:
+            return
+        self._is_expanded = True
+        if self._body_cache is None:
+            self._body_cache = await self._build_body()
+        self._expansion_panel.content.content = self._body_cache
+        self._expansion_panel.expanded = True
+        if self._expansion_panel.page:
+            self._expansion_panel.update()
+
+    def on_collapse(self) -> None:
+        """Called by ManageSamplesView when this panel becomes collapsed.
+        Removes the body controls from the Flet tree while keeping
+        self._body_cache / self._detail_cache in memory for instant reopen."""
+        if not self._is_expanded:
+            return
+        self._is_expanded = False
+        self._expansion_panel.content.content = self._collapsed_placeholder()
+        self._expansion_panel.expanded = False
+        if self._expansion_panel.page:
+            self._expansion_panel.update()
+
+    def invalidate_detail_cache(self) -> None:
+        """Call after any operation that changes this sample's file tree,
+        so the next expand re-fetches fresh detail data."""
+        self._detail_cache = None
+        self._body_cache = None
 
     async def _build_body(self) -> ft.Control:
-        detail = await self._on_action('get_detail', self._sample.id)
+        if self._detail_cache is None:
+            self._detail_cache = await self._on_action('get_detail', self._sample.id)
+        detail = self._detail_cache
         body_controls: list[ft.Control] = []
 
         if detail:
