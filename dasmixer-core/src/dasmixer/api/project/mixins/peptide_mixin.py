@@ -250,7 +250,10 @@ class PeptideMixin:
         max_ppm: float | None = None,
         min_score: float | None = None,
         protein_id: str | None = None,
-        gene: str | None = None
+        gene: str | None = None,
+        min_quality: float | None = None,
+        has_ptm: str | None = None,
+        has_substitution: str | None = None
     ) -> tuple[list[str], list]:
         """
         Build WHERE conditions and parameters for peptide queries.
@@ -340,7 +343,26 @@ class PeptideMixin:
         if gene is not None:
             conditions.append("mp.gene LIKE ?")
             params.append(f"%{gene}%")
-        
+
+        # Min Quality
+        mq = min_quality
+        if mq is not None:
+            conditions.append("(id.quality IS NOT NULL AND id.quality >= ?)")
+            params.append(float(mq))
+
+        # Has PTM (values: 'Yes' | 'No'; missing/'All' → no filter)
+        if has_ptm == 'Yes':
+            conditions.append("id.has_ptm = 1")
+        elif has_ptm == 'No':
+            # не имеет PTM = NULL (не обсчитано) либо 0
+            conditions.append("(id.has_ptm IS NULL OR id.has_ptm = 0)")
+
+        # Has AA Substitution (peptide_match.substitution)
+        if has_substitution == 'Yes':
+            conditions.append("mp.substitution = 1")
+        elif has_substitution == 'No':
+            conditions.append("mp.substitution = 0")
+
         return conditions, params
     
     async def count_joined_peptide_data(
@@ -363,7 +385,10 @@ class PeptideMixin:
         tool: str | None = None,
         tool_id: int | None = None,
         protein_id: str | None = None,
-        gene: str | None = None
+        gene: str | None = None,
+        min_quality: float | None = None,
+        has_ptm: str | None = None,
+        has_substitution: str | None = None
     ) -> int:
         """
         Count joined peptide data with optional filtering.
@@ -398,10 +423,12 @@ class PeptideMixin:
                     i.canonical_sequence, 
                     i.ppm,
                     i.score,
-                    i.is_preferred 
+                    i.is_preferred,
+                    i.quality,
+                    i.has_ptm
                  FROM identification i, tool t 
                  WHERE t.id = i.tool_id) AS id 
-                ON id.spectre_id = s.id
+                 ON id.spectre_id = s.id
             LEFT JOIN
                 (SELECT 
                     m.matched_sequence, 
@@ -410,9 +437,10 @@ class PeptideMixin:
                     m.identification_id, 
                     m.unique_evidence,
                     m.identity,
+                    m.substitution,
                     p.gene
                  FROM peptide_match m, protein p 
-                 WHERE p.id = m.protein_id) AS mp 
+                 WHERE p.id = m.protein_id) AS mp
                 ON mp.identification_id = id.identification_id
             WHERE 1=1
         """
@@ -437,7 +465,10 @@ class PeptideMixin:
             min_score=min_score,
             max_ppm=max_ppm,
             protein_id=protein_id,
-            gene=gene
+            gene=gene,
+            min_quality=min_quality,
+            has_ptm=has_ptm,
+            has_substitution=has_substitution
 
         )
         
@@ -470,6 +501,9 @@ class PeptideMixin:
         protein_id: str | None = None,
         gene: str | None = None,
         max_ppm: float | None = None,
+        min_quality: float | None = None,
+        has_ptm: str | None = None,
+        has_substitution: str | None = None,
         limit: int | None = None,
         offset: int = 0
     ) -> pd.DataFrame:
@@ -500,20 +534,25 @@ class PeptideMixin:
         Returns:
             DataFrame with columns:
                 - sample, subset, sample_id, subset_id
-                - seq_no, scans, charge, rt, pepmass, intensity
+                - seq_no, scans, charge, rt, pepmass, intensity, peaks_count
                 - tool, tool_id, identification_id
                 - sequence, canonical_sequence, ppm, is_preferred
+                - intensity_coverage, ions_matched, ion_match_type, top_peaks_covered
+                - override_charge, source_sequence, isotope_offset, theor_mass,
+                  quality, override_pepmass, has_ptm
                 - matched_sequence, matched_ppm, protein_id, unique_evidence, gene
         """
         # Base query
         query = """
              SELECT
                 sb.sample, sb.subset, sb.sample_id, sb.subset_id,
-                s.id as spectre_id, s.seq_no, s.scans, s.charge, s.rt, s.pepmass, s.intensity,
+                s.id as spectre_id, s.seq_no, s.scans, s.charge, s.rt, s.pepmass, s.intensity, s.peaks_count AS peaks_count,
                 id.tool, id.tool_id, id.identification_id, id.sequence,
                 id.canonical_sequence, id.ppm, id.score, id.is_preferred,
                 id.ions_matched, id.ion_match_type, id.top_peaks_covered,
                 id.intensity_coverage,
+                id.override_charge, id.source_sequence, id.isotope_offset,
+                id.theor_mass, id.quality, id.override_pepmass, id.has_ptm,
                 mp.matched_sequence, mp.matched_ppm, mp.protein_id, mp.identity,
                 mp.unique_evidence, mp.gene,
                 mp.matched_peaks, mp.matched_top_peaks, mp.matched_ion_type,
@@ -544,7 +583,14 @@ class PeptideMixin:
                     i.intensity_coverage,
                     i.ions_matched,
                     i.ion_match_type,
-                    i.top_peaks_covered
+                    i.top_peaks_covered,
+                    i.override_charge,
+                    i.source_sequence,
+                    i.isotope_offset,
+                    i.theor_mass,
+                    i.quality,
+                    i.override_pepmass,
+                    i.has_ptm
                  FROM identification i, tool t
                  WHERE t.id = i.tool_id) AS id
                 ON id.spectre_id = s.id
@@ -587,7 +633,10 @@ class PeptideMixin:
             identification_id=identification_id,
             protein_id=protein_id,
             gene=gene,
-            max_ppm=max_ppm
+            max_ppm=max_ppm,
+            min_quality=min_quality,
+            has_ptm=has_ptm,
+            has_substitution=has_substitution
         )
         
         # Add conditions to query

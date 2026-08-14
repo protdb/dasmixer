@@ -95,12 +95,18 @@ class IonCoverageAction(BaseAction):
                 max_ptm = int(max_ptm_ctrl.value) if max_ptm_ctrl else 5
             except (ValueError, AttributeError):
                 max_ptm = 5
+            min_quality_ctrl = controls.get('min_quality')
+            try:
+                quality_threshold = float(min_quality_ctrl.value) if min_quality_ctrl else 0.25
+            except (ValueError, AttributeError):
+                quality_threshold = 0.25
             trust_ppm = bool(controls.get('trust_ppm').value) if controls.get('trust_ppm') else False
             recalculate_ptms = bool(controls.get('recalculate_ptms').value) if controls.get('recalculate_ptms') else True
             unallocated_only = not recalculate_ptms
             tool_settings_map[tid] = {
                 'ptm_list': ptm_list,
                 'max_ptm': max_ptm,
+                'quality_threshold': quality_threshold,
                 'trust_ppm': trust_ppm,
                 'unallocated_only': unallocated_only,
             }
@@ -136,7 +142,7 @@ class IonCoverageAction(BaseAction):
 
         async def _compute_batch(
             loop, executor, worker_batch, ptm_list, max_ptm,
-            trust_ppm=False, unallocated_only=False,
+            trust_ppm=False, unallocated_only=False, quality_threshold=0.25,
         ) -> list:
             """Submit worker_batch to the process pool and gather results."""
             sub_batches = [
@@ -161,6 +167,7 @@ class IonCoverageAction(BaseAction):
                     max_ptm_sites,
                     trust_ppm,
                     unallocated_only,
+                    quality_threshold,
                 )
                 for sub_batch in sub_batches
             ]
@@ -206,6 +213,7 @@ class IonCoverageAction(BaseAction):
                         loop, executor, worker_batch, ptm_list, max_ptm,
                         trust_ppm=t_settings.get('trust_ppm', False),
                         unallocated_only=t_settings.get('unallocated_only', False),
+                        quality_threshold=t_settings.get('quality_threshold', 0.25),
                     )
                     del worker_batch
 
@@ -255,6 +263,7 @@ class IonCoverageAction(BaseAction):
                             loop, executor, next_worker_batch, ptm_list, max_ptm,
                             trust_ppm=t_settings.get('trust_ppm', False),
                             unallocated_only=t_settings.get('unallocated_only', False),
+                            quality_threshold=t_settings.get('quality_threshold', 0.25),
                         )
                         del next_worker_batch
 

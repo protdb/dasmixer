@@ -424,6 +424,7 @@ class SeqFixer:
         sequence: str,
         pepmass: float,
         mgf_charge: int | None,
+        allow_ptm: bool = True,
     ) -> SeqResults:
         """
         Scenario 1: precursor + identified ProForma sequence.
@@ -431,16 +432,34 @@ class SeqFixer:
         Pipeline
         --------
         1. Direct hit with mgf_charge (if provided).
-        2. Charge override scan in override_charges range.
-        3. Isotope offset × PTM enumeration.
+        2. Combined charge × isotope-offset scan for the *original* sequence
+           (existing modifications, if any, are kept fixed — no new PTM is
+           added at this stage).  This always yields a best-effort fallback
+           candidate — the (charge, offset) combination with the lowest
+           abs_ppm across the whole grid — even when nothing passes
+           target_ppm.
+        3. Isotope offset × new-PTM enumeration.  Only runs when PTM
+           re-enumeration is allowed (``self.unallocated_only=False`` and
+           ``allow_ptm=True``); when disabled, no PTM — internal *or*
+           terminal — is ever added, and only Step 2's charge/offset
+           correction applies.
+
+        All candidates gathered in steps 2–3 that pass ``target_ppm`` are
+        returned, plus the guaranteed best-effort fallback from step 2
+        (appended last, de-duplicated against already-collected candidates).
+        Downstream callers (see ``identification_processor.process_single_ident``)
+        score every returned candidate via ``match_predictions`` and select
+        the one with the best Quality (ties broken by lowest abs_ppm).
 
         Returns
         -------
         SeqResults
             original — SeqMatchParams for the bare sequence / mgf_charge
                        (no PTM correction applied, isotope_offset=None).
-            override — list of alternative SeqMatchParams that passed
-                       target_ppm, or None if none were found.
+            override — list of candidate SeqMatchParams (threshold-passing
+                       plus the guaranteed best-effort fallback), or None
+                       only when step 1's direct hit already satisfied
+                       target_ppm.
         """
         split, params, canonical = _split_and_strip(sequence)
         canonical_split, canonical_params = parse(canonical)  # mods-free split
@@ -450,36 +469,51 @@ class SeqFixer:
 
         # ── Step 1: direct hit ────────────────────────────────────────────────
         if mgf_charge is not None and original.abs_ppm is not None and original.abs_ppm <= self.target_ppm:
-            return SeqResults(original=original, override=None)
+            return SeqResults(original=original, original_ppm=original.ppm, override=None)
 
-        # ── Step 2: charge override (no PTM, no isotope correction) ──────────
-        charge_hits, best_charge = self._scan_charges(
+        # ── Step 2: combined charge × isotope-offset scan (original sequence,
+        #    existing modifications kept fixed — no new PTM added) ───────────
+        orig_hits, orig_best = self._scan_charge_and_offset(
             sequence=sequence,
             pepmass=pepmass,
             neutral_mass=original.seq_neutral_mass,
         )
-        if charge_hits:
-            return SeqResults(original=original, override=charge_hits)
-
-        # ── Step 3: isotope offset + PTM enumeration ──────────────────────────
-        # Use best_charge from charge scan (minimum abs_ppm) as the working
-        # charge; this is safe even when mgf_charge is None.
-        if self.unallocated_only:
-            ptm_sites = []  # do not enumerate new attach_to-based positions
-        else:
-            ptm_sites = _collect_ptm_sites(canonical_split, self.ptm_list)
-        ptm_hits = self._scan_offsets_and_ptms(
-            canonical_split=canonical_split,
-            canonical_params=canonical_params,
-            ptm_sites=ptm_sites,
-            pepmass=pepmass,
-            charge=best_charge,
+        best_charge = orig_best.charge if orig_best is not None else (
+            mgf_charge if mgf_charge is not None else self.override_charges[0]
         )
-        if ptm_hits:
-            return SeqResults(original=original, override=ptm_hits)
 
-        # Nothing found — return bare original with no overrides
-        return SeqResults(original=original, override=None)
+        # ── Step 3: isotope offset + new-PTM enumeration ──────────────────────
+        # Skipped entirely (no internal AND no terminal PTM candidates) when
+        # PTM re-enumeration is disabled — see unallocated_only / allow_ptm.
+        ptm_hits: list[SeqMatchParams] = []
+        if not (self.unallocated_only or not allow_ptm):
+            ptm_sites = _collect_ptm_sites(canonical_split, self.ptm_list)
+            scanned = self._scan_offsets_and_ptms(
+                canonical_split=canonical_split,
+                canonical_params=canonical_params,
+                ptm_sites=ptm_sites,
+                pepmass=pepmass,
+                charge=best_charge,
+            )
+            if scanned:
+                ptm_hits = scanned
+
+        # ── Combine: all threshold-passing candidates + guaranteed
+        #    best-effort fallback for the original sequence ─────────────────
+        combined: list[SeqMatchParams] = list(orig_hits) + list(ptm_hits)
+        if orig_best is not None and not any(
+            c.sequence == orig_best.sequence
+            and c.charge == orig_best.charge
+            and c.isotope_offset == orig_best.isotope_offset
+            for c in combined
+        ):
+            combined.append(orig_best)
+
+        return SeqResults(
+            original=original,
+            original_ppm=original.ppm,
+            override=combined if combined else None,
+        )
 
     def get_matched_ppm(
         self,
@@ -551,7 +585,7 @@ class SeqFixer:
 
         # ── Step 1: direct hit ────────────────────────────────────────────────
         if original.abs_ppm is not None and original.abs_ppm <= self.target_ppm:
-            return SeqResults(original=original, override=None)
+            return SeqResults(original=original, original_ppm=original.ppm, override=None)
 
         # ── Step 2: charge override ───────────────────────────────────────────
         charge_hits, best_charge = self._scan_charges(
@@ -560,7 +594,7 @@ class SeqFixer:
             neutral_mass=neutral_matched,
         )
         if charge_hits:
-            return SeqResults(original=original, override=charge_hits)
+            return SeqResults(original=original, original_ppm=original.ppm, override=charge_hits)
 
         # ── Step 3: isotope offset + PTM enumeration ──────────────────────────
         ptm_sites = _collect_ptm_sites(matched_split, extended_ptm_list)
@@ -573,9 +607,9 @@ class SeqFixer:
             extended_ptm_list=extended_ptm_list,
         )
         if ptm_hits:
-            return SeqResults(original=original, override=ptm_hits)
+            return SeqResults(original=original, original_ppm=original.ppm, override=ptm_hits)
 
-        return SeqResults(original=original, override=None)
+        return SeqResults(original=original, original_ppm=original.ppm, override=None)
 
     # ── private helpers ──────────────────────────────────────────────────────
 
@@ -643,6 +677,58 @@ class SeqFixer:
                 ))
 
         return (hits if hits else None), best_charge
+
+    def _scan_charge_and_offset(
+        self,
+        sequence: str,
+        pepmass: float,
+        neutral_mass: float,
+    ) -> tuple[list[SeqMatchParams], SeqMatchParams | None]:
+        """
+        Combined charge × isotope-offset grid scan for a *fixed* sequence
+        (no new PTM added — existing modifications, if any, stay as-is).
+
+        Iterates every (charge, offset) combination in
+        override_charges × [0 … max_isotope_offset], applying the isotope
+        mass correction to the experimental pepmass at each offset.
+
+        Returns
+        -------
+        hits : list[SeqMatchParams]
+            All (charge, offset) combinations whose abs_ppm <= target_ppm.
+        best : SeqMatchParams | None
+            The single best-effort candidate (lowest abs_ppm) across the
+            entire grid — guaranteed non-None whenever the grid is
+            non-empty (override_charges always has at least one charge).
+            Returned separately so callers can use it as a fallback even
+            when it does not pass target_ppm.
+        """
+        min_z, max_z = self.override_charges
+        hits: list[SeqMatchParams] = []
+        best: SeqMatchParams | None = None
+        best_abs_ppm = float("inf")
+
+        for z in range(min_z, max_z + 1):
+            for offset in range(0, self.max_isotope_offset + 1):
+                corrected = pepmass - offset * self.isotope_step / z
+                ppm = get_ppm_for_masses(corrected, neutral_mass, z)
+                abs_ppm = abs(ppm)
+                candidate = SeqMatchParams(
+                    sequence=sequence,
+                    seq_neutral_mass=neutral_mass,
+                    pepmass=corrected,
+                    charge=z,
+                    ppm=ppm,
+                    abs_ppm=abs_ppm,
+                    isotope_offset=offset,
+                )
+                if abs_ppm < best_abs_ppm:
+                    best_abs_ppm = abs_ppm
+                    best = candidate
+                if abs_ppm <= self.target_ppm:
+                    hits.append(candidate)
+
+        return hits, best
 
     def _scan_offsets_and_ptms(
         self,

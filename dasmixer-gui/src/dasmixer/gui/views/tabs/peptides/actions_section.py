@@ -63,6 +63,16 @@ class ActionsSection(BaseSection):
             on_click=lambda e: self.page.run_task(self._save_all_settings, e),
         )
 
+        self.clear_calculations_btn = ft.ElevatedButton(
+            content=ft.Text("Clear Calculations"),
+            icon=ft.Icons.DELETE_SWEEP,
+            on_click=lambda e: self.page.run_task(self._run_clear_calculations, e),
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.RED_700,
+                color=ft.Colors.WHITE,
+            ),
+        )
+
         return ft.Column(
             [
                 ft.Text("Actions", size=18, weight=ft.FontWeight.BOLD),
@@ -78,7 +88,7 @@ class ActionsSection(BaseSection):
                 self.calc_coverage_btn,
                 self.match_proteins_btn,
                 ft.Divider(),
-                self.save_settings_btn,
+                ft.Row([self.save_settings_btn, self.clear_calculations_btn], spacing=10),
             ],
             spacing=8,
         )
@@ -159,6 +169,78 @@ class ActionsSection(BaseSection):
             import traceback
             traceback.print_exc()
             self.show_error(f"Error saving settings: {ex}")
+
+    async def _run_clear_calculations(self, e):
+        """Open confirmation dialog and clear all calculations globally."""
+        try:
+            checkbox = ft.Checkbox(label="I am sure", value=False)
+
+            confirm_btn = ft.ElevatedButton(
+                content=ft.Text("Confirm"),
+                icon=ft.Icons.DELETE_SWEEP,
+                disabled=True,
+            )
+
+            def on_checkbox_change(event):
+                confirm_btn.disabled = not checkbox.value
+                dlg.update()
+
+            checkbox.on_change = on_checkbox_change
+
+            async def on_confirm(event):
+                dlg.open = False
+                self.page.update()
+                await self.project.clear_calculations()
+                await self.project.save()
+                self.show_success("Calculations cleared")
+                # Reload the peptide table if available
+                search_section = self.parent_tab.sections.get('search')
+                if search_section is not None and hasattr(search_section, 'table_view'):
+                    table_view = search_section.table_view
+                    table_view.current_page = 0
+                    await table_view._load_table_data()
+
+            def on_cancel(event):
+                dlg.open = False
+                self.page.update()
+
+            confirm_btn.on_click = lambda ev: self.page.run_task(on_confirm, ev)
+
+            dlg = ft.AlertDialog(
+                modal=True,
+                title=ft.Text("Clear Calculations"),
+                content=ft.Column([
+                    ft.Text(
+                        "This will reset all ion-coverage, PPM correction, quality, and PTM results "
+                        "for EVERY identification in the project:\n\n"
+                        "- Sequences modified by SEQFixer (PTM/isotope/charge overrides) will be "
+                        "restored to their original imported form.\n"
+                        "- intensity_coverage, ions_matched, ion_match_type, top_peaks_covered, ppm, "
+                        "theor_mass, quality, override_pepmass, has_ptm, isotope_offset, "
+                        "override_charge and source_sequence will be cleared (NULL).\n"
+                        "- is_preferred flags will be reset to 0 for all spectra.\n\n"
+                        "Peptide-protein matches (peptide_match table) are NOT affected, but their "
+                        "derived metrics will become inconsistent until coverage is recalculated.\n\n"
+                        "This action cannot be undone. Confirm only if you intend to rerun the calculations.",
+                        size=12,
+                    ),
+                    checkbox,
+                ], tight=True, scroll=ft.ScrollMode.AUTO, width=480),
+                actions=[
+                    ft.TextButton("Cancel", on_click=on_cancel),
+                    confirm_btn,
+                ],
+                actions_alignment=ft.MainAxisAlignment.END,
+            )
+
+            self.page.overlay.append(dlg)
+            dlg.open = True
+            self.page.update()
+
+        except Exception as ex:
+            import traceback
+            traceback.print_exc()
+            self.show_error(f"Error: {ex}")
 
     # ------------------------------------------------------------------
     # Full workflow

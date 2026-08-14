@@ -96,9 +96,20 @@ def _get_worker_logger() -> logging.Logger:
 def _get_best_override(
     overrides: list[tuple[SeqMatchParams, MatchResult]], criteria: str
 ) -> tuple[SeqMatchParams, MatchResult]:
-    """Select the best override by primary criterion, then by abs_ppm."""
-    criteria = "intensity_percent"
-    overrides.sort(key=lambda row: (-getattr(row[1], criteria), row[0].abs_ppm))
+    """
+    Select the best candidate among all SeqFixer overrides.
+
+    Primary key: Quality (MatchResult.quality), descending — the candidate
+    whose theoretical fragments best explain the experimental spectrum wins,
+    independent of whether its PPM passed target_ppm.
+    Tie-break: abs_ppm, ascending — among equally-good-quality candidates,
+    the one with the smallest mass error wins.
+
+    The ``criteria`` parameter (legacy selection_criteria / seq_criteria)
+    is currently unused for candidate ranking; Quality-first selection
+    supersedes it per spec.
+    """
+    overrides.sort(key=lambda row: (-row[1].quality, row[0].abs_ppm))
     return overrides[0]
 
 
@@ -110,10 +121,12 @@ def process_single_ident(
     pepmass: float,
     mz_array,
     intensity_array,
+    canonical_sequence: str | None = None,
     mgf_charge: int | None = None,
     selection_criteria: str = "intensity_percent",
     trust_ppm: bool = False,
     existing_ppm: float | None = None,
+    quality_threshold: float = 0.25,
 ) -> dict:
     # ── Trust PPM branch: skip SeqFixer entirely if we trust the imported ppm ──
     if trust_ppm and existing_ppm is not None:
@@ -141,6 +154,9 @@ def process_single_ident(
             charges=fragment_charges,
             sequence=sequence,
         )
+        has_ptm_value = None
+        if canonical_sequence is not None:
+            has_ptm_value = 1 if sequence != canonical_sequence else 0
         return {
             "sequence": sequence,
             "ppm": existing_ppm,
@@ -151,65 +167,105 @@ def process_single_ident(
             "ions_matched": match_result.max_ion_matches,
             "ion_match_type": match_result.top_matched_ion_type,
             "top_peaks_covered": match_result.top10_intensity_matches,
+            "quality": match_result.quality,
+            "override_pepmass": None,
+            "has_ptm": has_ptm_value,
         }
 
-    seq_results = fixer.get_ppm(sequence, pepmass, mgf_charge)
-    if not seq_results.override:
+    # ── Pre-match on the original (imported) sequence — quality gate ──
+    # A high quality means the spectrum labelling is trustworthy, so a high
+    # precursor PPM is more likely an isotope offset than a missed PTM.  When
+    # quality >= threshold, PTM enumeration is skipped (charge/isotope only).
+    # Unlocalized ProForma '?' sequences cannot be meaningfully pre-matched,
+    # so they always run the full PTM path (allow_ptm=True).
+    pre_match: MatchResult | None = None
+    quality: float | None = None
+    if '?' in sequence:
+        allow_ptm = True
+    else:
+        pre_match = match_predictions(
+            params=params,
+            mz=mz_array,
+            intensity=intensity_array,
+            charges=fragment_charges,
+            sequence=sequence,
+        )
+        quality = pre_match.quality
+        allow_ptm = quality < quality_threshold
+
+    seq_results = fixer.get_ppm(sequence, pepmass, mgf_charge, allow_ptm=allow_ptm)
+    if '?' in sequence:
+        # Unlocalized modification position is resolved independently of the
+        # charge/offset/PTM candidates returned by SeqFixer — it disambiguates
+        # the placement of a modification already present in the imported
+        # sequence, it is not a "recalculation" of PTMs. NOTE: get_ppm() now
+        # always returns a guaranteed best-effort override candidate (see
+        # SeqFixer.get_ppm), so this branch must not rely on
+        # `seq_results.override` truthiness — it is keyed on '?' presence.
         ppm_result = seq_results.original
-        # Unlocalized modification (ProForma '?' notation): expand into positioned
-        # variants and pick the one with the best ion coverage.
-        if '?' in sequence:
-            positioned_variants = _expand_unlocalized(sequence, fixer.ptm_list)
-            best_seq = positioned_variants[0]
-            match_result = match_predictions(
+        positioned_variants = _expand_unlocalized(sequence, fixer.ptm_list)
+        best_seq = positioned_variants[0]
+        match_result = match_predictions(
+            params=params,
+            mz=mz_array,
+            intensity=intensity_array,
+            charges=fragment_charges,
+            sequence=best_seq,
+        )
+        for variant in positioned_variants[1:]:
+            candidate = match_predictions(
                 params=params,
                 mz=mz_array,
                 intensity=intensity_array,
                 charges=fragment_charges,
-                sequence=best_seq,
+                sequence=variant,
             )
-            for variant in positioned_variants[1:]:
-                candidate = match_predictions(
+            if candidate.intensity_percent > match_result.intensity_percent:
+                match_result = candidate
+                best_seq = variant
+        # Keep ppm/theor_mass from original (calculated correctly by pyteomics
+        # proforma), only update the sequence to the winning positioned variant.
+        ppm_result = SeqMatchParams(
+            sequence=best_seq,
+            seq_neutral_mass=ppm_result.seq_neutral_mass,
+            pepmass=ppm_result.pepmass,
+            charge=ppm_result.charge,
+            ppm=ppm_result.ppm,
+            abs_ppm=ppm_result.abs_ppm,
+            isotope_offset=ppm_result.isotope_offset,
+        )
+        quality = match_result.quality
+    elif not seq_results.override:
+        # Only reachable when Step 1's direct hit already satisfied
+        # target_ppm (get_ppm's only remaining override=None case).
+        ppm_result = seq_results.original
+        match_result = pre_match
+    else:
+        all_matches = []
+        for override in seq_results.override:
+            if pre_match is not None and override.sequence == sequence:
+                # Reuse the pre-match when the override kept the original sequence.
+                match_res = pre_match
+            else:
+                match_res = match_predictions(
                     params=params,
                     mz=mz_array,
                     intensity=intensity_array,
                     charges=fragment_charges,
-                    sequence=variant,
+                    sequence=override.sequence,
                 )
-                if candidate.intensity_percent > match_result.intensity_percent:
-                    match_result = candidate
-                    best_seq = variant
-            # Keep ppm/theor_mass from original (calculated correctly by pyteomics
-            # proforma), only update the sequence to the winning positioned variant.
-            ppm_result = SeqMatchParams(
-                sequence=best_seq,
-                seq_neutral_mass=ppm_result.seq_neutral_mass,
-                pepmass=ppm_result.pepmass,
-                charge=ppm_result.charge,
-                ppm=ppm_result.ppm,
-                abs_ppm=ppm_result.abs_ppm,
-                isotope_offset=ppm_result.isotope_offset,
-            )
-        else:
-            match_result = match_predictions(
-                params=params,
-                mz=mz_array,
-                intensity=intensity_array,
-                charges=fragment_charges,
-                sequence=sequence,
-            )
-    else:
-        all_matches = []
-        for override in seq_results.override:
-            match_res = match_predictions(
-                params=params,
-                mz=mz_array,
-                intensity=intensity_array,
-                charges=fragment_charges,
-                sequence=override.sequence,
-            )
             all_matches.append((override, match_res))
         ppm_result, match_result = _get_best_override(all_matches, criteria=selection_criteria)
+        quality = match_result.quality
+
+    # override_pepmass is only meaningful when an isotope offset was actually
+    # applied; otherwise it stays NULL.
+    override_pepmass_value = (
+        ppm_result.pepmass if ppm_result.isotope_offset else None
+    )
+    has_ptm_value = None
+    if canonical_sequence is not None:
+        has_ptm_value = 1 if ppm_result.sequence != canonical_sequence else 0
 
     return {
         "sequence": ppm_result.sequence,
@@ -221,6 +277,9 @@ def process_single_ident(
         "ions_matched": match_result.max_ion_matches,
         "ion_match_type": match_result.top_matched_ion_type,
         "top_peaks_covered": match_result.top10_intensity_matches,
+        "quality": quality,
+        "override_pepmass": override_pepmass_value,
+        "has_ptm": has_ptm_value,
     }
 
 
@@ -247,6 +306,7 @@ def process_identificatons_batch(
     max_ptm_sites: int = 10,
     trust_ppm: bool = False,
     unallocated_only: bool = False,
+    quality_threshold: float = 0.25,
 ) -> list[dict]:
     log = _get_worker_logger()
     log.info("=== batch START  size=%d  pid=%d ===", len(batch), os.getpid())
@@ -283,6 +343,7 @@ def process_identificatons_batch(
         charge = item.get("charge")
         mz_array = item.get("mz_array", [])
         intensity_array = item.get("intensity_array", [])
+        canonical_sequence = item.get("canonical_sequence")
 
         log.debug(
             "ENTER  ident_id=%s  spectre_id=%s  seq=%s  pepmass=%s  charge=%s  peaks=%d",
@@ -299,10 +360,12 @@ def process_identificatons_batch(
                 pepmass,
                 mz_array,
                 intensity_array,
+                canonical_sequence=canonical_sequence,
                 mgf_charge=charge,
                 selection_criteria=seq_criteria,
                 trust_ppm=trust_ppm,
                 existing_ppm=item.get('ppm'),
+                quality_threshold=quality_threshold,
             )
             elapsed = time.monotonic() - t0
             log.debug(
@@ -339,6 +402,9 @@ def process_identificatons_batch(
                 "ion_match_type": None,
                 "top_peaks_covered": None,
                 "isotope_offset": None,
+                "quality": None,
+                "override_pepmass": None,
+                "has_ptm": None,
                 "source_sequence": sequence,
             })
 

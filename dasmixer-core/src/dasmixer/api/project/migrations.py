@@ -44,6 +44,14 @@ MIGRATIONS: list[dict] = [
             ALTER TABLE protein_quantification_result ADD COLUMN abs_value_gl REAL;
         """,
     },
+    {
+        "version": "0.7.1",
+        "sql": """
+            ALTER TABLE identification ADD COLUMN quality REAL;
+            ALTER TABLE identification ADD COLUMN override_pepmass REAL;
+            ALTER TABLE identification ADD COLUMN has_ptm INTEGER;
+        """,
+    },
 ]
 
 

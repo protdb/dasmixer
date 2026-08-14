@@ -217,7 +217,8 @@ class IdentificationMixin:
             spectre_peaks_count: int,
             ions_matched: int,
             top_peaks_covered: int,
-            canonical_length: tuple[int, int]
+            canonical_length: tuple[int, int],
+            min_quality: float | None = None
     ):
         """
         Special method for identification processing — returns candidates for
@@ -233,6 +234,10 @@ class IdentificationMixin:
             ions_matched: minimum matched ions count
             top_peaks_covered: minimum top-10 peaks covered count
             canonical_length: (min_len, max_len) tuple for canonical sequence length
+            min_quality: minimum identification quality (0..1). When provided,
+                         only identifications with quality >= min_quality are
+                         returned; NULL-quality rows are excluded. When None,
+                         no quality filter is applied.
         """
         query = """
             SELECT
@@ -262,7 +267,7 @@ class IdentificationMixin:
                 i.top_peaks_covered >= ?
         """
 
-        params = (
+        params = [
             int(spectra_file_id),
             int(tool_id),
             float(min_score),
@@ -273,9 +278,13 @@ class IdentificationMixin:
             int(spectre_peaks_count),
             int(ions_matched),
             int(top_peaks_covered),
-        )
+        ]
 
-        rows = await self._fetchall(query, params)
+        if min_quality is not None:
+            query += " AND i.quality IS NOT NULL AND i.quality >= ?"
+            params.append(float(min_quality))
+
+        rows = await self._fetchall(query, tuple(params))
         return pd.DataFrame(rows) if rows else pd.DataFrame()
 
     async def get_all_idents_for_preferred(
@@ -502,7 +511,7 @@ class IdentificationMixin:
         Keys recognised:
             id, ppm, theor_mass, override_charge,
             intensity_coverage, ions_matched, ion_match_type, top_peaks_covered,
-            source_sequence, isotope_offset
+            source_sequence, isotope_offset, quality, override_pepmass, has_ptm
         """
         query = """
             UPDATE identification
@@ -516,7 +525,10 @@ class IdentificationMixin:
                 ion_match_type = ?,
                 top_peaks_covered = ?,
                 source_sequence = ?,
-                isotope_offset = ?
+                isotope_offset = ?,
+                quality = ?,
+                override_pepmass = ?,
+                has_ptm = ?
             WHERE id = ?
         """
         params = []
@@ -537,9 +549,45 @@ class IdentificationMixin:
                 data_row.get('top_peaks_covered'),
                 source_sequence_value,
                 data_row.get('isotope_offset'),
+                data_row.get('quality'),
+                data_row.get('override_pepmass'),
+                data_row.get('has_ptm'),
                 data_row['id'],
             ))
         await self._executemany(query, params)
+
+    async def clear_calculations(self) -> None:
+        """
+        Глобальный сброс результатов расчёта покрытия/PPM/quality для всех
+        идентификаций проекта. Действия:
+
+        - где source_sequence не пусто → sequence восстанавливается из source_sequence;
+        - обнуляются (NULL): intensity_coverage, ions_matched, ion_match_type,
+          top_peaks_covered, override_charge, isotope_offset, ppm, theor_mass,
+          quality, override_pepmass, has_ptm, source_sequence;
+        - is_preferred → 0.
+
+        Таблица peptide_match НЕ затрагивается. Метод не вызывает save() —
+        вызывающая сторона должна сохранить проект.
+        """
+        query = """
+            UPDATE identification SET
+                sequence = COALESCE(source_sequence, sequence),
+                intensity_coverage = NULL,
+                ions_matched = NULL,
+                ion_match_type = NULL,
+                top_peaks_covered = NULL,
+                override_charge = NULL,
+                isotope_offset = NULL,
+                ppm = NULL,
+                theor_mass = NULL,
+                quality = NULL,
+                override_pepmass = NULL,
+                has_ptm = NULL,
+                source_sequence = NULL,
+                is_preferred = 0
+        """
+        await self._execute(query)
 
     async def get_identification_file_by_path(self, file_path: str) -> dict | None:
         """
