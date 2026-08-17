@@ -39,6 +39,8 @@ class AppConfig(BaseSettings):
     theme: str = "light"
     window_width: int = 1200
     window_height: int = 800
+    plot_aspect_ratio: str = "16:9"  # Plot aspect ratio: "1:1" | "4:3" | "2:3" | "16:9"
+    plot_view_mode: str = "Window"    # Interactive viewer mode: "Window" | "Browser"
 
     # Batch operation limits
     spectra_batch_size: int = 5000

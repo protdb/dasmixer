@@ -100,10 +100,41 @@ class SettingsView(ft.View):
             value=config.theme,
         )
 
+        # --- Plot aspect ratio ---
+        self._plot_aspect_dropdown = ft.Dropdown(
+            label="Plot aspect ratio",
+            width=200,
+            options=[
+                ft.DropdownOption(key="1:1", text="1:1 (Square)"),
+                ft.DropdownOption(key="4:3", text="4:3 (Classic)"),
+                ft.DropdownOption(key="2:3", text="2:3 (Portrait)"),
+                ft.DropdownOption(key="16:9", text="16:9 (Widescreen)"),
+            ],
+            value=config.plot_aspect_ratio,
+        )
+
+        # --- Plot view mode ---
+        self._plot_view_mode_dropdown = ft.Dropdown(
+            label="Plot and report view mode",
+            width=200,
+            options=[
+                ft.DropdownOption(key="Window", text="Window (pywebview)"),
+                ft.DropdownOption(key="Browser", text="Browser (default)"),
+            ],
+            value=config.plot_view_mode,
+        )
+
         theme_section = self._section(
             title="Appearance",
             subtitle=None,
-            content=ft.Row([self._theme_dropdown], spacing=10),
+            content=ft.Row(
+                [
+                    self._theme_dropdown,
+                    self._plot_aspect_dropdown,
+                    self._plot_view_mode_dropdown,
+                ],
+                spacing=10,
+            ),
         )
 
         # --- Batch limits ---
@@ -447,6 +478,8 @@ class SettingsView(ft.View):
 
         # Apply
         config.theme = new_theme
+        config.plot_aspect_ratio = self._plot_aspect_dropdown.value or "16:9"
+        config.plot_view_mode = self._plot_view_mode_dropdown.value or "Window"
         for field_name, val in batch_values.items():
             setattr(config, field_name, val)
         config.default_colors = new_colors

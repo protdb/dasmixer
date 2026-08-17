@@ -5,13 +5,47 @@ import plotly.graph_objects as go
 import json
 import multiprocessing
 
+from dasmixer.api.config import config
 from dasmixer.api.project.project import Project
 from dasmixer.gui.components.plotly_viewer import PlotlyViewer, show_webview, render_png_async
 from dasmixer.utils import logger
 from dasmixer.gui.utils import show_snack
 
-_PLOT_WIDTH = 1100
-_PLOT_HEIGHT = 700
+WINDOW_HEAD_GAP = 200
+
+def _get_plot_dimensions(page: ft.Page | None) -> tuple[int, int]:
+    """
+    Calculate plot width and height based on window size and aspect ratio setting.
+
+    Returns:
+        (width, height) tuple in pixels
+    """
+    # Fallback when page/window unavailable
+    if page is None or getattr(page, "window", None) is None or page.window.height is None:
+        return (1100, 700)
+
+    window_height = page.window.height
+
+    # Height: 150px less than window, clamped to [300, 1000]
+    if window_height <= 300 + WINDOW_HEAD_GAP:
+        height = 300
+    elif window_height >= 1000 + WINDOW_HEAD_GAP:
+        height = 1000
+    else:
+        height = window_height - WINDOW_HEAD_GAP
+
+
+    try:
+        w ,h = [int(x) for x in str(config.plot_aspect_ratio).split(":")]
+    except ValueError:
+        w = 16
+        h = 9
+
+    # Parse aspect ratio
+
+    width = int(height * w / h)
+
+    return width, height
 
 
 class BasePlotView(ft.Container):
@@ -86,7 +120,6 @@ class BasePlotView(ft.Container):
         self.preview_container = ft.Container(
             content=ft.Text("No plot generated yet", color=ft.Colors.GREY_600),
             alignment=ft.Alignment.CENTER,
-            height=_PLOT_HEIGHT + 20
         )
 
         buttons = []
@@ -241,14 +274,17 @@ class BasePlotView(ft.Container):
         Render the figure to PNG asynchronously (no event-loop blocking),
         cache the bytes, then update the preview container.
         """
+        # Calculate dimensions based on current window size and aspect ratio
+        width, height = _get_plot_dimensions(self.page)
+
         # Render PNG in a thread pool — Kaleido subprocess won't block the loop
-        img_bytes = await render_png_async(fig, _PLOT_WIDTH, _PLOT_HEIGHT)
+        img_bytes = await render_png_async(fig, width, height)
         self._last_img_bytes = img_bytes
 
         viewer = PlotlyViewer(
             figure=fig,
-            width=_PLOT_WIDTH,
-            height=_PLOT_HEIGHT,
+            width=width,
+            height=height,
             title=self.title,
             show_interactive_button=False,  # we have our own button in the button row
             img_bytes=img_bytes,            # pass pre-rendered bytes — no second render
@@ -383,7 +419,6 @@ class BasePlotView(ft.Container):
                     italic=True,
                 ),
                 alignment=ft.Alignment.CENTER,
-                height=80,
             )
         # Caller handles page.update()
 
@@ -398,11 +433,14 @@ class BasePlotView(ft.Container):
             return
         self._is_suspended = False
 
+        # Calculate dimensions based on current window size and aspect ratio
+        width, height = _get_plot_dimensions(self.page)
+
         if self._last_img_bytes is not None and self.preview_container is not None:
             viewer = PlotlyViewer(
                 figure=self.current_figure,
-                width=_PLOT_WIDTH,
-                height=_PLOT_HEIGHT,
+                width=width,
+                height=height,
                 title=self.title,
                 show_interactive_button=False,
                 img_bytes=self._last_img_bytes,

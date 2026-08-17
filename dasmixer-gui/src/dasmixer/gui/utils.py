@@ -75,3 +75,25 @@ def show_snack(page: ft.Page | BasePage, message: str, color: str) -> None:
             bgcolor=color,
         )
     )
+
+
+def cleanup_temp_html_files() -> None:
+    """
+    Remove stale DASMixer temporary HTML files from the system temp directory.
+
+    Cleans up files created by Browser-mode interactive viewers
+    (``dasmixer_plot_*.html`` and ``dasmixer_report_*.html``).
+    Called when opening/creating/closing a project.
+    """
+    import tempfile
+
+    from dasmixer.utils import logger
+
+    temp_dir = Path(tempfile.gettempdir())
+    for pattern in ("dasmixer_plot_*.html", "dasmixer_report_*.html"):
+        for file_path in temp_dir.glob(pattern):
+            try:
+                file_path.unlink()
+                logger.debug(f"[cleanup] Removed temp file: {file_path}")
+            except Exception as e:
+                logger.debug(f"[cleanup] Could not remove {file_path}: {e}")

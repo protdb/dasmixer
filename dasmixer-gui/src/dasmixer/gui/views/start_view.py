@@ -1,9 +1,9 @@
 """Start view - project selection screen."""
 
 import flet as ft
-from pathlib import Path
 
 from dasmixer.gui.utils import get_asset_path
+from dasmixer.gui.components.recent_projects_list import RecentProjectsList
 from dasmixer.versions import APP_VERSION
 
 
@@ -108,18 +108,10 @@ class StartView(ft.Container):
         )
 
         # Recent projects
-        recent_items = []
-        for project_path in self.recent_projects:
-            path = Path(project_path)
-            if path.exists():
-                recent_items.append(
-                    ft.ListTile(
-                        leading=ft.Icon(ft.Icons.DESCRIPTION),
-                        title=ft.Text(path.name, weight=ft.FontWeight.BOLD),
-                        subtitle=ft.Text(str(path.parent), size=12),
-                        on_click=lambda e, p=project_path: self.on_open_project(p),
-                    )
-                )
+        recent_list = RecentProjectsList(
+            recent_projects=self.recent_projects,
+            on_click_project=lambda p: self.on_open_project(p),
+        )
 
         recent_section = ft.Container(
             content=ft.Column([
@@ -129,16 +121,7 @@ class StartView(ft.Container):
                     weight=ft.FontWeight.BOLD,
                 ),
                 ft.Container(height=10),
-                ft.Column(
-                    recent_items if recent_items else [
-                        ft.Text(
-                            "No recent projects",
-                            size=14,
-                            italic=True,
-                        )
-                    ],
-                    spacing=5,
-                ),
+                recent_list,
             ]),
             padding=ft.padding.only(top=40, bottom=20, left=20, right=20),
             col=breakpoints,

@@ -14,14 +14,34 @@ from dasmixer.gui.utils import show_snack
 
 def show_webview(fig: go.Figure, title: str):
     """
-    Show plotly figure in webview window.
+    Show plotly figure in webview window or default browser based on config.
 
     Top-level function required for multiprocessing pickling.
     """
-    import webview
+    from dasmixer.api.config import config
+
     html = fig.to_html(include_plotlyjs='cdn')
-    window = webview.create_window(title, html=html)
-    webview.start()
+
+    if config.plot_view_mode == "Browser":
+        import tempfile
+        import webbrowser
+        from pathlib import Path
+
+        with tempfile.NamedTemporaryFile(
+            mode='w',
+            suffix='.html',
+            prefix='dasmixer_plot_',
+            delete=False,
+            encoding='utf-8'
+        ) as f:
+            f.write(html)
+            temp_path = f.name
+
+        webbrowser.open(Path(temp_path).as_uri())
+    else:
+        import webview
+        window = webview.create_window(title, html=html)
+        webview.start()
 
 
 def _render_png_sync(fig: go.Figure, width: int, height: int) -> bytes:

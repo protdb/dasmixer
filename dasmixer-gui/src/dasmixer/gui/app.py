@@ -7,7 +7,7 @@ from pathlib import Path
 from dasmixer.api.config import config
 from dasmixer.api.project.project import Project
 import traceback
-from dasmixer.gui.utils import show_snack, get_asset_path
+from dasmixer.gui.utils import show_snack, get_asset_path, cleanup_temp_html_files
 from dasmixer.gui.components.progress_dialog import ProgressDialog
 from dasmixer.gui.components.merge_options_dialog import MergeOptionsDialog
 from dasmixer.utils import logger
@@ -213,8 +213,16 @@ class DASMixerApp:
     def _build_appbar(self) -> ft.AppBar:
         """Build application AppBar with menu."""
         close_disabled = self.current_project is None
+
+        # Determine AppBar title based on current project
+        if self.current_project:
+            project_name = Path(self.current_project.path).stem
+            title_text = f"DASMixer — {project_name}"
+        else:
+            title_text = "DASMixer"
+
         return ft.AppBar(
-            title=ft.Text("DASMixer", size=20, weight=ft.FontWeight.BOLD),
+            title=ft.Text(title_text, size=20, weight=ft.FontWeight.BOLD),
             actions=[
                 # File menu
                 ft.PopupMenuButton(
@@ -230,6 +238,12 @@ class DASMixerApp:
                             content=ft.Text("Open Project"),
                             icon=ft.Icons.FOLDER_OPEN,
                             on_click=lambda _: self.page.run_task(self.open_project_dialog)
+                        ),
+                        ft.PopupMenuItem(
+                            content=ft.Text("Open Recent"),
+                            icon=ft.Icons.HISTORY,
+                            on_click=lambda _: self.page.run_task(self._show_open_recent_dialog),
+                            disabled=(len(config.recent_projects) == 0)
                         ),
                         ft.PopupMenuItem(),  # Divider
                         ft.PopupMenuItem(
@@ -292,6 +306,68 @@ class DASMixerApp:
                 ),
             ]
         )
+
+    # ------------------------------------------------------------------
+    # Titles
+    # ------------------------------------------------------------------
+
+    def _update_titles(self):
+        """Update window title based on current project."""
+        if self.current_project:
+            project_name = Path(self.current_project.path).stem
+            self.page.title = f"{project_name}: DASMixer - Mass Spectrometry Data Integration"
+        else:
+            self.page.title = "DASMixer - Mass Spectrometry Data Integration"
+        if self.page:
+            self.page.update()
+
+    # ------------------------------------------------------------------
+    # Open Recent
+    # ------------------------------------------------------------------
+
+    async def _show_open_recent_dialog(self):
+        """Show Open Recent modal dialog."""
+        from dasmixer.gui.components.recent_projects_list import RecentProjectsList
+
+        async def on_project_selected(path: str):
+            dialog.open = False
+            self.page.update()
+
+            # Save current project with checkpoint (no warning)
+            if self.current_project:
+                try:
+                    await self.current_project.save(checkpoint=True)
+                except Exception as ex:
+                    logger.warning(f"[app] Failed to save current project before opening recent: {ex}")
+
+            # Open selected project
+            await self.open_project(path)
+
+        def on_cancel(_):
+            dialog.open = False
+            self.page.update()
+
+        recent_list = RecentProjectsList(
+            recent_projects=config.recent_projects,
+            on_click_project=lambda p: self.page.run_task(on_project_selected, p),
+        )
+
+        dialog = ft.AlertDialog(
+            modal=True,
+            title=ft.Text("Open Recent Project"),
+            content=ft.Container(
+                content=recent_list,
+                width=500,
+                height=300,
+            ),
+            actions=[
+                ft.TextButton("Cancel", on_click=on_cancel),
+            ],
+        )
+
+        self.page.overlay.append(dialog)
+        dialog.open = True
+        self.page.update()
 
     # ------------------------------------------------------------------
     # Navigation helpers
@@ -508,6 +584,8 @@ class DASMixerApp:
             )
 
             config.add_recent_project(str(project_path))
+            cleanup_temp_html_files()
+            self._update_titles()
             self.show_project_view()
             self._show_success(f"Created project: {project_path.name}")
 
@@ -561,6 +639,8 @@ class DASMixerApp:
             await self._check_project_version()
 
             config.add_recent_project(str(project_path))
+            cleanup_temp_html_files()
+            self._update_titles()
             self.show_project_view()
             self._show_success(f"Opened project: {project_path.name}")
 
@@ -575,6 +655,8 @@ class DASMixerApp:
             try:
                 await self.current_project.close()
                 self.current_project = None
+                cleanup_temp_html_files()
+                self._update_titles()
                 self.show_start_view()
                 self._show_info("Project closed")
             except Exception as ex:

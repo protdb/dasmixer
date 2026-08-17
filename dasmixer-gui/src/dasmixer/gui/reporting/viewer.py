@@ -1,20 +1,38 @@
-"""Interactive report viewer using pywebview."""
+"""Interactive report viewer (pywebview window or default browser)."""
 
 import multiprocessing
-import webview
 from pathlib import Path
 
 
 def _show_html_in_webview(html_content: str, title: str = "Report Viewer"):
     """
     Function to run in separate process.
-    
+
     Args:
         html_content: HTML content to display
         title: Window title
     """
-    window = webview.create_window(title, html=html_content)
-    webview.start()
+    from dasmixer.api.config import config
+
+    if config.plot_view_mode == "Browser":
+        import tempfile
+        import webbrowser
+
+        with tempfile.NamedTemporaryFile(
+            mode='w',
+            suffix='.html',
+            prefix='dasmixer_report_',
+            delete=False,
+            encoding='utf-8'
+        ) as f:
+            f.write(html_content)
+            temp_path = f.name
+
+        webbrowser.open(Path(temp_path).as_uri())
+    else:
+        import webview
+        window = webview.create_window(title, html=html_content)
+        webview.start()
 
 
 class ReportViewer:
