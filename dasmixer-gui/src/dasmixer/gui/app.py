@@ -330,21 +330,31 @@ class DASMixerApp:
         from dasmixer.gui.components.recent_projects_list import RecentProjectsList
 
         async def on_project_selected(path: str):
+            # 1. Close the Open Recent modal dialog
             dialog.open = False
+            try:
+                self.page.overlay.remove(dialog)
+            except ValueError:
+                pass
             self.page.update()
 
-            # Save current project with checkpoint (no warning)
+            # 2. Close current project completely (routes to start view)
             if self.current_project:
                 try:
                     await self.current_project.save(checkpoint=True)
                 except Exception as ex:
                     logger.warning(f"[app] Failed to save current project before opening recent: {ex}")
+                await self.close_project()
 
-            # Open selected project
+            # 3. Open the new project (shows migration dialog if needed)
             await self.open_project(path)
 
         def on_cancel(_):
             dialog.open = False
+            try:
+                self.page.overlay.remove(dialog)
+            except ValueError:
+                pass
             self.page.update()
 
         recent_list = RecentProjectsList(
@@ -446,17 +456,15 @@ class DASMixerApp:
 
         result = [False]
 
-        def on_update(e):
+        async def on_update(e):
             result[0] = True
             dialog.open = False
             event.set()
-            self.page.update()
 
-        def on_skip(e):
+        async def on_skip(e):
             result[0] = False
             dialog.open = False
             event.set()
-            self.page.update()
 
         event = asyncio.Event()
 
@@ -510,12 +518,14 @@ class DASMixerApp:
             dialog.update_progress(1.0, "Done")
         except MigrationError as e:
             logger.exception(f"Migration failed: {e}")
-            dialog.open = False
-            self.page.update()
             self._show_error(f"Migration failed: {e}")
             return
         finally:
             dialog.open = False
+            try:
+                self.page.overlay.remove(dialog)
+            except ValueError:
+                pass
             self.page.update()
 
         show_snack(self.page, f"Project updated to {PROJECT_VERSION}", ft.Colors.GREEN_400)
@@ -630,7 +640,7 @@ class DASMixerApp:
                 return
 
             if self.current_project:
-                await self.current_project.close()
+                await self.close_project()
 
             self.current_project = Project(path=project_path, create_if_not_exists=False)
             await self.current_project.initialize()
