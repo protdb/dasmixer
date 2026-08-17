@@ -1,7 +1,7 @@
 """Version constants for DASMixer project."""
 
 # Версия приложения DASMixer
-APP_VERSION = "0.7.1a1"
+APP_VERSION = "0.7.1a2"
 
 # Версия схемы файла проекта (.dasmix).
 # Поднимается только тогда, когда меняется схема БД.
