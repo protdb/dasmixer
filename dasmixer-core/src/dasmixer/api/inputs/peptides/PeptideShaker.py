@@ -1,16 +1,20 @@
 import logging
 from typing import AsyncIterator
+from copy import deepcopy
+import re
 
 import pandas as pd
-
-from .table_importer import SimpleTableImporter, TableImporter, ColumnRenames
 from pyteomics.proforma import parse, GenericModification, to_proforma
 from pyteomics.mass import calculate_mass
-import re
+
+from .table_importer import SimpleTableImporter, TableImporter, ColumnRenames
+
 
 terminal_ptm = {
     'NH2': 'Amidated',
     'COOH': 'Carboxy',
+    'pyroE': 'Glu->pyro-Glu',
+    'pyroQ': 'Gln->pyro-Glu'
 }
 internal_ptm = {
     'pyri': 'Pyridylethyl',
@@ -36,7 +40,7 @@ class PeptideShakerImporter(TableImporter):
 
     @staticmethod
     def to_proforma(sequence: str) -> str:
-        parts = seqence.split('-')
+        parts = sequence.split('-')
         if len(parts) == 3:
             start, seq, end = parts
         elif len(parts) == 2:
@@ -52,22 +56,30 @@ class PeptideShakerImporter(TableImporter):
             start = None
         else:
             raise ValueError('Too many parts')
-        if start == 'NH2' and end == 'COOH':
+        if start == 'NH2':
             start = None
+        if end == 'COOH':
             end = None
+        if start == 'pyro':
+            if seq.startswith('E'):
+                start = 'pyroE'
+            elif seq.startswith('Q'):
+                start = 'pyroQ'
+            else:
+                logging.warning(f'pyro-term at wrong residue in {sequence}')
         if start is not None:
-            start = GenericModification(terminal_ptm[start])
+            start = [GenericModification(terminal_ptm[start])]
         if end is not None:
-            end = GenericModification(terminal_ptm[end])
+            end = [GenericModification(terminal_ptm[end])]
         split_seq = split_rg.findall(seq)
         transformed_seq = []
         for aa in split_seq:
             if len(aa) == 1:
-                transformed_seq.append(aa.upper(), None)
+                transformed_seq.append((aa.upper(), None))
             else:
                 aa_name = aa[0].upper()
                 ptm = internal_ptm.get(aa[2:-1], None)
-                transformed_seq.append((aa_name, ptm))
+                transformed_seq.append((aa_name, [ptm]))
         return to_proforma(transformed_seq, n_term=start, c_term=end)
 
     async def get_mapping_data(self) -> pd.DataFrame:
@@ -78,6 +90,8 @@ class PeptideShakerImporter(TableImporter):
         return res
 
     async def get_merged_data(self) -> pd.DataFrame:
+        if self.sheets is None:
+            self._read_table()
         seq_df = self.get_sheet(name='Peptide Identification Summary')[['Sequence', 'Modified Sequence']]
         scan_match_df = self.get_sheet(name='Peptide Spectrum Matching Summa')
         seq_df['proforma'] = seq_df['Modified Sequence'].apply(self.to_proforma)
@@ -86,7 +100,7 @@ class PeptideShakerImporter(TableImporter):
         for _, row in seq_df.iterrows():
             seqs[row['Sequence']].append({'proforma': row['proforma'], 'theor_mass': row['theor_mass'],})
 
-        spectra_df = await self.project.execute_query_df()
+        spectra_df = await self.get_mapping_data()
 
         spectra_df['pepmass'] = spectra_df['pepmass'].round(4)
         spectra_df['rt'] = spectra_df['rt'].round(4)
@@ -107,29 +121,40 @@ class PeptideShakerImporter(TableImporter):
         proformas = []
 
         for _, row in df.iterrows():
-            pf = copy(seqs.get(row['Sequence'], []))
+            pf = deepcopy(seqs.get(row['Sequence'], []))
+            print('pf', pf)
             if len(pf) == 0:
                 proformas.append(None)
-            if len(pf) == 1:
+            elif len(pf) == 1:
                 proformas.append(pf[0]['proforma'])
             else:
                 pf.sort(key=lambda x: abs(x['theor_mass'] - row['Theoretical Mass']))
                 proformas.append(pf[0]['proforma'])
-        df['proformas'] = proformas
-        return df
+        df['proforma'] = proformas
+        bad_pfs = df.query("proforma != proforma")
+        if len(bad_pfs) > 0:
+            logging.warning(f"reqorlds with bat proforma: {len(bad_pfs)}")
+            print(bad_pfs.to_markdown(index=False))
+        return df.query("proforma == proforma").copy()
 
     async def parse_batch(
         self,
         batch_size: int = 1000
     ) -> AsyncIterator[pd.DataFrame]:
         result = await self.get_merged_data()
-        rename_cols = self.renames.mapping
-        for col in rename_cols.keys:
+        rename_cols = renames.mapping
+        print(rename_cols)
+        print(result.columns)
+        print(result.head(10).to_markdown(index=False))
+        for col in rename_cols.keys():
             if col not in result.columns:
                 result[col] = None
         result.rename(columns=rename_cols, inplace=True)
-        sheet_df = result[[col for col in r.keys() if col in result.columns]]
+        print(result.columns)
+        print([col for col in rename_cols.keys() if col in result.columns])
+        sheet_df = result[[col for col in rename_cols.values() if col in result.columns]]
         cursor = 0
+        print(sheet_df.head(10).to_markdown(index=False))
         while cursor < len(sheet_df):
             batch = sheet_df[cursor:cursor + batch_size]
             yield batch
@@ -138,6 +163,7 @@ class PeptideShakerImporter(TableImporter):
     async def validate(self) -> bool:
         try:
             # TODO: more detailed logging!
+            self._read_table()
             peptide_sheet = self.get_sheet(name='Peptide Identification Summary')
             matching_sheet = self.get_sheet(name='Peptide Spectrum Matching Summa')
             peptide_sheet = peptide_sheet[['Sequence', 'Modified Sequence']]

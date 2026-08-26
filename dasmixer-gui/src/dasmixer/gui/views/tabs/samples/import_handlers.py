@@ -271,6 +271,9 @@ class ImportHandlers:
                     collect_proteins=collect_proteins,
                     is_uniprot_proteins=is_uniprot_proteins,
                 )
+                if parser.require_project:
+                    parser.project = self.project
+                    parser.spectra_file_id = spectra_file_id
                 logger.debug(f'Parser {type(parser)} init for {file_path}')
                 
                 # Validate file

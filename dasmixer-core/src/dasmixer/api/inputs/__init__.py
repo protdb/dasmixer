@@ -63,11 +63,11 @@ def register_parsers():
     except ImportError as e:
         logger.exception(e)
 
-    # try:
-    #     from .peptides.PeptideShaker import PeptideShakerImporter
-    #     registry.add_identification_parser(PeptideShakerImporter)
-    # except ImportError as e:
-    #     logger.exception(e)
+    try:
+        from .peptides.PeptideShaker import PeptideShakerImporter
+        registry.add_identification_parser("PeptideShaker XLS", PeptideShakerImporter)
+    except ImportError as e:
+        logger.exception(e)
 
 
 # Auto-register on import
