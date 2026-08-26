@@ -3,6 +3,7 @@
 from abc import abstractmethod
 from typing import AsyncIterator
 import pandas as pd
+from dasmixer.api import Project
 
 from dasmixer.api.project.dataclasses import Protein
 from ..base import BaseImporter
@@ -36,6 +37,14 @@ class IdentificationParser(BaseImporter):
     # NEW: Column name used to split stacked file by sample.
     # Set in subclass if can_import_stacked = True.
     sample_id_column: str | None = None
+
+    # TODO: refine description
+    # if require_project is overriden to True, the Project object should be set externally to project property
+    # it may be required to import files without scans/seq_no to perform mapping
+    project: Project | None = None
+    spectra_file_id: int | None = None
+
+    require_project: bool = False
     
     def __init__(
         self,

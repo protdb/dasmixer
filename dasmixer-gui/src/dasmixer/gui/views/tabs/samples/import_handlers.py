@@ -476,6 +476,9 @@ class ImportHandlers:
                 
                 # Parse file, filter by file_sample_id
                 parser = parser_class(str(file_path))
+                if parser.require_project:
+                    parser.project = self.project
+                    parser.spectra_file_id = spectra_file_id
                 is_valid = await parser.validate()
                 if not is_valid:
                     raise ValueError(f"Invalid file format: {file_path.name}")

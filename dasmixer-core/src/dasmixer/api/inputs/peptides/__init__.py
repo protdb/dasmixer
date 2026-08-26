@@ -10,6 +10,7 @@ from .table_importer import (
 from .PowerNovo2 import PowerNovo2Importer
 from .MQ_Evidences import MaxQuantEvidenceParser
 from .PLGS import PLGSImporter
+from .PeptideShaker import PeptideShakerImporter
 
 # Note: Parser registration is now handled in api/inputs/__init__.py
 # to avoid circular imports
@@ -22,5 +23,6 @@ __all__ = [
     'ColumnRenames',
     'PowerNovo2Importer',
     'MaxQuantEvidenceParser',
-    'PLGSImporter'
+    'PLGSImporter',
+    'PeptideShakerImporter'
 ]

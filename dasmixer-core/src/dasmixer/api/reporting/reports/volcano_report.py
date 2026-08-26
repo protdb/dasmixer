@@ -27,6 +27,9 @@ class VolcanoReport(BaseReport):
         subsets = await self.project.get_subsets()
         subset_colors = {x.name: x.display_color for x in subsets}
         df = data.copy()
+        if len(df.columns) != 5:
+            print(df)
+            raise Exception("Not enough data in selection, cannot create plot")
         df.columns = ['protein_id', 'subset', 'p_value', 'fc', 'fc_log2']
         
         # Фильтруем невалидные данные
@@ -154,6 +157,7 @@ class VolcanoReport(BaseReport):
 
         for protein in df['protein_id'].unique():
             ctrl_values = df.query("protein_id==@protein & subset==@control_subset")[lfq_measure]
+            print(ctrl_values)
             if len(ctrl_values) == 0:
                 continue
             logger.debug(f"{protein} {ctrl_values}")

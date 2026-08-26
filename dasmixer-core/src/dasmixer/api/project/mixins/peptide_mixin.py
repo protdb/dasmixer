@@ -88,15 +88,19 @@ class PeptideMixin:
             #     query,
             #     rows_to_insert
             # )
-            try:
-                for r in rows_to_insert:
+            skipped = 0
+            for r in rows_to_insert:
+                try:
                     await self._execute(query, r)
-            except Exception as e:
-                print(query)
-                print(r)
-                raise e
+                except Exception as e:
+                    print(query)
+                    print(r)
+                    logger.exception(e)
+                    skipped += 1
             # Note: No auto-save for batch efficiency
-            logger.debug(f"Added {len(rows_to_insert)} peptide matches")
+            logger.debug(f"Added {len(rows_to_insert)} peptide matches, skipped: {skipped}")
+            if skipped > (len(rows_to_insert) / 2):
+                raise Exception("Too many bad proteins in data, check if library were loaded!")
     
     async def get_peptide_matches(
         self,

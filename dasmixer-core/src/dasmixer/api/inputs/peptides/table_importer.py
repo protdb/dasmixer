@@ -62,6 +62,12 @@ class ColumnRenames:
     theor_mass: str | None = None
     src_file_protein_id: str | None = None  # NEW: source column for protein ID
 
+    @property
+    def mapping(self) -> dict[str, str]:
+        r = asdict(self)
+        return {v: k for k, v in r.items() if v is not None and v != ''}
+
+
 
 class TableImporter(IdentificationParser, ABC):
     """
@@ -193,8 +199,8 @@ class SimpleTableImporter(TableImporter):
         Raises:
             ValueError: If neither scans nor seq_no can be mapped
         """
-        r = asdict(self.renames)
-        rename_cols = {v: k for k, v in r.items() if v is not None and v != ''}
+
+        rename_cols = self.renames.mapping
         logger.debug(f'rename cols: {rename_cols}')
         result = df.rename(columns=rename_cols)
         logger.debug(result)
