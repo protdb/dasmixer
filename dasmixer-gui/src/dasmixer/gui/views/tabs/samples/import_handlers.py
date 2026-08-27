@@ -293,7 +293,7 @@ class ImportHandlers:
                     by=parser.spectra_id_field
                 )
                 logger.info(f'Matching to spectra_file with id: {spectra_file_id} by {parser.spectra_id_field}')
-                logger.debug(spectra_mapping)
+                # logger.debug(spectra_mapping)
                 
                 # Import identifications in batches
                 batch_size = _config.identification_batch_size
@@ -301,7 +301,6 @@ class ImportHandlers:
                 file_ident_count = 0
                 async for batch in parser.parse_batch(batch_size=batch_size):
                     logger.warn(batch)
-                    logger.warn(spectra_mapping)
                     batch = pd.merge(
                         batch,
                         pd.json_normalize(spectra_mapping),

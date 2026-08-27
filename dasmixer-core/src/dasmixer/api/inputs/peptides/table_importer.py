@@ -213,7 +213,7 @@ class SimpleTableImporter(TableImporter):
             )
         
         # Return only standard columns that exist
-        available_cols = [col for col in rename_cols.keys() if col in result.columns]
+        available_cols = [col for col in rename_cols.values() if col in result.columns]
         return result[available_cols]
 
     def prepare_df(self, df: pd.DataFrame) -> pd.DataFrame:
