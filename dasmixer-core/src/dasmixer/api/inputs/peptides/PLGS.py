@@ -10,7 +10,8 @@ renames = ColumnRenames(
     canonical_sequence='peptide.seq',
     score='peptide.score',
     src_file_protein_id='protein.Accession',
-    ppm='peptidePrecursor.deltaMhpPPM'
+    ppm='peptidePrecursor.deltaMhpPPM',
+    sequence='sequence',
 )
 
 ptm_renames = {
@@ -94,6 +95,7 @@ class PLGSImporter(SimpleTableImporter):
         return result
 
     def transform_df(self, df: pd.DataFrame) -> pd.DataFrame:
+        df = df.copy()
         df['sequence'] = df.apply(lambda row: self.get_modified_sequence(row['peptide.seq'], row['peptide.modification']), axis=1)
         return df
 
