@@ -28,3 +28,29 @@ def calculate_peptide_quality(
 
     quality = (1/n_ion_types) * (n_ions / (seq_length - 1))
     return quality
+
+
+def calculate_longest_consec_run_ratio(matches: list[FragmentMatch], sequence: str) -> float:
+    ions = {}
+    for match in matches:
+        typ = match.fragment.ion_type
+        pos = match.fragment.end - match.fragment.start
+        if not typ in ions:
+            ions[typ] = set()
+        ions[typ].add(pos)
+    res = 0
+    for typ, val_set in ions.items():
+        vals = list(val_set)
+        vals.sort()
+        longest = 1
+        current = 1
+        for prev, curr in zip(vals, vals[1:]):
+            if curr - prev == 1:
+                current += 1
+            else:
+                current = 1
+            longest = max(longest, current)
+        res = max(res, longest)
+
+    seq_length = len(parse(sequence)[0])
+    return res / seq_length
