@@ -45,6 +45,7 @@ class PeptideIonTableView(BaseTableView):
         'ion_match_type': 'Ion Type',
         'top_peaks_covered': 'Top-10 Peaks',
         'quality': 'Quality',
+        'lcrr': 'LCRR',
         # charge / pepmass (source + final)
         'charge': 'Source charge',
         'pepmass': 'Source pepmass',
@@ -82,7 +83,7 @@ class PeptideIonTableView(BaseTableView):
         'ion_match_type', 'top_peaks_covered', 'is_preferred',
         'protein_id', 'gene',
         # NEW visible by default:
-        'quality', 'final_charge', 'final_pepmass',
+        'quality', 'lcrr', 'final_charge', 'final_pepmass',
     }
 
     def __init__(self, project: Project, plot_callback=None):

@@ -218,7 +218,8 @@ class IdentificationMixin:
             ions_matched: int,
             top_peaks_covered: int,
             canonical_length: tuple[int, int],
-            min_quality: float | None = None
+            min_quality: float | None = None,
+            min_lcrr: float | None = None
     ):
         """
         Special method for identification processing — returns candidates for
@@ -238,10 +239,14 @@ class IdentificationMixin:
                          only identifications with quality >= min_quality are
                          returned; NULL-quality rows are excluded. When None,
                          no quality filter is applied.
+            min_lcrr: minimum lcrr value (0..1). When provided, only
+                      identifications with lcrr >= min_lcrr are returned;
+                      NULL-lcrr rows are excluded. When None, no lcrr filter
+                      is applied.
         """
         query = """
             SELECT
-                i.id, i.spectre_id, i.tool_id, i.ppm, i.intensity_coverage, i.score,
+                i.id, i.spectre_id, i.tool_id, i.ppm, i.intensity_coverage, i.score, i.lcrr,
                 s.spectre_file_id,
                 m.matched_ppm, m.matched_coverage_percent
             FROM identification i
@@ -284,6 +289,10 @@ class IdentificationMixin:
             query += " AND i.quality IS NOT NULL AND i.quality >= ?"
             params.append(float(min_quality))
 
+        if min_lcrr is not None:
+            query += " AND i.lcrr IS NOT NULL AND i.lcrr >= ?"
+            params.append(float(min_lcrr))
+
         rows = await self._fetchall(query, tuple(params))
         return pd.DataFrame(rows) if rows else pd.DataFrame()
 
@@ -307,7 +316,7 @@ class IdentificationMixin:
         """
         query = """
             SELECT
-                i.id, i.spectre_id, i.tool_id, i.ppm, i.intensity_coverage, i.score,
+                i.id, i.spectre_id, i.tool_id, i.ppm, i.intensity_coverage, i.score, i.lcrr,
                 s.spectre_file_id,
                 m.matched_ppm, m.matched_coverage_percent
             FROM identification i
@@ -511,7 +520,7 @@ class IdentificationMixin:
         Keys recognised:
             id, ppm, theor_mass, override_charge,
             intensity_coverage, ions_matched, ion_match_type, top_peaks_covered,
-            source_sequence, isotope_offset, quality, override_pepmass, has_ptm
+            source_sequence, isotope_offset, quality, lcrr, override_pepmass, has_ptm
         """
         query = """
             UPDATE identification
@@ -527,6 +536,7 @@ class IdentificationMixin:
                 source_sequence = ?,
                 isotope_offset = ?,
                 quality = ?,
+                lcrr = ?,
                 override_pepmass = ?,
                 has_ptm = ?
             WHERE id = ?
@@ -550,6 +560,7 @@ class IdentificationMixin:
                 source_sequence_value,
                 data_row.get('isotope_offset'),
                 data_row.get('quality'),
+                data_row.get('longest_consec_run_rate'),
                 data_row.get('override_pepmass'),
                 data_row.get('has_ptm'),
                 data_row['id'],
@@ -564,7 +575,7 @@ class IdentificationMixin:
         - где source_sequence не пусто → sequence восстанавливается из source_sequence;
         - обнуляются (NULL): intensity_coverage, ions_matched, ion_match_type,
           top_peaks_covered, override_charge, isotope_offset, ppm, theor_mass,
-          quality, override_pepmass, has_ptm, source_sequence;
+          quality, lcrr, override_pepmass, has_ptm, source_sequence;
         - is_preferred → 0.
 
         Таблица peptide_match НЕ затрагивается. Метод не вызывает save() —
@@ -582,6 +593,7 @@ class IdentificationMixin:
                 ppm = NULL,
                 theor_mass = NULL,
                 quality = NULL,
+                lcrr = NULL,
                 override_pepmass = NULL,
                 has_ptm = NULL,
                 source_sequence = NULL,

@@ -159,6 +159,7 @@ async def calculate_preferred_identifications_for_file(
             top_peaks_count = tool_params.get("min_top_peaks", 1)
             min_ions = tool_params.get("min_ions_covered", 1)
             min_quality = tool_params.get("min_quality", 0.25)
+            min_lcrr = tool_params.get("min_lcrr", 0.2)
             denovo_correction = tool_params.get("denovo_correction", False)
             denovo_correction_ppm = tool_params.get("denovo_correction_ppm", 50000)
 
@@ -173,6 +174,7 @@ async def calculate_preferred_identifications_for_file(
                 ions_matched=min_ions,
                 top_peaks_covered=top_peaks_count,
                 min_quality=min_quality,
+                min_lcrr=min_lcrr,
             )
             logger.debug(f"tool_id={tool_id} spectra_file_id={spectra_file_id} rows={len(idents)}")
             if not idents.empty:

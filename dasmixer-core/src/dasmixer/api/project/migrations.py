@@ -52,6 +52,12 @@ MIGRATIONS: list[dict] = [
             ALTER TABLE identification ADD COLUMN has_ptm INTEGER;
         """,
     },
+    {
+        "version": "0.7.2",
+        "sql": """
+            ALTER TABLE identification ADD COLUMN lcrr REAL;
+        """,
+    },
 ]
 
 
