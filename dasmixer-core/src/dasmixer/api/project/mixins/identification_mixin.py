@@ -219,7 +219,8 @@ class IdentificationMixin:
             top_peaks_covered: int,
             canonical_length: tuple[int, int],
             min_quality: float | None = None,
-            min_lcrr: float | None = None
+            min_lcrr: float | None = None,
+            max_unconfirmed_ptms: int | None = None,
     ):
         """
         Special method for identification processing — returns candidates for
@@ -243,10 +244,14 @@ class IdentificationMixin:
                       identifications with lcrr >= min_lcrr are returned;
                       NULL-lcrr rows are excluded. When None, no lcrr filter
                       is applied.
+            max_unconfirmed_ptms: maximum allowed unconfirmed PTMs count. When
+                         provided, only identifications with unconfirmed_ptms <=
+                         max_unconfirmed_ptms are returned; NULL-unconfirmed_ptms
+                         rows are excluded. When None, no filter is applied.
         """
         query = """
             SELECT
-                i.id, i.spectre_id, i.tool_id, i.ppm, i.intensity_coverage, i.score, i.lcrr,
+                i.id, i.spectre_id, i.tool_id, i.ppm, i.intensity_coverage, i.score, i.lcrr, i.unconfirmed_ptms,
                 s.spectre_file_id,
                 m.matched_ppm, m.matched_coverage_percent
             FROM identification i
@@ -293,6 +298,10 @@ class IdentificationMixin:
             query += " AND i.lcrr IS NOT NULL AND i.lcrr >= ?"
             params.append(float(min_lcrr))
 
+        if max_unconfirmed_ptms is not None:
+            query += " AND i.unconfirmed_ptms IS NOT NULL AND i.unconfirmed_ptms <= ?"
+            params.append(int(max_unconfirmed_ptms))
+
         rows = await self._fetchall(query, tuple(params))
         return pd.DataFrame(rows) if rows else pd.DataFrame()
 
@@ -316,7 +325,7 @@ class IdentificationMixin:
         """
         query = """
             SELECT
-                i.id, i.spectre_id, i.tool_id, i.ppm, i.intensity_coverage, i.score, i.lcrr,
+                i.id, i.spectre_id, i.tool_id, i.ppm, i.intensity_coverage, i.score, i.lcrr, i.unconfirmed_ptms,
                 s.spectre_file_id,
                 m.matched_ppm, m.matched_coverage_percent
             FROM identification i
@@ -520,7 +529,7 @@ class IdentificationMixin:
         Keys recognised:
             id, ppm, theor_mass, override_charge,
             intensity_coverage, ions_matched, ion_match_type, top_peaks_covered,
-            source_sequence, isotope_offset, quality, lcrr, override_pepmass, has_ptm
+            source_sequence, isotope_offset, quality, lcrr, unconfirmed_ptms, override_pepmass, has_ptm
         """
         query = """
             UPDATE identification
@@ -537,6 +546,7 @@ class IdentificationMixin:
                 isotope_offset = ?,
                 quality = ?,
                 lcrr = ?,
+                unconfirmed_ptms = ?,
                 override_pepmass = ?,
                 has_ptm = ?
             WHERE id = ?
@@ -561,6 +571,7 @@ class IdentificationMixin:
                 data_row.get('isotope_offset'),
                 data_row.get('quality'),
                 data_row.get('longest_consec_run_rate'),
+                data_row.get('unconfirmed_ptms'),
                 data_row.get('override_pepmass'),
                 data_row.get('has_ptm'),
                 data_row['id'],
@@ -575,7 +586,7 @@ class IdentificationMixin:
         - где source_sequence не пусто → sequence восстанавливается из source_sequence;
         - обнуляются (NULL): intensity_coverage, ions_matched, ion_match_type,
           top_peaks_covered, override_charge, isotope_offset, ppm, theor_mass,
-          quality, lcrr, override_pepmass, has_ptm, source_sequence;
+          quality, lcrr, unconfirmed_ptms, override_pepmass, has_ptm, source_sequence;
         - is_preferred → 0.
 
         Таблица peptide_match НЕ затрагивается. Метод не вызывает save() —
@@ -594,6 +605,7 @@ class IdentificationMixin:
                 theor_mass = NULL,
                 quality = NULL,
                 lcrr = NULL,
+                unconfirmed_ptms = NULL,
                 override_pepmass = NULL,
                 has_ptm = NULL,
                 source_sequence = NULL,

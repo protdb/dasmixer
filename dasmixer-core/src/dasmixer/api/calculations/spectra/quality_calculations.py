@@ -70,5 +70,7 @@ def calculate_unconfirmed_ptms(matches: list[FragmentMatch], sequence: str) -> i
     seq_ptms = _get_ptm_amount(sequence)
     if seq_ptms == 0:
         return 0
+    if len(matches) == 0:
+        return seq_ptms
     max_frag_ptm = max([_get_ptm_amount(x.fragment.sequence) for x in matches])
     return seq_ptms - max_frag_ptm

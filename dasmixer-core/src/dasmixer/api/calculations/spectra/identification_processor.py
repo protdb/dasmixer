@@ -169,6 +169,7 @@ def process_single_ident(
             "top_peaks_covered": match_result.top10_intensity_matches,
             "quality": match_result.quality,
             "longest_consec_run_rate": match_result.longest_consec_run_rate,
+            "unconfirmed_ptms": match_result.unconfirmed_ptms,
             "override_pepmass": None,
             "has_ptm": has_ptm_value,
         }
@@ -280,6 +281,7 @@ def process_single_ident(
         "top_peaks_covered": match_result.top10_intensity_matches,
         "quality": quality,
         "longest_consec_run_rate": match_result.longest_consec_run_rate,
+        "unconfirmed_ptms": match_result.unconfirmed_ptms,
         "override_pepmass": override_pepmass_value,
         "has_ptm": has_ptm_value,
     }
@@ -406,6 +408,7 @@ def process_identificatons_batch(
                 "isotope_offset": None,
                 "quality": None,
                 "longest_consec_run_rate": None,
+                "unconfirmed_ptms": None,
                 "override_pepmass": None,
                 "has_ptm": None,
                 "source_sequence": sequence,

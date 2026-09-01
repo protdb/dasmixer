@@ -166,6 +166,12 @@ class ToolSettingsSection(BaseSection):
                 width=150,
                 keyboard_type=ft.KeyboardType.NUMBER,
             ),
+            'max_unconfirmed_ptms': ft.TextField(
+                label="Max Unconfirmed PTMs",
+                value=str(settings.get('max_unconfirmed_ptms', 0)),
+                width=170,
+                keyboard_type=ft.KeyboardType.NUMBER,
+            ),
             # ── Protein matching ───────────────────────────────────────────
             'use_protein_from_file': ft.Checkbox(
                 label="Use protein ID from file",
@@ -275,6 +281,7 @@ class ToolSettingsSection(BaseSection):
             ft.Row([
                 controls['min_quality'],
                 controls['min_lcrr'],
+                controls['max_unconfirmed_ptms'],
             ]),
             controls['denovo_correction'],
         ], spacing=8)
@@ -529,6 +536,9 @@ class ToolSettingsSection(BaseSection):
             if not (0 <= float(controls['min_lcrr'].value) <= 1):
                 return False, "Min LCRR must be in [0, 1]"
 
+            if int(controls['max_unconfirmed_ptms'].value) < 0:
+                return False, "Max Unconfirmed PTMs must be ≥ 0"
+
             max_ptm_val = int(controls['max_ptm'].value)
             if max_ptm_val < 0:
                 return False, "Max PTM combinations must be ≥ 0"
@@ -586,6 +596,7 @@ class ToolSettingsSection(BaseSection):
             'min_spectre_peaks': int(controls['min_spectre_peaks'].value),
             'min_quality': float(controls['min_quality'].value),
             'min_lcrr': float(controls['min_lcrr'].value),
+            'max_unconfirmed_ptms': int(controls['max_unconfirmed_ptms'].value),
             'leucine_combinatorics': controls['leucine_combinatorics'].value,
             'ptm_list': ptm_list_to_save,
             'max_ptm': int(controls['max_ptm'].value),
@@ -643,6 +654,7 @@ class ToolSettingsSection(BaseSection):
                 'min_spectre_peaks': int(controls['min_spectre_peaks'].value),
                 'min_quality': float(controls['min_quality'].value),
                 'min_lcrr': float(controls['min_lcrr'].value),
+                'max_unconfirmed_ptms': int(controls['max_unconfirmed_ptms'].value),
                 'leucine_combinatorics': controls['leucine_combinatorics'].value,
                 'ptm_list': ptm_list,
                 'max_ptm': int(controls['max_ptm'].value),

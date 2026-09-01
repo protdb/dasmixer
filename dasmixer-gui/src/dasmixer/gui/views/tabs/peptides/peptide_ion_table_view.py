@@ -46,6 +46,7 @@ class PeptideIonTableView(BaseTableView):
         'top_peaks_covered': 'Top-10 Peaks',
         'quality': 'Quality',
         'lcrr': 'LCRR',
+        'unconfirmed_ptms': 'Unconfirmed PTMs',
         # charge / pepmass (source + final)
         'charge': 'Source charge',
         'pepmass': 'Source pepmass',

@@ -428,10 +428,11 @@ class PeptideMixin:
                     i.ppm,
                     i.score,
                      i.is_preferred,
-                     i.quality,
-                     i.lcrr,
-                     i.has_ptm
-                  FROM identification i, tool t 
+                      i.quality,
+                      i.lcrr,
+                      i.unconfirmed_ptms,
+                      i.has_ptm
+                   FROM identification i, tool t 
                   WHERE t.id = i.tool_id) AS id 
                  ON id.spectre_id = s.id
             LEFT JOIN
@@ -544,7 +545,7 @@ class PeptideMixin:
                 - sequence, canonical_sequence, ppm, is_preferred
                 - intensity_coverage, ions_matched, ion_match_type, top_peaks_covered
                 - override_charge, source_sequence, isotope_offset, theor_mass,
-                   quality, lcrr, override_pepmass, has_ptm
+                   quality, lcrr, unconfirmed_ptms, override_pepmass, has_ptm
                 - matched_sequence, matched_ppm, protein_id, unique_evidence, gene
         """
         # Base query
@@ -557,7 +558,7 @@ class PeptideMixin:
                 id.ions_matched, id.ion_match_type, id.top_peaks_covered,
                 id.intensity_coverage,
                 id.override_charge, id.source_sequence, id.isotope_offset,
-                 id.theor_mass, id.quality, id.lcrr, id.override_pepmass, id.has_ptm,
+                 id.theor_mass, id.quality, id.lcrr, id.unconfirmed_ptms, id.override_pepmass, id.has_ptm,
                 mp.matched_sequence, mp.matched_ppm, mp.protein_id, mp.identity,
                 mp.unique_evidence, mp.gene,
                 mp.matched_peaks, mp.matched_top_peaks, mp.matched_ion_type,
@@ -593,12 +594,13 @@ class PeptideMixin:
                     i.source_sequence,
                     i.isotope_offset,
                     i.theor_mass,
-                     i.quality,
-                     i.lcrr,
-                     i.override_pepmass,
-                     i.has_ptm
-                  FROM identification i, tool t
-                  WHERE t.id = i.tool_id) AS id
+                      i.quality,
+                      i.lcrr,
+                      i.unconfirmed_ptms,
+                      i.override_pepmass,
+                      i.has_ptm
+                   FROM identification i, tool t
+                   WHERE t.id = i.tool_id) AS id
                 ON id.spectre_id = s.id
             LEFT JOIN
                 (SELECT

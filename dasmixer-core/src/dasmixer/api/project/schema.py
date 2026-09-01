@@ -120,6 +120,7 @@ CREATE TABLE IF NOT EXISTS identification (
     override_pepmass REAL,              -- Corrected precursor m/z from SEQFixer; NULL when no isotope offset applied
     has_ptm INTEGER,                    -- BOOLEAN: 1 if final sequence contains PTM (sequence != canonical_sequence), 0 otherwise; NULL if not calculated
     lcrr REAL,                          -- Longest Consecutive Run Ratio (0..1); NULL if not calculated
+    unconfirmed_ptms INTEGER,           -- Number of unconfirmed PTMs (seq_ptms - max_frag_ptm); NULL if not calculated
     src_file_protein_id TEXT,  -- protein ID from source identification file (nullable)
     FOREIGN KEY (spectre_id) REFERENCES spectre(id) ON DELETE CASCADE,
     FOREIGN KEY (tool_id) REFERENCES tool(id) ON DELETE CASCADE,
