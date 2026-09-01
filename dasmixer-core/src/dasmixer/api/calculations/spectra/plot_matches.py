@@ -43,6 +43,7 @@ def plot_ion_match(
     ppm_threshold: float = 20.0
 ) -> go.Figure:
     """
+    !!!!!!!!OBSOLETE METHOD!!!!!
     Plot ion match visualization for a spectrum and sequence.
     
     This is a simplified function for UI display. For full functionality
@@ -85,6 +86,7 @@ def plot_ion_match(
             "<extra></extra>"
         )
     ))
+
     
     # Update layout
     charge_text = f" (charge: {charge})" if charge else ""
@@ -162,13 +164,22 @@ def generate_spectrum_plot(
     # Plot each spectrum
     for row_no, df, header in zip(range(1, num_plots + 1), data, headers):
         # Add bars for each peak
+        fig.add_trace(go.Scatter(
+            x=df['mz'],
+            y=df['intensity'],
+            customdata=np.stack((df['frag_seq'], df['label']), axis=-1),
+            hovertemplate=(
+                "%{customdata[1]} %{customdata[0]}<br>M/z: %{x}, Int.: %{y}<extra></extra>"
+            ),
+            marker = dict(color="rgba(0,0,0,0)"),
+            mode='markers'
+        ), row=row_no, col=1)
         for _, row in df.iterrows():
             # Determine color based on ion match
             if pd.notna(row.get('ion_type')):
                 color = get_ion_type_color(row['ion_type'])
             else:
                 color = 'lightgray'
-            
             # Add bar trace
             fig.add_trace(
                 go.Bar(
@@ -179,11 +190,8 @@ def generate_spectrum_plot(
                         line=dict(color=color, width=2)
                     ),
                     showlegend=False,
-                    hovertemplate=(
-                        f"m/z: {row['mz']:.2f}<br>"
-                        f"Intensity: {row['intensity']:.0f}"
-                        "<extra></extra>"
-                    )
+                    hovertext=None
+
                 ),
                 row=row_no,
                 col=1
@@ -228,7 +236,8 @@ def generate_spectrum_plot(
     fig.update_layout(
         showlegend=False,
         height=400 * num_plots,  # Scale height with number of plots
-        hovermode='closest'
+        hovermode='closest',
+        hoverdistance=20
     )
     
     return fig

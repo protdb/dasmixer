@@ -54,3 +54,21 @@ def calculate_longest_consec_run_ratio(matches: list[FragmentMatch], sequence: s
 
     seq_length = len(parse(sequence)[0])
     return res / seq_length
+
+
+def _get_ptm_amount(sequence: str) -> int:
+    seq, params = parse(sequence)
+    ptm_count = len([1 for x in seq if x[1] is not None])
+    if params['n_term'] is not None:
+        ptm_count += len(params['n_term'])
+    if params['c_term'] is not None:
+        ptm_count += len(params['c_term'])
+    return ptm_count
+
+
+def calculate_unconfirmed_ptms(matches: list[FragmentMatch], sequence: str) -> int:
+    seq_ptms = _get_ptm_amount(sequence)
+    if seq_ptms == 0:
+        return 0
+    max_frag_ptm = max([_get_ptm_amount(x.fragment.sequence) for x in matches])
+    return seq_ptms - max_frag_ptm

@@ -18,12 +18,15 @@ def _show_html_in_webview(html_content: str, title: str = "Report Viewer"):
         import tempfile
         import webbrowser
 
+        from dasmixer.api.config import get_temp_html_dir
+
         with tempfile.NamedTemporaryFile(
             mode='w',
             suffix='.html',
             prefix='dasmixer_report_',
             delete=False,
-            encoding='utf-8'
+            encoding='utf-8',
+            dir=str(get_temp_html_dir()),
         ) as f:
             f.write(html_content)
             temp_path = f.name

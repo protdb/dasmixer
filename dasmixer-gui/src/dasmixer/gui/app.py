@@ -72,6 +72,10 @@ class DASMixerApp:
 
         logger.debug("[app] Route handlers registered.")
 
+        # Remove stale interactive-mode HTML files left by previous runs
+        # (older than 24h, so concurrently running instances are not affected).
+        cleanup_temp_html_files()
+
         if initial_project_path:
             logger.debug(f"[app] Opening initial project: {initial_project_path}")
             self.page.run_task(self._open_initial_project, initial_project_path)
@@ -594,7 +598,6 @@ class DASMixerApp:
             )
 
             config.add_recent_project(str(project_path))
-            cleanup_temp_html_files()
             self._update_titles()
             self.show_project_view()
             self._show_success(f"Created project: {project_path.name}")
@@ -649,7 +652,6 @@ class DASMixerApp:
             await self._check_project_version()
 
             config.add_recent_project(str(project_path))
-            cleanup_temp_html_files()
             self._update_titles()
             self.show_project_view()
             self._show_success(f"Opened project: {project_path.name}")
@@ -665,7 +667,6 @@ class DASMixerApp:
             try:
                 await self.current_project.close()
                 self.current_project = None
-                cleanup_temp_html_files()
                 self._update_titles()
                 self.show_start_view()
                 self._show_info("Project closed")

@@ -4,6 +4,8 @@ from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 import typer
 import json
+import sys
+import tempfile
 from typing import Any
 
 from dasmixer.utils.logger import logger
@@ -227,3 +229,25 @@ class AppConfig(BaseSettings):
 # Global config instance
 # Loaded once on module import
 config = AppConfig.load()
+
+
+def get_temp_html_dir() -> Path:
+    """
+    Get directory for temporary HTML files produced in Browser display mode.
+
+    On Windows the system temp directory (``tempfile.gettempdir()``) is used.
+    On Linux/macOS we use ``~/.cache/dasmixer/tmp/plots/`` instead, because
+    browsers such as Firefox refuse to open ``file://`` URLs pointing at
+    ``/tmp`` due to security restrictions.
+
+    The directory is created (with parents) if it does not exist.
+
+    Returns:
+        Path to an existing directory for temporary HTML files.
+    """
+    if sys.platform == "win32":
+        return Path(tempfile.gettempdir())
+
+    temp_dir = Path.home() / ".cache" / "dasmixer" / "tmp" / "plots"
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    return temp_dir

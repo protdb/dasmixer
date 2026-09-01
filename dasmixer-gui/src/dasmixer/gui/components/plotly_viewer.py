@@ -27,12 +27,15 @@ def show_webview(fig: go.Figure, title: str):
         import webbrowser
         from pathlib import Path
 
+        from dasmixer.api.config import get_temp_html_dir
+
         with tempfile.NamedTemporaryFile(
             mode='w',
             suffix='.html',
             prefix='dasmixer_plot_',
             delete=False,
-            encoding='utf-8'
+            encoding='utf-8',
+            dir=str(get_temp_html_dir()),
         ) as f:
             f.write(html)
             temp_path = f.name

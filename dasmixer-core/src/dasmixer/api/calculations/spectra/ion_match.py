@@ -11,7 +11,9 @@ from peptacular.score import (
 
 )
 
-from .quality_calculations import calculate_peptide_quality, calculate_longest_consec_run_ratio
+from .quality_calculations import (calculate_peptide_quality,
+                                   calculate_longest_consec_run_ratio,
+                                   calculate_unconfirmed_ptms)
 
 def _get_matched_intensity_percentage(
     fragment_matches: list[FragmentMatch], intensities: list[float]
@@ -89,6 +91,7 @@ class MatchResult:
     top_matched_ion_type: str
     quality: float
     longest_consec_run_rate: float
+    unconfirmed_ptms: int
 
 def match_predictions(
     params: IonMatchParameters,
@@ -142,7 +145,8 @@ def match_predictions(
             max_ion_matches=0,
             top_matched_ion_type='',
             quality=0.0,
-            longest_consec_run_rate=0.0
+            longest_consec_run_rate=0.0,
+            unconfirmed_ptms=0
         )
 
     # Generate theoretical fragments
@@ -191,8 +195,14 @@ def match_predictions(
     )
 
     lcrr = calculate_longest_consec_run_ratio(
-        matches, sequence)
+        matches,
+        sequence
+    )
 
+    unconfirmed_ptms = calculate_unconfirmed_ptms(
+        matches,
+        sequence,
+    )
 
     
     return MatchResult(
@@ -205,7 +215,8 @@ def match_predictions(
         max_ion_matches=max_matches,
         top_matched_ion_type=max_matches_type,
         quality=quality,
-        longest_consec_run_rate=lcrr
+        longest_consec_run_rate=lcrr,
+        unconfirmed_ptms=unconfirmed_ptms
     )
 
 

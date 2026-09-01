@@ -113,6 +113,36 @@ Code edits are picked up immediately — no rebuild needed.
 - Version: read `from dasmixer.versions import APP_VERSION`. `dasmixer.__version__` is unavailable when the metapackage is not installed (this is expected).
 - `make dev-install` installs into the *currently active* environment, not necessarily the poetry venv. Prefer the `poetry run pip install -e ...` form above for poetry-based workflows.
 
+#### Dependency updates
+
+Each subpackage owns its dependencies in its own `pyproject.toml` (`[project] dependencies`). The root `poetry.lock` tracks only shared dev tools (pytest) — it does **not** lock subpackage dependencies. Subpackages are editable-installed via `pip`, so dependency changes require a reinstall to take effect in the venv.
+
+**1. Update the constraint in the subpackage.** Edit `dasmixer-<pkg>/pyproject.toml`, following the existing `>=X.Y.Z,<MAJOR.0.0` range convention.
+
+**2. Reinstall in the root poetry venv.**
+
+```bash
+poetry run pip install -e ./dasmixer-core          # reinstall + upgrade changed deps
+poetry run pip install -e ./dasmixer-cli -e ./dasmixer-gui   # sync versions
+poetry run pip check                               # verify no conflicts
+```
+
+**3. Update the GUI standalone env** (has its own `poetry.lock` and venv, with `dasmixer-core` as a path dependency):
+
+```bash
+cd dasmixer-gui
+poetry lock            # re-resolve lock with the new constraint from ../dasmixer-core
+poetry install         # upgrade in the GUI venv
+```
+
+For a targeted upgrade of a single package without touching the rest: `poetry update <package>`.
+
+**4. Verify.**
+
+```bash
+poetry run python -c "import importlib.metadata as m; print(m.version('<package>'))"
+```
+
 ---
 
 ## Usage

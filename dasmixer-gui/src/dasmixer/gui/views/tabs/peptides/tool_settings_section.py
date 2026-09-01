@@ -270,9 +270,12 @@ class ToolSettingsSection(BaseSection):
                 controls['min_top_peaks'],
                 controls['min_ions_covered'],
                 controls['min_spectre_peaks'],
+
+            ], spacing=10),
+            ft.Row([
                 controls['min_quality'],
                 controls['min_lcrr'],
-            ], spacing=10),
+            ]),
             controls['denovo_correction'],
         ], spacing=8)
 
