@@ -54,7 +54,7 @@ class PlotMixin:
             i.score,
             i.ppm,
             i.tool_id,
-            m.matched_sequence,
+            coalesce(m.matched_sequence_modified, matched_sequence) as matched_sequence_modified,
             m.matched_ppm,
             m.protein_id,
             m.identity
@@ -73,7 +73,7 @@ class PlotMixin:
             i.score,
             i.ppm,
             i.tool_id,
-            null as matched_sequence,
+            null as matched_sequence_modified,
             null as matched_ppm,
             null as protein_id,
              null as identity
@@ -83,7 +83,6 @@ class PlotMixin:
             """
 
         ident_rows = await self._fetchall(query, (spectrum_id,))
-
         plots = []
         tool_seqs = set()
 
@@ -102,12 +101,13 @@ class PlotMixin:
                 })
                 tool_seqs.add(tool_seq)
             if row.get('protein_id', None) is not None:
-                if row['matched_sequence'] != row['canonical_sequence']:
-                    if tool_seq not in tool_seqs:
-                        tool_seqs.add(tool_seq)
+                if row['matched_sequence_modified'] != row['sequence']:
+                    tool_seq_protein = f'{row["tool"]}:{row["matched_sequence_modified"]}'
+                    if tool_seq_protein not in tool_seqs:
+                        tool_seqs.add(tool_seq_protein)
                         plots.append({
                             'tool': row['tool'],
-                            'sequence': row['matched_sequence'],
+                            'sequence': row['matched_sequence_modified'],
                             'protein_id': row['protein_id'],
                             'is_preferred': row['is_preferred'],
                             'ppm': row['matched_ppm'],

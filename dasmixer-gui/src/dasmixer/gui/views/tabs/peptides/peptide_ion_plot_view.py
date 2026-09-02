@@ -75,6 +75,9 @@ class PeptideIonPlotView(BasePlotView):
         sequences = plot_data['sequences']
         headers = plot_data['headers']
 
+        if len(sequences) > 1:
+            self.height_multiplier = 0.65 * len(sequences)
+
         fig = make_full_spectrum_plot(
             params=params,
             mz=plot_data['mz'],
@@ -86,12 +89,12 @@ class PeptideIonPlotView(BasePlotView):
         )
 
         fig.update_layout(
-            height=500 * len(headers),
-            width=1100,
             template='plotly_white',
             showlegend=False #self.plot_settings.get('show_legend', True)
 
         )
+
+
 
         if self.plot_settings.get('show_title', True):
             fig.update_layout(

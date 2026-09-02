@@ -150,6 +150,7 @@ def match_predictions(
         )
 
     # Generate theoretical fragments
+    print(params, sequence)
     frags = Fragmenter(sequence).fragment(
         params.ions,
         params.charges,
@@ -221,7 +222,7 @@ def match_predictions(
 
 
 def get_matches_dataframe(
-    match_result: MatchResult,
+    match_result: MatchResult | None,
     mz: list[float],
     intensity: list[float]
 ) -> pd.DataFrame:
@@ -261,7 +262,7 @@ def get_matches_dataframe(
         'intensity': intensity
     })
     
-    if not match_result.fragment_matches:
+    if match_result is None or not match_result.fragment_matches:
         # No matches - return experimental data with empty match columns
         exp_df['ion_type'] = None
         exp_df['ion_pos'] = None

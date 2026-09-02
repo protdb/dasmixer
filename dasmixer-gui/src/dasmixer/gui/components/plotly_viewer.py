@@ -12,7 +12,7 @@ from dasmixer.utils import logger
 from dasmixer.gui.utils import show_snack
 
 
-def show_webview(fig: go.Figure, title: str):
+def show_webview(fig: go.Figure, title: str, max_width: int = 1280, max_height: int = 720):
     """
     Show plotly figure in webview window or default browser based on config.
 
@@ -43,7 +43,13 @@ def show_webview(fig: go.Figure, title: str):
         webbrowser.open(Path(temp_path).as_uri())
     else:
         import webview
-        window = webview.create_window(title, html=html)
+        window_height = min(
+            fig.layout.height, max_height,
+        )
+        window_width = min(
+            fig.layout.width, max_width,
+        )
+        window = webview.create_window(title, html=html, width=window_width, height=window_height)
         webview.start()
 
 
@@ -121,6 +127,7 @@ class PlotlyViewer(ft.Container):
                     fit=ft.BoxFit.CONTAIN,
                 )
             except Exception as e:
+                logger.exception(e)
                 image = ft.Container(
                     content=ft.Text(f"Error rendering chart: {e}", color=ft.Colors.RED),
                     width=self.width,

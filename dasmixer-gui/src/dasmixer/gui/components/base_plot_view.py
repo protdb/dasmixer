@@ -63,6 +63,8 @@ class BasePlotView(ft.Container):
 
     plot_type_name: str = "base_plot"
 
+    height_multiplier: float = 1.0
+
     def __init__(
         self,
         project: Project,
@@ -256,6 +258,7 @@ class BasePlotView(ft.Container):
                 self.page.update()
 
         except Exception as ex:
+            logger.exception(ex)
             if self.preview_container is not None:
                 self.preview_container.content = ft.Text(
                     f"Error generating plot: {ex}", color=ft.Colors.RED_400
@@ -276,6 +279,8 @@ class BasePlotView(ft.Container):
         """
         # Calculate dimensions based on current window size and aspect ratio
         width, height = _get_plot_dimensions(self.page)
+        height = int(height * self.height_multiplier)
+        fig.update_layout(width=width, height=height)
 
         # Render PNG in a thread pool — Kaleido subprocess won't block the loop
         img_bytes = await render_png_async(fig, width, height)
@@ -298,10 +303,16 @@ class BasePlotView(ft.Container):
         """Launch interactive WebView in a separate process."""
         if not self.current_figure:
             return
+        if self.page:
+            max_height = self.page.height
+            max_width = self.page.width
+        else:
+            max_height = 1280
+            max_width = 720
         try:
             p = multiprocessing.Process(
                 target=show_webview,
-                args=(self.current_figure, self.title)
+                args=(self.current_figure, self.title, max_width, max_height)
             )
             p.start()
         except Exception as ex:

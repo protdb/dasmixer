@@ -47,7 +47,6 @@ class PeptideIonTableView(BaseTableView):
         'quality': 'Quality',
         'lcrr': 'LCRR',
         'unconfirmed_ptms': 'Unconfirmed PTMs',
-        # charge / pepmass (source + final)
         'charge': 'Source charge',
         'pepmass': 'Source pepmass',
         'override_charge': 'Override Charge',
@@ -55,9 +54,7 @@ class PeptideIonTableView(BaseTableView):
         'isotope_offset': 'Isotope Offset',
         'final_charge': 'Charge',
         'final_pepmass': 'Pepmass',
-        # has_ptm
         'has_ptm': 'Has PTM',
-        # peptide_match
         'matched_sequence': 'Match Sequence',
         'matched_ppm': 'Match PPM',
         'protein_id': 'Protein',
@@ -79,12 +76,9 @@ class PeptideIonTableView(BaseTableView):
     }
 
     default_columns = {
-        'identification_id', 'spectre_id', 'sample', 'seq_no', 'scans',
-        'tool', 'sequence', 'ppm', 'intensity_coverage', 'ions_matched',
-        'ion_match_type', 'top_peaks_covered', 'is_preferred',
-        'protein_id', 'gene',
-        # NEW visible by default:
-        'quality', 'lcrr', 'final_charge', 'final_pepmass',
+        'identification_id', 'spectre_id', 'sample', 'scans', 'tool',
+        'sequence', 'ppm', 'intensity_coverage', 'ions_matched', 'is_preferred',
+        'protein_id', 'gene', 'quality', 'lcrr', 'final_charge', 'final_pepmass',
     }
 
     def __init__(self, project: Project, plot_callback=None):
@@ -105,7 +99,8 @@ class PeptideIonTableView(BaseTableView):
             'spectre_id': None,
             'protein_id': None,
             'gene': None,
-            'protein_identified': 'All',
+            'protein_identified': 'None',
+            'sequence_identified': 'None',
             'min_quality': 0.0,
             'has_ptm': 'None',
             'has_substitution': 'None',
@@ -170,6 +165,15 @@ class PeptideIonTableView(BaseTableView):
             ],
             width=150,
         )
+        self.sequence_identified_field = ft.Dropdown(
+            label="Sequence Identified", value='None',
+            options=[
+                ft.DropdownOption(key="None", text="All"),
+                ft.DropdownOption(key="True", text="Yes"),
+                ft.DropdownOption(key="False", text="No"),
+            ],
+            width=150,
+        )
         self.protein_field = ft.TextField(
             label="Protein id", value="", width=150
         )
@@ -226,6 +230,7 @@ class PeptideIonTableView(BaseTableView):
             ], spacing=10),
             ft.Row([
                 self.protein_identified_field,
+                self.sequence_identified_field,
                 self.protein_field,
                 self.gene_field
             ]),
@@ -258,6 +263,7 @@ class PeptideIonTableView(BaseTableView):
         self.filter['protein_id'] = self.protein_field.value
         self.filter['gene'] = self.gene_field.value
         self.filter['protein_identified'] = self.protein_identified_field.value
+        self.filter['sequence_identified'] = self.sequence_identified_field.value
         try:
             self.filter['min_quality'] = float(self.min_quality_field.value)
         except (ValueError, TypeError):
@@ -293,6 +299,7 @@ class PeptideIonTableView(BaseTableView):
         if self.filter['sample_id'] != 'all':
             kwargs['sample_id'] = int(self.filter['sample_id'])
 
+
         if self.filter['tool_id'] != 'all':
             kwargs['tool_id'] = int(self.filter['tool_id'])
 
@@ -307,6 +314,9 @@ class PeptideIonTableView(BaseTableView):
 
         if self.filter['protein_identified'] != 'None':
             kwargs['protein_identified'] = self.filter['protein_identified'] == 'True'
+
+        if self.filter['sequence_identified'] != 'None':
+            kwargs['sequence_identified'] = self.filter['sequence_identified'] == 'True'
 
         if self.filter.get('identification_id'):
             try:
@@ -323,6 +333,12 @@ class PeptideIonTableView(BaseTableView):
         if self.filter.get('seq_no'):
             try:
                 kwargs['seq_no'] = int(self.filter['seq_no'])
+            except (ValueError, TypeError):
+                pass
+
+        if self.filter.get('spectre_id'):
+            try:
+                kwargs['spectre_id'] = int(self.filter['spectre_id'])
             except (ValueError, TypeError):
                 pass
 

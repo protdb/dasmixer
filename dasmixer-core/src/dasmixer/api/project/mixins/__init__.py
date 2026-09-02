@@ -6,6 +6,7 @@ from .sample_mixin import SampleMixin
 from .spectra_mixin import SpectraMixin
 from .identification_mixin import IdentificationMixin
 from .peptide_mixin import PeptideMixin
+from .joined_peptide_data_mixin import JoinedPeptideDataMixin
 from .protein_mixin import ProteinMixin
 from .plot_mixin import PlotMixin
 from .query_mixin import QueryMixin
@@ -19,6 +20,7 @@ __all__ = [
     'SpectraMixin',
     'IdentificationMixin',
     'PeptideMixin',
+    'JoinedPeptideDataMixin',
     'ProteinMixin',
     'PlotMixin',
     'QueryMixin',

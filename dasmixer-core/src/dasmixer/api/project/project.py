@@ -9,6 +9,7 @@ from .mixins import (
     SpectraMixin,
     IdentificationMixin,
     PeptideMixin,
+    JoinedPeptideDataMixin,
     ProteinMixin,
     ImportProjectMixin,
     PlotMixin,
@@ -29,6 +30,7 @@ class Project(
     SpectraMixin,
     IdentificationMixin,
     PeptideMixin,
+    JoinedPeptideDataMixin,
     ProteinMixin,
     ImportProjectMixin,
     
@@ -50,7 +52,9 @@ class Project(
     - SampleMixin: Sample management
     - SpectraMixin: Spectra files and spectra management
     - IdentificationMixin: Identification files and identifications management
-    - PeptideMixin: Peptide matches and complex joined queries
+    - PeptideMixin: Peptide matches CRUD and metrics
+    - JoinedPeptideDataMixin: Complex joined queries over
+        spectre/identification/peptide_match
     - ProteinMixin: Protein, identification results, and quantification management
     - ImportProjectMixin: Import another project's data into this one
     - PlotMixin: Data preparation for plotting
