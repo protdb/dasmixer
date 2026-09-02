@@ -51,8 +51,12 @@ class PeptideIonPlotView(BasePlotView):
                 label=label,
                 value=key in selected_header_fields,
             )
+            container = ft.Container(
+                content=checkbox,
+                width=170
+            )
             self._header_field_checkboxes[key] = checkbox
-            header_field_row_items.append(checkbox)
+            header_field_row_items.append(container)
 
         return ft.Column([
             ft.Text("Plot Display Options:", weight=ft.FontWeight.BOLD, size=13),
