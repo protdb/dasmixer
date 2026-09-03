@@ -41,7 +41,7 @@ DisableDirPage=auto
 ; Remove the following line to run in administrative install mode (install for all users).
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
-SetupIconFile={#SourcePath}\assets\icons\icon_64.ico
+SetupIconFile={#SourcePath}\assets\icons\icon_64_bg.ico
 SolidCompression=yes
 WizardStyle=modern
 

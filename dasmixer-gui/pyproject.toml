@@ -11,6 +11,7 @@ urls = {Homepage = "https://github.com/protdb/dasmixer"}
 dependencies = [
     "dasmixer-core[all] ==0.7.2a3",
     "flet[all] ==0.81.0",
+    "flet-color-pickers ==0.81.0",
     "pywebview[gtk] ==6.2.1 ; sys_platform == 'linux'",
     "pywebview[qt] ==6.2.1 ; sys_platform == 'darwin'",
     "pywebview ==6.2.1 ; sys_platform == 'win32'",
