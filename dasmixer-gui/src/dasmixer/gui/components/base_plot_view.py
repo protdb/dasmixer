@@ -8,6 +8,7 @@ import multiprocessing
 from dasmixer.api.config import config
 from dasmixer.api.project.project import Project
 from dasmixer.gui.components.plotly_viewer import PlotlyViewer, show_webview, render_png_async
+from dasmixer.gui.components.clipboard import copy_png_to_clipboard
 from dasmixer.utils import logger
 from dasmixer.gui.utils import show_snack
 
@@ -91,6 +92,7 @@ class BasePlotView(ft.Container):
         self.save_button: ft.ElevatedButton | None = None
         self.export_button: ft.ElevatedButton | None = None
         self.webview_button: ft.ElevatedButton | None = None
+        self.copy_button: ft.ElevatedButton | None = None
 
         # suspend/resume support
         self._is_suspended: bool = False
@@ -125,6 +127,14 @@ class BasePlotView(ft.Container):
         )
 
         buttons = []
+
+        self.copy_button = ft.ElevatedButton(
+            content=ft.Text("Copy"),
+            icon=ft.Icons.CONTENT_COPY,
+            on_click=lambda e: self.page.run_task(self._on_copy, e) if self.page else None,
+            disabled=True
+        )
+        buttons.append(self.copy_button)
 
         if self.show_save_button:
             self.save_button = ft.ElevatedButton(
@@ -250,7 +260,7 @@ class BasePlotView(ft.Container):
             await self._display_plot(fig)
 
             # Enable action buttons
-            for btn in [self.save_button, self.export_button, self.webview_button]:
+            for btn in [self.copy_button, self.save_button, self.export_button, self.webview_button]:
                 if btn is not None:
                     btn.disabled = False
 
@@ -343,6 +353,38 @@ class BasePlotView(ft.Container):
             logger.exception(ex)
             if self.page:
                 show_snack(self.page, f"Error saving plot: {ex}", ft.Colors.RED_400)
+                self.page.update()
+
+    async def _on_copy(self, e):
+        """Copy the plot image to the clipboard."""
+        if not self.current_figure:
+            return
+
+        # Use the cached preview PNG if available — what the user sees.
+        img_bytes = self._last_img_bytes
+        if img_bytes is None:
+            # Defensive re-render (button only enabled after first display,
+            # so this path should not normally be reached).
+            try:
+                width, height = _get_plot_dimensions(self.page)
+                height = int(height * self.height_multiplier)
+                img_bytes = await render_png_async(self.current_figure, width, height)
+            except Exception as ex:
+                logger.exception(ex)
+                if self.page:
+                    show_snack(self.page, f"Error copying plot: {ex}", ft.Colors.RED_400)
+                    self.page.update()
+                return
+
+        try:
+            await copy_png_to_clipboard(self.page, img_bytes)
+            if self.page:
+                show_snack(self.page, "Plot copied!", ft.Colors.GREEN_400)
+                self.page.update()
+        except Exception as ex:
+            logger.exception(ex)
+            if self.page:
+                show_snack(self.page, f"Error copying plot: {ex}", ft.Colors.RED_400)
                 self.page.update()
 
     async def _on_export(self, e):

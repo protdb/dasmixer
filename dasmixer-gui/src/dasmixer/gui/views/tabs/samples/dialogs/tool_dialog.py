@@ -5,6 +5,7 @@ from dasmixer.api.project.project import Project
 from dasmixer.api.project.dataclasses import Tool
 from dasmixer.api.inputs.registry import registry
 from ..constants import get_default_color
+from dasmixer.gui.components.color_picker import ColorPickerField
 from dasmixer.gui.utils import show_snack
 from dasmixer.utils import logger
 
@@ -74,9 +75,6 @@ class ToolDialog:
         else:
             default_color = self.tool.display_color or "#9333EA"
 
-        if default_color.startswith('#'):
-            default_color = default_color[1:]
-
         # Build form fields
         self.name_field = ft.TextField(
             label="Tool Name",
@@ -97,28 +95,11 @@ class ToolDialog:
             value=self.tool.parser if self.is_edit_mode else parser_options[0].key,
             width=300,
         )
-        self.color_field = ft.TextField(
-            label="Color (hex)",
+        self.color_field = ColorPickerField(
             value=default_color,
-            max_length=6,
-            hint_text="e.g., 9333EA for purple",
+            label="Color (hex)",
+            compact=False,                # full-режим
         )
-        color_preview = ft.Container(
-            width=50, height=50, border_radius=5, bgcolor=f"#{default_color}"
-        )
-
-        def update_color_preview(e):
-            color_value = self.color_field.value
-            if color_value:
-                if not color_value.startswith('#'):
-                    color_value = '#' + color_value
-                try:
-                    color_preview.bgcolor = color_value
-                    color_preview.update()
-                except Exception:
-                    pass
-
-        self.color_field.on_change = update_color_preview
 
         # Replace spinner with real form
         self.dialog.content = ft.Column(
@@ -127,11 +108,7 @@ class ToolDialog:
                 ft.Text("Tool Type:", weight=ft.FontWeight.W_500),
                 self.tool_type_group,
                 self.parser_dropdown,
-                ft.Row(
-                    [self.color_field, color_preview],
-                    alignment=ft.MainAxisAlignment.START,
-                    spacing=10,
-                ),
+                self.color_field,
                 ft.Container(height=5),
                 ft.Text(
                     "Tool represents an identification method (e.g., de novo, database search)",
@@ -141,7 +118,7 @@ class ToolDialog:
                 ),
             ],
             tight=True,
-            width=400,
+            width=460,
             scroll=ft.ScrollMode.AUTO,
         )
         self.dialog.actions = [
@@ -167,10 +144,12 @@ class ToolDialog:
             return
         
         try:
-            # Prepare color
+            # Prepare color (component returns '#RRGGBB')
+            if not self.color_field.is_valid:
+                self.color_field.set_error("Invalid color")
+                self.page.update()
+                return
             color = self.color_field.value
-            if not color.startswith('#'):
-                color = '#' + color
             
             if self.is_edit_mode:
                 # Update existing tool

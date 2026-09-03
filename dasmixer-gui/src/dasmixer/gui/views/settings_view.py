@@ -1,13 +1,11 @@
 """Settings view — application settings screen."""
 
-import re
 import os
 import flet as ft
 from dasmixer.utils import logger
 from dasmixer.api.config import config
 from dasmixer.gui.utils import show_snack
-
-_HEX_RE = re.compile(r'^#[0-9a-fA-F]{6}$')
+from dasmixer.gui.components.color_picker import ColorPickerField
 
 
 def _apply_logging_config(cfg) -> None:
@@ -74,7 +72,8 @@ class SettingsView(ft.View):
             ),
             scroll=ft.ScrollMode.AUTO,
         )
-        self._color_rows: list[dict] = []  # [{container, field}]
+        self._color_rows: list[ColorPickerField] = []
+        self._row_containers: dict[int, ft.Container] = {}
         self._build_controls()
 
     def _go_back(self):
@@ -320,76 +319,38 @@ class SettingsView(ft.View):
 
     def _add_color_row(self, hex_color: str = "#888888"):
         """Add one editable color row to the palette list."""
-        preview = ft.Container(
-            width=36,
-            height=36,
-            bgcolor=hex_color if _HEX_RE.match(hex_color) else "#888888",
-            border_radius=4,
-            border=ft.border.all(1, ft.Colors.GREY_400),
-        )
-        field = ft.TextField(
+        field = ColorPickerField(
             value=hex_color,
-            width=120,
-            hint_text="#rrggbb",
-            on_change=lambda e, p=preview, f=None: self._on_color_change(e, p),
-            on_blur=lambda e, p=preview: self._on_color_blur(e, p),
+            label=None,
+            compact=True,
+            show_delete=True,
+            preview_size=36,
         )
-        # Fix: bind field reference for on_change
-        field.on_change = lambda e, p=preview, tf=field: self._on_color_change(e, p)
-
-        row_data = {"preview": preview, "field": field}
-        self._color_rows.append(row_data)
-
-        delete_btn = ft.IconButton(
-            icon=ft.Icons.DELETE_OUTLINE,
-            tooltip="Remove color",
-            on_click=lambda _, rd=row_data: self._on_delete_color(rd),
-        )
+        # Bind delete to this instance after creation (avoids closure-on-self issues)
+        self._color_rows.append(field)
+        field._on_delete_cb = lambda: self._on_delete_color(field)
 
         row_container = ft.Container(
-            content=ft.Row(
-                [preview, field, delete_btn],
-                spacing=8,
-                vertical_alignment=ft.CrossAxisAlignment.CENTER,
-            ),
+            content=field,
+            padding=ft.padding.symmetric(vertical=2),
         )
-        row_data["container"] = row_container
+        self._row_containers[id(field)] = row_container
         self._color_rows_column.controls.append(row_container)
 
     # ------------------------------------------------------------------
     # Event handlers
     # ------------------------------------------------------------------
 
-    def _on_color_change(self, e: ft.ControlEvent, preview: ft.Container):
-        """Live-update color preview as user types."""
-        value = e.control.value or ""
-        if _HEX_RE.match(value):
-            preview.bgcolor = value
-            e.control.border_color = None  # reset error highlight
-        else:
-            preview.bgcolor = "#888888"
-        if self.page:
-            preview.update()
-            e.control.update()
-
-    def _on_color_blur(self, e: ft.ControlEvent, preview: ft.Container):
-        """Validate color on focus loss — highlight invalid values."""
-        value = e.control.value or ""
-        if not _HEX_RE.match(value):
-            e.control.border_color = ft.Colors.RED
-        else:
-            e.control.border_color = None
-        if self.page:
-            e.control.update()
-
     def _on_add_color(self):
         self._add_color_row("#888888")
         if self.page:
             self._color_rows_column.update()
 
-    def _on_delete_color(self, row_data: dict):
-        self._color_rows.remove(row_data)
-        self._color_rows_column.controls.remove(row_data["container"])
+    def _on_delete_color(self, field: ColorPickerField):
+        self._color_rows.remove(field)
+        row_container = self._row_containers.pop(id(field), None)
+        if row_container is not None and row_container in self._color_rows_column.controls:
+            self._color_rows_column.controls.remove(row_container)
         if self.page:
             self._color_rows_column.update()
 
@@ -447,16 +408,12 @@ class SettingsView(ft.View):
 
         # Colors
         new_colors: list[str] = []
-        for row_data in self._color_rows:
-            val = (row_data["field"].value or "").strip()
-            if not _HEX_RE.match(val):
-                errors.append(f"Invalid color value: '{val}'")
-                row_data["field"].border_color = ft.Colors.RED
-                row_data["field"].update()
+        for field in self._color_rows:
+            if not field.is_valid:
+                errors.append(f"Invalid color value: '{field.value}'")
+                field.set_error("Invalid hex color")
             else:
-                row_data["field"].border_color = None
-                row_data["field"].update()
-                new_colors.append(val)
+                new_colors.append(field.value)
 
         if errors:
             show_snack(self.page, "Fix errors before saving: " + "; ".join(errors), ft.Colors.RED_400)

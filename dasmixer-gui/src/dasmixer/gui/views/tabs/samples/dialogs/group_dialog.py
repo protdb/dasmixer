@@ -4,6 +4,7 @@ import flet as ft
 from dasmixer.api.project.project import Project
 from dasmixer.api.project.dataclasses import Subset
 from ..constants import get_default_color
+from dasmixer.gui.components.color_picker import ColorPickerField
 from dasmixer.gui.utils import show_snack
 from dasmixer.utils import logger
 
@@ -77,9 +78,6 @@ class GroupDialog:
 
     async def _fill_dialog(self, dlg_title: str, default_color: str):
         """Replace dialog content with the actual form."""
-        if default_color.startswith('#'):
-            default_color = default_color[1:]
-
         self.name_field = ft.TextField(
             label="Group Name",
             value=self.group.name if self.is_edit_mode else "",
@@ -92,41 +90,20 @@ class GroupDialog:
             min_lines=2,
             max_lines=4,
         )
-        self.color_field = ft.TextField(
+        self.color_field = ColorPickerField(
+            value=default_color,          # полный '#RRGGBB'
             label="Color (hex)",
-            value=default_color,
-            max_length=6,
-            hint_text="e.g., FF0000 for red",
+            compact=False,                # full-режим
         )
-        color_preview = ft.Container(
-            width=50, height=50, border_radius=5, bgcolor=f"#{default_color}"
-        )
-
-        def update_color_preview(e):
-            color_value = self.color_field.value
-            if color_value:
-                if not color_value.startswith('#'):
-                    color_value = '#' + color_value
-                try:
-                    color_preview.bgcolor = color_value
-                    color_preview.update()
-                except Exception:
-                    pass
-
-        self.color_field.on_change = update_color_preview
 
         self.dialog.content = ft.Column(
             [
                 self.name_field,
                 self.details_field,
-                ft.Row(
-                    [self.color_field, color_preview],
-                    alignment=ft.MainAxisAlignment.START,
-                    spacing=10,
-                ),
+                self.color_field,
             ],
             tight=True,
-            width=400,
+            width=460,
         )
         self.dialog.actions = [
             ft.TextButton("Cancel", on_click=self._close),
@@ -151,11 +128,13 @@ class GroupDialog:
             return
         
         try:
-            # Prepare color
+            # Prepare color (component returns '#RRGGBB')
+            if not self.color_field.is_valid:
+                self.color_field.set_error("Invalid color")
+                self.page.update()
+                return
             color = self.color_field.value
-            if not color.startswith('#'):
-                color = '#' + color
-            
+
             if self.is_edit_mode:
                 # Update existing group
                 self.group.name = self.name_field.value
