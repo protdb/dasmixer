@@ -8,56 +8,68 @@ class MedianReport(BaseReport):
     name = "Basic statistics"
     description = "Creates table with common statistic parameters (mean, median, variance etc per subset"
 
-    async def _get_data(self, lfq_type, lfq_measure, subsets) -> pd.DataFrame:
+    async def _get_data(
+        self, lfq_type, lfq_measure, subsets, exclude_outliers: bool = True
+    ) -> pd.DataFrame:
         data = await self.project.get_protein_quantification_data(
             method=lfq_type,
-            subsets=subsets,
+            subsets=subsets if subsets else None,
+            exclude_outliers=exclude_outliers,
         )
-        sample_data = await self.project.execute_query_df(
-            """
-            select
-              sb.name as subset_name,
-              sb.id as subset_id,
-              s.cnt as sample_count
-            FROM
-              subset sb,
-              (select subset_id, count() as cnt from sample group by subset_id) as s
-            WHERE
-              s.subset_id = sb.id
-            """
+        if data.empty:
+            return pd.DataFrame()
+
+        # Normalize subsets: None / empty list → all subsets present in data.
+        if not subsets:
+            subsets = list(data['subset'].dropna().unique())
+
+        # True sample counts per subset (excluding outliers by default),
+        # used as denominators for "% of subset_samples".
+        sample_counts = await self.project.get_subset_sample_counts(
+            exclude_outliers=exclude_outliers, subsets=subsets
         )
-        sample_counts = {}
-        for _, row in sample_data.iterrows():
-            if subsets is not None and row['subset_name'] in subsets:
-                sample_counts[row['subset_name']] = row['sample_count']
+
         data['value'] = data[lfq_measure]
         uq_proteins = data[['protein_id', 'protein_name', 'gene']].drop_duplicates()
-        all_samples = len(data['sample_id'].unique())
+        all_samples = len(data['sample_id'].unique()) or 1
 
         results = []
         for _, protein_row in uq_proteins.iterrows():
             sub_df = data[data['protein_id'] == protein_row['protein_id']]
+            protein_total = len(sub_df)
             res = {
-                ('protein','ID'): protein_row['protein_id'],
+                ('protein', 'ID'): protein_row['protein_id'],
                 ('protein', 'Name'): protein_row['protein_name'],
                 ('protein', 'Gene'): protein_row['gene'],
-                ('protein', 'Total samples'): len(sub_df),
-                ('protein', '% of all samples'): len(sub_df) / all_samples * 100,
+                ('protein', 'Total samples'): protein_total,
+                ('protein', '% of all samples'): protein_total / all_samples * 100,
             }
             for subset in subsets:
-                subset_subdf = sub_df.query(f'subset==@subset')
-                res[(subset, 'Samples')] = len(subset_subdf)
-                res[(subset, '% of total samples')] = len(subset_subdf) / len(sub_df) * 100
-                res[(subset, '% of subset_samples')] = len(subset_subdf) / sample_counts[subset] * 100
-                res[(subset, 'Mean')] = subset_subdf['value'].mean()
-                res[(subset, 'Median')] = subset_subdf['value'].median()
-                res[(subset, 'STD')] = subset_subdf['value'].std()
-                res[(subset, 'Min')] = subset_subdf['value'].min()
-                res[(subset, 'Max')] = subset_subdf['value'].max()
-                res[(subset, 'Variance')] = subset_subdf['value'].var()
-                res[(subset, 'CV')] = subset_subdf['value'].std() / subset_subdf['value'].mean()
-                res[(subset, 'Skew')] = subset_subdf['value'].skew()
-                res[(subset, 'Kurtosis')] = subset_subdf['value'].kurtosis()
+                subset_subdf = sub_df.query('subset==@subset')
+                n_sub = len(subset_subdf)
+                sub_total = sample_counts.get(subset, 0)
+                values = subset_subdf['value']
+                mean_val = values.mean()
+                res[(subset, 'Samples')] = n_sub
+                res[(subset, '% of total samples')] = (
+                    n_sub / protein_total * 100 if protein_total > 0 else 0
+                )
+                res[(subset, '% of subset_samples')] = (
+                    n_sub / sub_total * 100 if sub_total > 0 else 0
+                )
+                res[(subset, 'Mean')] = mean_val
+                res[(subset, 'Median')] = values.median()
+                res[(subset, 'STD')] = values.std()
+                res[(subset, 'Min')] = values.min()
+                res[(subset, 'Max')] = values.max()
+                res[(subset, 'Variance')] = values.var()
+                # CV undefined when mean is 0 / NaN — leave as None instead of inf/NaN.
+                if mean_val is not None and not pd.isna(mean_val) and mean_val != 0:
+                    res[(subset, 'CV')] = values.std() / mean_val
+                else:
+                    res[(subset, 'CV')] = None
+                res[(subset, 'Skew')] = values.skew()
+                res[(subset, 'Kurtosis')] = values.kurtosis()
             results.append(res)
         df = pd.json_normalize(results)
         df.columns = pd.MultiIndex.from_tuples(list(df.columns))
@@ -77,8 +89,14 @@ class MedianReport(BaseReport):
         else:
             lfq_type = str(lfq_value)
             lfq_measure = 'rel_value'
-        df = await self._get_data(lfq_type, lfq_measure, params.get('subsets', None))
-        df.columns = [f"{col[0]}_{col[1]}" for col in df.columns]
+        include_outliers = bool(params.get('include_outliers', False))
+        exclude_outliers = not include_outliers
+        df = await self._get_data(
+            lfq_type, lfq_measure, params.get('subsets', None),
+            exclude_outliers=exclude_outliers,
+        )
+        if not df.empty:
+            df.columns = [f"{col[0]}_{col[1]}" for col in df.columns]
         return [], [('Full statistic offload', df, False)]
 
 from ..registry import registry

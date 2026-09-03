@@ -355,7 +355,8 @@ class ProteinMixin:
             self,
             method: str = None,
             subsets: list[str] | None = None,
-            protein_id: str | None = None
+            protein_id: str | None = None,
+            exclude_outliers: bool = True,
     ) -> pd.DataFrame:
         """
         Get protein quantification data.
@@ -364,6 +365,8 @@ class ProteinMixin:
             method: LFQ algorithm ('emPAI', 'iBAQ', 'NSAF', 'Top3')
             subsets: Optional list of subset names to filter
             protein_id: Optional protein ID to filter
+            exclude_outliers: If True (default), samples marked as outlier
+                are excluded from the result.
         
         Returns:
             DataFrame with quantification data
@@ -394,20 +397,23 @@ class ProteinMixin:
             WHERE 1=1
         """
         params = []
-        
+
+        if exclude_outliers:
+            query += " AND (s.outlier = 0 OR s.outlier IS NULL)"
+
         if method:
             query += " AND q.algorithm = ?"
             params.append(method)
-        
+
         if protein_id:
             query += " AND i.protein_id = ?"
             params.append(protein_id)
-        
+
         if subsets:
             placeholders = ','.join('?' * len(subsets))
             query += f" AND sb.name IN ({placeholders})"
             params.extend(subsets)
-        
+
         params_tuple = tuple(params) if params else None
         df = await self.execute_query_df(query, params_tuple)
         return df

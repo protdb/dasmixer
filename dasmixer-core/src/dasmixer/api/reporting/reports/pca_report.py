@@ -136,13 +136,43 @@ def _compute_pca(wide: pd.DataFrame, n_components: int = 2) -> tuple[pd.DataFram
     """
     Run PCA on the wide (samples × proteins) matrix.
 
-    Missing values filled with column medians before scaling.
-    Returns (scores_df, fitted_pca).
+    Proteins (columns) with no value in any sample and constant-value
+    columns are dropped before scaling. Remaining missing values are filled
+    with column medians.
+
+    Raises ValueError when the cleaned matrix has no usable features or fewer
+    than 2 independent dimensions (a 2D PCA cannot be produced).
+
+    Returns (scores_df, fitted_pca). ``scores_df`` keeps the input row index.
     """
+    # Drop proteins (columns) with no value in any sample.
+    wide = wide.dropna(axis=1, how="all")
+    # Drop constant-value columns: they carry no information and inflate the
+    # explained-variance denominator.
+    nunique = wide.nunique(axis=0)
+    wide = wide.loc[:, nunique > 1]
+
+    if wide.shape[1] == 0:
+        raise ValueError(
+            "No proteins with measurable variation across samples remain "
+            "after removing all-NaN and constant-value entries. "
+            "Cannot run PCA."
+        )
+
+    # Fill remaining NaN with column medians (per-protein central tendency).
     filled = wide.fillna(wide.median(numeric_only=True))
     scaler = StandardScaler()
     scaled = scaler.fit_transform(filled)
-    pca = PCA(n_components=min(n_components, min(scaled.shape)))
+
+    n_comp = min(n_components, scaled.shape[0], scaled.shape[1])
+    if n_comp < 2:
+        raise ValueError(
+            f"Not enough independent dimensions for a 2D PCA "
+            f"(samples={scaled.shape[0]}, usable proteins={scaled.shape[1]}). "
+            f"At least 2 samples and 2 proteins with variation are required."
+        )
+
+    pca = PCA(n_components=n_comp)
     scores = pca.fit_transform(scaled)
     cols = [f"PC{i+1}" for i in range(scores.shape[1])]
     return pd.DataFrame(scores, index=wide.index, columns=cols), pca
@@ -189,7 +219,11 @@ def _compute_roc(
             pc1 = -pc1
             auc = roc_auc_score(y_true, pc1)
 
-        fpr, tpr, _ = roc_curve(y_true, pc1)
+        try:
+            fpr, tpr, _ = roc_curve(y_true, pc1)
+        except Exception:
+            # Degenerate y_true / non-finite pc1 — skip this subset.
+            continue
         results.append({
             "subset": subset,
             "fpr": fpr.tolist(),
@@ -211,17 +245,19 @@ class PCAReport(BaseReport):
     parameters = None
 
     async def _get_quant_matrix(
-        self, lfq_type: str, lfq_measure: str, selected_subsets: list[str]
+        self, lfq_type: str, lfq_measure: str, selected_subsets: list[str],
+        exclude_outliers: bool = True,
     ) -> tuple[pd.DataFrame, pd.DataFrame]:
         """
         Build wide sample × protein matrix and return (wide_df, meta_df).
 
         meta_df has columns [sample, subset] indexed by sample name.
-        wide_df rows = sample names, columns = protein_id, values = rel_value.
+        wide_df rows = sample names, columns = protein_id, values = lfq_measure.
         """
         df = await self.project.get_protein_quantification_data(
             method=lfq_type,
             subsets=selected_subsets if selected_subsets else None,
+            exclude_outliers=exclude_outliers,
         )
         if df.empty:
             raise ValueError(
@@ -257,8 +293,12 @@ class PCAReport(BaseReport):
         lfq_type = lfq_value[0]
         lfq_measure = lfq_value[1]
         show_labels = params.get("show_labels", False)
+        include_outliers = bool(params.get("include_outliers", False))
+        exclude_outliers = not include_outliers
 
-        wide, meta = await self._get_quant_matrix(lfq_type, lfq_measure, selected_subsets)
+        wide, meta = await self._get_quant_matrix(
+            lfq_type, lfq_measure, selected_subsets, exclude_outliers=exclude_outliers
+        )
 
         # Align meta to wide rows (some samples might have no quant data)
         meta = meta.reindex(wide.index)
@@ -268,8 +308,16 @@ class PCAReport(BaseReport):
         wide = wide.loc[valid_mask]
         meta = meta.loc[valid_mask]
 
+        # Drop samples with no quantification value across any protein — they
+        # cannot be positioned in PCA space.
+        row_mask = ~wide.isna().all(axis=1)
+        wide = wide.loc[row_mask]
+        meta = meta.reindex(wide.index)
+
         if len(wide) < 2:
-            raise ValueError("At least 2 samples with quantification data are required for PCA.")
+            raise ValueError(
+                "At least 2 samples with quantification data are required for PCA."
+            )
 
         # Build color map from DB
         subsets_obj = await self.project.get_subsets()

@@ -34,6 +34,7 @@ class PCAReportForm(ReportForm):
     subsets = MultiSubsetSelector(label="Subsets to include")
     lfq = LFQSelector(label="LFQ", default_method="emPAI", default_value_type="rel")
     show_labels = BoolSelector(default=True, label="Show sample labels")
+    include_outliers = BoolSelector(default=False, label="Include outlier samples")
 
 
 # ---------------------------------------------------------------------------
@@ -49,6 +50,7 @@ class VolcanoReportForm(ReportForm):
     percent_to_calculate = IntSelector(default=20, label="Min % samples with value")
     fc_threshold = FloatSelector(default=1.5, label="FC threshold")
     p_threshold = FloatSelector(default=0.05, label="p-value threshold")
+    include_outliers = BoolSelector(default=False, label="Include outlier samples")
 
 
 # ---------------------------------------------------------------------------
@@ -93,6 +95,7 @@ class SampleReportForm(ReportForm):
 class MedianReportForm(ReportForm):
     subsets = MultiSubsetSelector()
     lfq = LFQSelector(label="LFQ")
+    include_outliers = BoolSelector(default=False, label="Include outlier samples")
 
 # ---------------------------------------------------------------------------
 # Monkey-patch: bind form classes to report classes

@@ -6,7 +6,6 @@ from dasmixer.api.reporting._icons import Icons
 from scipy.stats import false_discovery_control, mannwhitneyu, ttest_ind
 import plotly.graph_objects as go
 from ..base import BaseReport
-from dasmixer.utils.logger import logger
 from smart_round import format_dataframe
 
 
@@ -16,9 +15,11 @@ class VolcanoReport(BaseReport):
     icon = Icons.VOLCANO
     parameters = None
 
-    async def get_data(self, lfq_type: str, subsets: list[str]) -> pd.DataFrame:
+    async def get_data(
+        self, lfq_type: str, subsets: list[str], exclude_outliers: bool = True
+    ) -> pd.DataFrame:
         return await self.project.get_protein_quantification_data(
-            method=lfq_type, subsets=subsets
+            method=lfq_type, subsets=subsets, exclude_outliers=exclude_outliers
         )
 
     async def draw_plot(self, data: pd.DataFrame, p_threshold: float, fc_threshold_log2: float) -> go.Figure:
@@ -27,9 +28,11 @@ class VolcanoReport(BaseReport):
         subsets = await self.project.get_subsets()
         subset_colors = {x.name: x.display_color for x in subsets}
         df = data.copy()
-        if len(df.columns) != 5:
-            print(df)
-            raise Exception("Not enough data in selection, cannot create plot")
+        if df.empty or len(df.columns) != 5:
+            raise ValueError(
+                "No valid data points to draw the Volcano plot "
+                "(no protein passed the statistical test with finite values)."
+            )
         df.columns = ['protein_id', 'subset', 'p_value', 'fc', 'fc_log2']
         
         # Фильтруем невалидные данные
@@ -99,11 +102,35 @@ class VolcanoReport(BaseReport):
         return fig
 
     @staticmethod
-    def get_pval(value_list1, value_list2, criteria) -> float:
-        if criteria == 'Mann-Whitney':
-            return mannwhitneyu(value_list1, value_list2).pvalue
-        elif criteria == 'T-test':
-            return ttest_ind(value_list1, value_list2).pvalue
+    def get_pval(value_list1, value_list2, criteria) -> float | None:
+        """Return p-value for the chosen test, or None on degenerate input."""
+        try:
+            if criteria == 'Mann-Whitney':
+                return mannwhitneyu(value_list1, value_list2).pvalue
+            elif criteria == 'T-test':
+                return ttest_ind(value_list1, value_list2).pvalue
+        except Exception:
+            return None
+        return None
+
+    @staticmethod
+    def correct_pvals(p_values: list[float], method: str) -> list[float]:
+        """
+        Apply multiple-testing correction.
+
+        ``BH`` / ``BY`` delegate to scipy.stats.false_discovery_control;
+        ``Bonferroni`` is computed manually as p * n clipped to 1.
+        Returns the adjusted p-values in the original order.
+        """
+        if not p_values:
+            return []
+        n = len(p_values)
+        method = (method or 'BH').upper()
+        if method == 'BONFERRONI':
+            return [min(p * n, 1.0) for p in p_values]
+        scipy_method = 'by' if method == 'BY' else 'bh'
+        arr = np.asarray(p_values, dtype=float)
+        return list(false_discovery_control(arr, method=scipy_method))
 
     async def _generate_impl(
         self,
@@ -119,6 +146,7 @@ class VolcanoReport(BaseReport):
 
         calc_share = int(params['percent_to_calculate']) / 100
         criteria = str(params['stats_method'])
+        fdc = str(params.get('fdc', 'BH'))
 
         fc_threshold = float(params['fc_threshold'])
         fc_threshold_log2 = np.log2(fc_threshold)
@@ -132,85 +160,126 @@ class VolcanoReport(BaseReport):
             lfq_type = str(lfq_value)
             lfq_measure = 'rel_value'
 
-        df = await self.get_data(lfq_type, all_subsets)
-        subset_lenghts_df = df[['subset', 'sample']].drop_duplicates(ignore_index=True).groupby('subset').count().reset_index(names='subset')
-        logger.debug(subset_lenghts_df)
-        subset_lenghts = {}
-        for _, row in subset_lenghts_df.iterrows():
-            subset_lenghts[row['subset']] = row['sample']
+        include_outliers = bool(params.get('include_outliers', False))
+        exclude_outliers = not include_outliers
+
+        df = await self.get_data(lfq_type, all_subsets, exclude_outliers=exclude_outliers)
+
+        # True subset sizes (number of non-outlier samples per subset) from DB.
+        # Using the real denominator instead of counting distinct samples in
+        # quantification data — the latter undercounts when a sample has no
+        # quantified proteins and wrongly includes outliers.
+        subset_counts = await self.project.get_subset_sample_counts(
+            exclude_outliers=exclude_outliers, subsets=all_subsets
+        )
+        subset_lenghts = {
+            name: subset_counts.get(name, 0) for name in all_subsets
+        }
+
         good_proteins = df[['protein_id', 'subset']].groupby(['protein_id', 'subset']).agg('size')
-        logger.debug(good_proteins)
         good_proteins = good_proteins.reset_index(name='count')
-        logger.debug(good_proteins)
         good_proteins['subset_size'] = good_proteins['subset'].map(subset_lenghts)
-        good_proteins['is_sufficient'] = (good_proteins['count'] / good_proteins['subset_size']) >= calc_share
-        logger.debug(len(df))
+        # Guard against a zero denominator (subset has no samples at all).
+        good_proteins['is_sufficient'] = good_proteins.apply(
+            lambda r: r['subset_size'] > 0
+            and (r['count'] / r['subset_size']) >= calc_share,
+            axis=1,
+        )
         df = pd.merge(
             df,
             good_proteins[['protein_id', 'subset', 'is_sufficient']],
             on=['protein_id', 'subset'],
             how='left',
         ).query('is_sufficient==True').copy()
-        logger.debug(len(df))
         result = []
         figure_data = []
 
         for protein in df['protein_id'].unique():
-            ctrl_values = df.query("protein_id==@protein & subset==@control_subset")[lfq_measure]
-            print(ctrl_values)
+            ctrl_values = (
+                df.query("protein_id==@protein & subset==@control_subset")[lfq_measure]
+                .dropna()
+                .tolist()
+            )
             if len(ctrl_values) == 0:
                 continue
-            logger.debug(f"{protein} {ctrl_values}")
+            ctrl_median = float(np.median(ctrl_values))
             subsets = []
             p_values = []
             fc_values = []
             samples_no = []
             for subset in exptl_subsets:
-                exptl_values = df.query("protein_id==@protein & subset==@subset")[lfq_measure]
+                exptl_values = (
+                    df.query("protein_id==@protein & subset==@subset")[lfq_measure]
+                    .dropna()
+                    .tolist()
+                )
                 if len(exptl_values) == 0:
                     continue
                 pval = self.get_pval(ctrl_values, exptl_values, criteria)
-                if pval is not None and not np.isnan(pval):
-                    p_values.append(pval)
-                    subsets.append(subset)
-                    fc_values.append(exptl_values.median() / ctrl_values.median())
-                    samples_no.append(len(exptl_values))
-            p_vals_corr = list(false_discovery_control(p_values))
+                if pval is None or np.isnan(pval):
+                    continue
+                exptl_median = float(np.median(exptl_values))
+                # Fold change is undefined when the control median is zero
+                # (division by zero → inf) or NaN — skip this comparison.
+                if ctrl_median == 0 or not np.isfinite(ctrl_median) or not np.isfinite(exptl_median):
+                    continue
+                p_values.append(pval)
+                subsets.append(subset)
+                fc_values.append(exptl_median / ctrl_median)
+                samples_no.append(len(exptl_values))
+            if not subsets:
+                continue
+            p_vals_corr = self.correct_pvals(p_values, fdc)
             res = {'protein_id': protein}
             for idx in range(len(subsets)):
+                fc = fc_values[idx]
+                fc_l2 = np.log2(fc) if fc > 0 else float('nan')
                 res[f'{subsets[idx]}_pval'] = p_vals_corr[idx]
-                res[f'{subsets[idx]}_fc'] = fc_values[idx]
+                res[f'{subsets[idx]}_fc'] = fc
                 res[f'{subsets[idx]}_pval_uncorr'] = p_values[idx]
-                res[f'{subsets[idx]}_fc_log2'] = np.log2(fc_values[idx])
+                res[f'{subsets[idx]}_fc_log2'] = fc_l2
                 res[f'{subsets[idx]}_samples'] = samples_no[idx]
-                res[f'{subsets[idx]}_samples_perc'] = samples_no[idx] / subset_lenghts[subsets[idx]] * 100
+                res[f'{subsets[idx]}_samples_perc'] = (
+                    samples_no[idx] / subset_lenghts[subsets[idx]] * 100
+                    if subset_lenghts.get(subsets[idx], 0) > 0 else 0
+                )
 
                 figure_data.append({
                     'protein_id': protein,
                     'subset': subsets[idx],
                     'pval': p_vals_corr[idx],
-                    'fc': fc_values[idx],
-                    'fc_log2': np.log2(fc_values[idx])
+                    'fc': fc,
+                    'fc_log2': fc_l2,
                 })
             result.append(res)
         calculated = pd.json_normalize(result)
 
+        def _row_values(row, suffix):
+            """Collect finite floats from row keys ending with ``suffix``."""
+            vals = []
+            for k, v in row.items():
+                if k.endswith(suffix):
+                    try:
+                        fv = float(v)
+                    except (TypeError, ValueError):
+                        continue
+                    if np.isfinite(fv):
+                        vals.append(fv)
+            return vals
+
         def get_min_pval(row):
-            try:
-                return min(row[x] for x in row.keys() if x.endswith('_pval'))
-            except ValueError:
-                logger.debug(row)
-                return None
+            vals = _row_values(row, '_pval')
+            return min(vals) if vals else None
 
         def get_max_fc_log2(row):
-            try:
-                return max(abs(row[x]) for x in row.keys() if x.endswith('_fc_log2'))
-            except ValueError:
-                logger.debug(row)
-                return None
+            vals = _row_values(row, '_fc_log2')
+            return max(abs(v) for v in vals) if vals else None
 
         calculated['max_fc'] = calculated.apply(lambda row: get_max_fc_log2(row.to_dict()), axis=1)
         calculated['min_pval'] = calculated.apply(lambda row: get_min_pval(row.to_dict()), axis=1)
+        # Drop rows where no finite FC / p-value could be computed — comparing
+        # None/NaN in the query below would otherwise raise on object dtype.
+        calculated = calculated.dropna(subset=['max_fc', 'min_pval']).copy()
 
         pois = calculated.query('min_pval <= @p_threshold & max_fc >= @fc_threshold_log2')
         figure_df = pd.json_normalize(figure_data)

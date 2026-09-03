@@ -336,6 +336,43 @@ class SampleMixin:
         )
         return {int(r['subset_id']): int(r['cnt']) for r in rows}
 
+    async def get_subset_sample_counts(
+        self, exclude_outliers: bool = True, subsets: list[str] | None = None
+    ) -> dict[str, int]:
+        """
+        Return sample counts grouped by subset NAME.
+
+        Used by reports (Volcano, Median) to know the true denominator per
+        comparison group, instead of deriving it from quantification data
+        (which is wrong when a sample has no quantified proteins or is an
+        outlier).
+
+        Args:
+            exclude_outliers: If True (default), outlier samples are not counted.
+            subsets: Optional list of subset names to filter; if None, all
+                subsets are returned.
+
+        Returns:
+            dict mapping subset name (str) → sample count (int).
+            Subsets with no (matching) samples are not included.
+        """
+        query = (
+            "SELECT sb.name AS subset_name, COUNT(*) AS cnt "
+            "FROM sample s JOIN subset sb ON s.subset_id = sb.id "
+            "WHERE s.subset_id IS NOT NULL"
+        )
+        params: list = []
+        if exclude_outliers:
+            query += " AND (s.outlier = 0 OR s.outlier IS NULL)"
+        if subsets:
+            placeholders = ",".join("?" * len(subsets))
+            query += f" AND sb.name IN ({placeholders})"
+            params.extend(subsets)
+        query += " GROUP BY sb.name"
+        rows = await self._fetchall(query, tuple(params) if params else None)
+        return {r['subset_name']: int(r['cnt']) for r in rows}
+
+
     # ------------------------------------------------------------------
     # sample_status_cache methods
     # ------------------------------------------------------------------
