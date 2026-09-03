@@ -1,6 +1,6 @@
 [project]
 name = "dasmixer-core"
-version = "0.7.2a2"
+version = "0.7.2a3"
 description = "DASMixer core library — project API, calculations, and data import"
 authors = [
     {name = "gluck", email = "glucksistemi@gmail.com"}

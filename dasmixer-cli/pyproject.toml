@@ -1,6 +1,6 @@
 [project]
 name = "dasmixer-cli"
-version = "0.7.2a2"
+version = "0.7.2a3"
 description = "DASMixer CLI — command-line tools for project management"
 authors = [
     {name = "gluck", email = "glucksistemi@gmail.com"}
@@ -9,7 +9,7 @@ readme = "README.md"
 requires-python = "<4.0, >=3.11"
 urls = {Homepage = "https://github.com/protdb/dasmixer"}
 dependencies = [
-    "dasmixer-core ==0.7.2a2",
+    "dasmixer-core ==0.7.2a3",
 ]
 
 [project.scripts]
