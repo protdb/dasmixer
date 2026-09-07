@@ -67,6 +67,11 @@ class MgfExportSection(ft.Card):
             hint_text="Select tool",
         )
 
+        self._cb_replace_scans = ft.Checkbox(
+            label="Replace SCANS with Spectre ID",
+            value=self.state.mgf_replace_scans,
+        )
+
         self._cb_write_offset = ft.Checkbox(
             label="Write offset from identification",
             value=self.state.mgf_write_offset,
@@ -106,6 +111,20 @@ class MgfExportSection(ft.Card):
             value=self.state.mgf_compression,
         )
 
+        self._merge_mode_group = ft.RadioGroup(
+            content=ft.Column([
+                ft.Radio(value="one_file", label="One file"),
+                ft.Radio(value="by_sample", label="By sample"),
+                ft.Radio(value="by_spectre_file", label="By Spectre file"),
+            ], spacing=2),
+            value=self.state.mgf_merge_mode,
+        )
+
+        self._cb_add_timestamp = ft.Checkbox(
+            label="Add timestamp to file name",
+            value=self.state.mgf_add_timestamp,
+        )
+
         self._export_btn = ft.ElevatedButton(
             content=ft.Text("Export"),
             icon=ft.Icons.DOWNLOAD,
@@ -118,6 +137,7 @@ class MgfExportSection(ft.Card):
             ft.Text("By identification:", weight=ft.FontWeight.W_600),
             self._by_group,
             self._tool_dropdown,
+            self._cb_replace_scans,
             self._cb_write_offset,
             self._cb_write_spectra,
             ft.Row(
@@ -129,6 +149,9 @@ class MgfExportSection(ft.Card):
             ),
             ft.Text("Compression:", weight=ft.FontWeight.W_600),
             self._compression_group,
+            ft.Text("Merge MGF:", weight=ft.FontWeight.W_600),
+            self._merge_mode_group,
+            self._cb_add_timestamp,
             ft.Row([self._export_btn], alignment=ft.MainAxisAlignment.END),
         ]
 
@@ -174,6 +197,9 @@ class MgfExportSection(ft.Card):
         self.state.mgf_write_seq = self._cb_write_seq.value
         self.state.mgf_seq_type = self._seq_type_dropdown.value if self._seq_type_dropdown.value else "canonical"
         self.state.mgf_compression = self._compression_group.value
+        self.state.mgf_replace_scans = self._cb_replace_scans.value
+        self.state.mgf_merge_mode = self._merge_mode_group.value
+        self.state.mgf_add_timestamp = self._cb_add_timestamp.value
 
         folder = await ft.FilePicker().get_directory_path(
             dialog_title="Select Export Directory",
@@ -203,6 +229,9 @@ class MgfExportSection(ft.Card):
                 output_dir=folder,
                 timestamp=timestamp,
                 progress_callback=_on_progress,
+                replace_scans=self.state.mgf_replace_scans,
+                merge_mode=self.state.mgf_merge_mode,
+                add_timestamp=self.state.mgf_add_timestamp,
             )
             progress_dlg.open = False
             self._page().update()

@@ -18,6 +18,8 @@ class FileEntry:
     included: bool = True
     checkbox: object = None   # ft.Checkbox
     id_field: object = None   # ft.TextField
+    spectra_file_id: int | None = None
+    spectra_dropdown: object = None  # ft.Dropdown
 
 
 class ImportPatternDialog:
@@ -370,6 +372,34 @@ class ImportPatternDialog:
                 self.files_list.update()
                 return
 
+            # For identifications: resolve spectre_file pairing by basename
+            spectra_file_ids: dict[str, int] = {}   # str(Path) -> spectre_file.id
+            unmatched_paths: set[str] = set()
+            if self.import_type == "identifications":
+                from dasmixer.utils.ident_spectra_pairing import resolve_ident_to_spectra_mapping
+                from collections import defaultdict
+
+                # Group found files by sample_id (normalized)
+                by_sample: dict[str, list[Path]] = defaultdict(list)
+                for fp, sid in found_files:
+                    sid_norm = sid if sid and sid != "UNKNOWN" else fp.stem
+                    by_sample[sid_norm].append(fp)
+
+                for sid_norm, fps in by_sample.items():
+                    sample = await self.project.get_sample_by_name(sid_norm)
+                    if sample is None:
+                        continue
+                    sf_df = await self.project.get_spectra_files(sample_id=sample.id)
+                    if sf_df.empty:
+                        continue
+                    sf_list = sf_df[["id", "path"]].to_dict("records")
+                    mapping, unm = resolve_ident_to_spectra_mapping(
+                        [str(fp) for fp in fps], sf_list
+                    )
+                    spectra_file_ids.update(mapping)
+                    for p in unm:
+                        unmatched_paths.add(p)
+
             self.files_list.controls.append(
                 ft.Text(f"Found {len(found_files)} file(s):", weight=ft.FontWeight.BOLD)
             )
@@ -377,10 +407,16 @@ class ImportPatternDialog:
             for file_path, sample_id in found_files:
                 sample_id_str = sample_id if sample_id and sample_id != "UNKNOWN" else ""
 
-                entry = FileEntry(path=file_path, sample_id=sample_id_str)
+                fp_str = str(file_path)
+                paired_sf_id = spectra_file_ids.get(fp_str)  # None if no spectre_file or unmatched
+                is_unmatched = fp_str in unmatched_paths
+
+                entry = FileEntry(path=file_path, sample_id=sample_id_str,
+                                  spectra_file_id=paired_sf_id)
 
                 cb = ft.Checkbox(
-                    value=True,
+                    value=not is_unmatched,
+                    disabled=is_unmatched,
                     on_change=lambda e, en=entry: self._on_entry_toggle(en, e),
                 )
                 entry.checkbox = cb
@@ -390,16 +426,58 @@ class ImportPatternDialog:
                     width=180,
                     hint_text="Sample ID",
                     border_color=ft.Colors.RED if not entry.sample_id.strip() else None,
-                    on_change=lambda e, en=entry: self._on_id_change(en, e),
+                    on_change=lambda e, en=entry: self.page.run_task(self._on_id_change(en, e)),
                 )
                 entry.id_field = id_tf
 
                 self._file_entries.append(entry)
 
+                # Build row controls: checkbox, file name, ID field
+                row_controls = [cb, ft.Text(file_path.name, size=12, expand=True), id_tf]
+
+                # Add spectre_file dropdown if we have pairing info for identifications
+                if self.import_type == "identifications" and paired_sf_id is not None:
+                    # Get spectre_file options for this sample
+                    sample_obj = await self.project.get_sample_by_name(sample_id_str or file_path.stem)
+                    sf_options = []
+                    if sample_obj:
+                        sf_df = await self.project.get_spectra_files(sample_id=sample_obj.id)
+                        if not sf_df.empty:
+                            sf_sorted = sf_df.iloc[sf_df["path"].apply(lambda p: Path(p).name).argsort()]
+                            for _, sf_row in sf_sorted.iterrows():
+                                sf_options.append(
+                                    ft.DropdownOption(
+                                        key=str(sf_row["id"]),
+                                        text=Path(sf_row["path"]).name,
+                                    )
+                                )
+
+                    sf_dropdown = ft.Dropdown(
+                        options=sf_options,
+                        value=str(paired_sf_id) if paired_sf_id else None,
+                        width=200,
+                        on_change=lambda e, en=entry: setattr(en, "spectra_file_id",
+                            int(e.control.value) if e.control.value else None),
+                    )
+                    entry.spectra_dropdown = sf_dropdown
+                    row_controls.append(sf_dropdown)
+                elif self.import_type == "identifications" and is_unmatched:
+                    # Unmatched: show red label, force excluded
+                    entry.included = False
+                    row_controls.append(
+                        ft.Text("No matching spectre file — skipped",
+                                color=ft.Colors.RED, size=11)
+                    )
+                elif self.import_type == "identifications" and paired_sf_id is None and not is_unmatched:
+                    # No spectre_file at all but not in unmatched (sample exists but no sf)
+                    row_controls.append(
+                        ft.Text("(no spectra files)", color=ft.Colors.ORANGE, size=11)
+                    )
+
                 self.files_list.controls.append(
                     ft.Container(
                         content=ft.Row(
-                            [cb, ft.Text(file_path.name, size=12, expand=True), id_tf],
+                            row_controls,
                             spacing=5,
                             vertical_alignment=ft.CrossAxisAlignment.CENTER,
                         ),
@@ -429,7 +507,7 @@ class ImportPatternDialog:
                 entry.id_field.update()
         self._update_import_btn_state()
 
-    def _on_id_change(self, entry: FileEntry, e):
+    async def _on_id_change(self, entry: FileEntry, e):
         entry.sample_id = e.control.value or ""
         if entry.id_field:
             entry.id_field.border_color = (
@@ -438,6 +516,25 @@ class ImportPatternDialog:
             if entry.id_field.page:
                 entry.id_field.update()
         self._update_import_btn_state()
+
+        # Simplified re-pairing for this entry row when sample_id changed
+        if self.import_type == "identifications" and entry.sample_id.strip():
+            sample_obj = await self.project.get_sample_by_name(entry.sample_id)
+            if sample_obj and entry.spectra_dropdown:
+                sf_df = await self.project.get_spectra_files(sample_id=sample_obj.id)
+                if not sf_df.empty:
+                    from pathlib import Path as _Path
+                    sf_sorted = sf_df.iloc[sf_df["path"].apply(lambda p: _Path(p).name).argsort()]
+                    new_options = [
+                        ft.DropdownOption(key=str(sf_row["id"]), text=_Path(sf_row["path"]).name)
+                        for _, sf_row in sf_sorted.iterrows()
+                    ]
+                    entry.spectra_dropdown.options = new_options
+                    if new_options:
+                        entry.spectra_dropdown.value = new_options[0].key
+                        entry.spectra_file_id = int(new_options[0].key)
+                    if entry.spectra_dropdown.page:
+                        entry.spectra_dropdown.update()
 
     def _select_all_files(self, e):
         for entry in self._file_entries:
@@ -500,10 +597,16 @@ class ImportPatternDialog:
                     on_duplicates=self._on_duplicates_group.value,
                 )
             else:
+                # Build 3-tuples for identifications: (path, sample_id, spectra_file_id)
+                ident_files = [
+                    (entry.path, entry.sample_id, entry.spectra_file_id)
+                    for entry in self._file_entries
+                    if entry.included and entry.sample_id.strip()
+                ]
                 collect = self.cb_collect_proteins.value if self.cb_collect_proteins else False
                 is_uniprot = self.cb_is_uniprot.value if self.cb_is_uniprot else False
                 await self.on_import_callback(
-                    included_files,
+                    ident_files,
                     self.tool_id,
                     collect_proteins=collect,
                     is_uniprot_proteins=is_uniprot,

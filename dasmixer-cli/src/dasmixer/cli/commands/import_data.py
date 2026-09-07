@@ -3,6 +3,7 @@
 import typer
 from pathlib import Path
 import asyncio
+from collections import defaultdict
 from typing import Annotated
 from dasmixer.api.project.project import Project
 from dasmixer.api.inputs.registry import registry
@@ -280,15 +281,12 @@ async def _import_ident_file_internal(
 
         # Determine spectra_file_id
         if spectra_file_id is None:
-            # Get first spectra file for this sample
-            rows = await project.execute_query(
-                "SELECT id FROM spectre_file WHERE sample_id=? ORDER BY id LIMIT 1",
-                [sample.id],
-            )
-            if not rows:
+            sf_df = await project.get_spectra_files(sample_id=sample.id)
+            if sf_df.empty:
                 typer.echo(f"Error: No spectra files found for sample '{sample_name}'", err=True)
                 raise typer.Exit(1)
-            spectra_file_id = rows[0]["id"]
+            sf_sorted = sf_df.iloc[sf_df["path"].apply(lambda p: Path(p).name).argsort()]
+            spectra_file_id = int(sf_sorted.iloc[0]["id"])
 
         # Get parser
         try:
@@ -402,6 +400,39 @@ async def ident_pattern(
         typer.echo("Cancelled")
         raise typer.Exit(0)
 
+    # --- Pre-pass: pair identification files with spectre_file by basename ---
+    from dasmixer.utils.ident_spectra_pairing import resolve_ident_to_spectra_mapping
+
+    # Normalize sid (same logic as main loop)
+    normalized: list[tuple[Path, str]] = []
+    for fp, sid in files:
+        sid = sid or fp.stem
+        normalized.append((fp, sid))
+
+    # Group by normalized sid
+    groups: dict[str, list[Path]] = defaultdict(list)
+    for fp, sid in normalized:
+        groups[sid].append(fp)
+
+    spectra_map: dict[str, int] = {}   # str(path) -> spectra_file_id
+    unmatched: set[str] = set()
+
+    async with Project(path=project_path_obj, create_if_not_exists=False) as _pre_pass_project:
+        for sid, ident_fps in groups.items():
+            sample_obj = await _pre_pass_project.get_sample_by_name(sid)
+            if sample_obj is None:
+                continue  # will be caught by _import_ident_file_internal
+            sf_df = await _pre_pass_project.get_spectra_files(sample_id=sample_obj.id)
+            if sf_df.empty:
+                continue  # will be caught by _import_ident_file_internal
+            spectra_files = sf_df[["id", "path"]].to_dict("records")
+            mapping, unm = resolve_ident_to_spectra_mapping(
+                [str(fp) for fp in ident_fps], spectra_files
+            )
+            spectra_map.update(mapping)
+            for p in unm:
+                unmatched.add(p)
+
     total_imported = 0
     total_files = 0
     errors = []
@@ -409,6 +440,12 @@ async def ident_pattern(
     for file_path, sid in files:
         if not sid:
             sid = file_path.stem
+
+        fp_str = str(file_path)
+        if fp_str in unmatched:
+            typer.echo(f"  Warning: {file_path.name} has no matching spectre_file (more identification files than spectre_file in sample), skipped")
+            continue
+
         try:
             result = await _import_ident_file_internal(
                 project_path=project_path_obj,
@@ -416,7 +453,7 @@ async def ident_pattern(
                 sample_name=sid,
                 parser_name=parser,
                 tool_name=tool,
-                spectra_file_id=None,
+                spectra_file_id=spectra_map.get(fp_str),
                 quiet=True,
             )
             total_imported += result
@@ -496,4 +533,108 @@ def fasta(
         raise
     except Exception as e:
         typer.echo(f"Error importing FASTA: {e}", err=True)
+        raise typer.Exit(1)
+
+
+@app.command(name="maxquant")
+def import_maxquant(
+    project_path: str = typer.Argument(..., help="Path to .dasmix project file (created if missing)"),
+    mqpar_path: str = typer.Argument(..., help="Path to mqpar.xml"),
+    fasta_path: str | None = typer.Option(None, "--fasta-path", help="Override FASTA file path"),
+    raw_path: str | None = typer.Option(None, "--raw-path", help="Override RAW files parent directory"),
+    txt_path: str | None = typer.Option(None, "--txt-path", help="Override txt results folder path"),
+    tool_name: str = typer.Option("MaxQuant", "--tool-name", help="Tool name"),
+    subset_name: str = typer.Option("MaxQuant Import", "--subset-name", help="Subset (group) name"),
+    keep_contaminants: bool = typer.Option(False, "--keep-contaminants", help="Keep 'Potential contaminant' identifications"),
+    delete_temporary_files: bool = typer.Option(True, "--delete-temporary-files/--keep-temporary-files", help="Delete temporary MGF/CSV after import"),
+    import_fasta: bool = typer.Option(True, "--import-fasta/--no-import-fasta", help="Import proteins from FASTA"),
+    fasta_is_uniprot: bool = typer.Option(True, "--fasta-uniprot/--fasta-generic", help="FASTA headers are UniProt-formatted"),
+    on_duplicates: str = typer.Option("skip", "--on-duplicates", help="skip|reload|add_as_new"),
+):
+    """
+    Import a full MaxQuant project (mqpar.xml + txt + apl spectra) into a DASMixer project.
+
+    If PROJECT_PATH does not exist, a new project is created (unlike the GUI flow,
+    where import always targets an already-open project).
+
+    Example:
+        dasmixer-cli import maxquant project.dasmix /data/mq/mqpar.xml --tool-name MaxQuant
+    """
+    from dasmixer.api.inputs.complex.MaxQuantProject.mqpar_parser import get_paths_from_mqpar
+    from dasmixer.api.inputs.complex.MaxQuantProject.importer import (
+        MaxQuantImportOptions, run_maxquant_import,
+    )
+    from dasmixer.api.config import config as app_config
+
+    async def _run():
+        mqpar_paths = get_paths_from_mqpar(mqpar_path)
+
+        effective_fasta = Path(fasta_path) if fasta_path else mqpar_paths.fasta_path.path
+        effective_raw = (
+            Path(raw_path) if raw_path
+            else (mqpar_paths.raw_parents[0].path if mqpar_paths.raw_parents else None)
+        )
+        effective_txt = Path(txt_path) if txt_path else mqpar_paths.custom_txt_path.path
+
+        if effective_raw is None or not effective_raw.is_dir():
+            typer.echo(f"Error: RAW files directory not found: {effective_raw}", err=True)
+            raise typer.Exit(1)
+        if not effective_txt.is_dir():
+            typer.echo(f"Error: txt results folder not found: {effective_txt}", err=True)
+            raise typer.Exit(1)
+        if import_fasta and not effective_fasta.is_file():
+            typer.echo(f"Error: FASTA file not found: {effective_fasta}", err=True)
+            raise typer.Exit(1)
+
+        project_file = Path(project_path)
+        create_new = not project_file.exists()
+
+        async with Project(path=project_file, create_if_not_exists=create_new) as project:
+            # Check tool.parser — hard error, spec section 1 item 10
+            tools = await project.get_tools()
+            existing_tool = next((t for t in tools if t.name == tool_name), None)
+            if existing_tool is not None and existing_tool.parser != "MaxQuant":
+                typer.echo(
+                    f"Error: Tool '{tool_name}' already exists with parser '{existing_tool.parser}' "
+                    f"(expected 'MaxQuant')", err=True
+                )
+                raise typer.Exit(1)
+
+            options = MaxQuantImportOptions(
+                mqpar_path=Path(mqpar_path),
+                txt_path=effective_txt,
+                raw_parent=effective_raw,
+                fasta_path=effective_fasta if import_fasta else None,
+                import_fasta=import_fasta,
+                fasta_is_uniprot=fasta_is_uniprot,
+                tool_name=tool_name,
+                subset_name=subset_name,
+                delete_temp_files=delete_temporary_files,
+                keep_contaminants=keep_contaminants,
+                selected_raw_names=[rf.name for rf in mqpar_paths.raw_files],
+                on_duplicates=on_duplicates,
+            )
+
+            async def _progress(p):
+                typer.echo(f"  [{p.stage}] {p.message}")
+
+            summary = await run_maxquant_import(project, options, progress_callback=_progress)
+
+        typer.echo(f"Import complete: {summary['samples_processed']} sample(s), "
+                   f"{summary['spectra_imported']} spectra, "
+                   f"{summary['identifications_imported']} identifications")
+        if summary['proteins_imported']:
+            typer.echo(f"  Proteins: {summary['proteins_imported']}")
+        if summary['skipped_duplicates']:
+            typer.echo(f"  Skipped duplicates: {summary['skipped_duplicates']}")
+
+        if create_new:
+            app_config.add_recent_project(str(project_file))
+
+    try:
+        asyncio.run(_run())
+    except typer.Exit:
+        raise
+    except Exception as e:
+        typer.echo(f"Error during MaxQuant import: {e}", err=True)
         raise typer.Exit(1)

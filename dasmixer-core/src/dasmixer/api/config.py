@@ -251,3 +251,28 @@ def get_temp_html_dir() -> Path:
     temp_dir = Path.home() / ".cache" / "dasmixer" / "tmp" / "plots"
     temp_dir.mkdir(parents=True, exist_ok=True)
     return temp_dir
+
+
+def get_maxquant_import_temp_dir() -> Path:
+    """
+    Directory for temporary MGF/CSV files created during MaxQuant import.
+
+    On Linux/macOS: ``~/.cache/dasmixer/tmp/maxquant_import/<YYYYMMDD_HHMMSS_ffffff>/``
+    On Windows: ``<tempfile.gettempdir()>/dasmixer/maxquant_import/<YYYYMMDD_HHMMSS_ffffff>/``
+
+    The directory is created (with parents) if it does not exist.
+    The caller is responsible for cleanup.
+
+    Returns:
+        Path to an existing directory for MaxQuant temporary files.
+    """
+    from datetime import datetime
+
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    if sys.platform == "win32":
+        base = Path(tempfile.gettempdir()) / "dasmixer" / "maxquant_import"
+    else:
+        base = Path.home() / ".cache" / "dasmixer" / "tmp" / "maxquant_import"
+    temp_dir = base / ts
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    return temp_dir

@@ -213,7 +213,9 @@ class ImportHandlers:
             total_identifications = 0
             skipped_count = 0
             
-            for i, (file_path, sample_id) in enumerate(file_list):
+            for i, entry in enumerate(file_list):
+                file_path, sample_id, *rest = entry
+                spectra_file_id_hint = rest[0] if rest else None
                 progress_text.value = f"Importing {file_path.name} ({i+1}/{total_files})..."
                 progress_bar.value = i / total_files
                 progress_details.value = f"Processing file..."
@@ -224,6 +226,8 @@ class ImportHandlers:
                 # Determine spectra_file_id
                 if fixed_spectra_file_id is not None:
                     spectra_file_id = fixed_spectra_file_id
+                elif spectra_file_id_hint is not None:
+                    spectra_file_id = spectra_file_id_hint
                 else:
                     # Get sample by name
                     sample = await self.project.get_sample_by_name(sample_id)
@@ -245,8 +249,10 @@ class ImportHandlers:
                         self.page.update()
                         return
 
-                    # Use first spectra file
-                    spectra_file_id = spectra_files.iloc[0]['id']
+                    # Use first spectra file (sorted by basename)
+                    from pathlib import Path as _Path
+                    sf_sorted = spectra_files.iloc[spectra_files["path"].apply(lambda p: _Path(p).name).argsort()]
+                    spectra_file_id = int(sf_sorted.iloc[0]['id'])
                 
                 # Check for duplicates
                 existing_if = await self.project.get_identification_file_by_path(str(file_path))

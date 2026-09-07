@@ -6,6 +6,7 @@ from .shared_state import SamplesTabState
 from .groups_section import GroupsSection
 from .tools_section import ToolsSection
 from .import_section import ImportSection
+from .maxquant_import_section import MaxQuantImportSection
 from .samples_summary_section import SamplesSummarySection
 from .import_handlers import ImportHandlers
 from .dialogs.import_mode_dialog import ImportModeDialog
@@ -66,6 +67,10 @@ class SamplesTab(ft.Container):
         sections['import'] = ImportSection(self.project, self.state, self)
         logger.debug("import...")
         
+        # MaxQuant import section
+        sections['import_maxquant'] = MaxQuantImportSection(self.project, self.state, self)
+        logger.debug("import_maxquant...")
+        
         # Tools section
         sections['tools'] = ToolsSection(self.project, self.state, self)
         logger.debug("tools...")
@@ -84,8 +89,11 @@ class SamplesTab(ft.Container):
             self.sections['groups'],
             ft.Container(height=10),
             
-            # Import
-            self.sections['import'],
+            # Import sections side by side
+            ft.Row([
+                ft.Container(content=self.sections['import'], expand=True),
+                ft.Container(content=self.sections['import_maxquant'], expand=True),
+            ], spacing=10),
             ft.Container(height=10),
             
             # Tools
@@ -258,5 +266,18 @@ class SamplesTab(ft.Container):
             self.page,
             tool_id=tool_id,
             on_import_callback=self.import_handlers.import_identification_files_stacked,
+        )
+        await dialog.show()
+    
+    def show_import_maxquant(self):
+        """Show MaxQuant import dialog."""
+        self.page.run_task(self._show_import_maxquant_dialog)
+
+    async def _show_import_maxquant_dialog(self):
+        """Show the MaxQuant import dialog."""
+        from .dialogs.import_maxquant_dialog import ImportMaxQuantDialog
+        dialog = ImportMaxQuantDialog(
+            self.project, self.page,
+            on_complete_callback=self._on_import_complete,
         )
         await dialog.show()
