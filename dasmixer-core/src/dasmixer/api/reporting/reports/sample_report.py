@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pandas as pd
 from dasmixer.api.reporting._icons import Icons
 
 from ..base import BaseReport
+
+if TYPE_CHECKING:
+    import plotly.graph_objects as go
 
 
 class SampleReport(BaseReport):

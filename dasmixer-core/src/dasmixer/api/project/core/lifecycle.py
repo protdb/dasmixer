@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from pathlib import Path
+from typing import Self
 
 import aiosqlite
 from dasmixer.utils.logger import logger
@@ -74,7 +75,7 @@ class ProjectLifecycle(ProjectBase):
             self._initialized = False
             logger.info("Project closed")
     
-    async def __aenter__(self) -> 'ProjectLifecycle':
+    async def __aenter__(self) -> Self:
         """Context manager entry."""
         await self.initialize()
         return self

@@ -83,7 +83,7 @@ class MedianReport(BaseReport):
     async def _generate_impl(
         self,
         params: dict
-    ) -> tuple[list[tuple[str, go.Figure]], list[tuple[str, pd.DataFrame, bool]]]:
+    ) -> tuple[list[tuple[str, "go.Figure"]], list[tuple[str, pd.DataFrame, bool]]]:
         lfq_value = params.get('lfq', ('emPAI', 'rel_value'))
         if isinstance(lfq_value, (tuple, list)) and len(lfq_value) == 2:
             lfq_type = lfq_value[0]

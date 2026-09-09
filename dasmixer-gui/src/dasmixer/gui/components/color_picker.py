@@ -78,7 +78,7 @@ def _try_update(control: ft.Control | None) -> None:
         return
     try:
         control.update()
-    except Exception as ex:  # noqa: BLE001
+    except Exception as ex:
         # Контрол может быть не смонтирован (page отсутствует) — это нормально.
         logger.debug("ColorPickerField update skipped: %s", ex)
 

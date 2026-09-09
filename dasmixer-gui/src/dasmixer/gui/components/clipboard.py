@@ -42,7 +42,7 @@ async def copy_png_to_clipboard(page: ft.Page, png_bytes: bytes) -> None:
     try:
         await ft.Clipboard().set_image(png_bytes)
         return
-    except Exception as ex:  # noqa: BLE001 - на desktop это FletUnsupportedPlatformException
+    except Exception as ex:
         logger.debug("ft.Clipboard().set_image() unavailable (%s); using native fallback", ex)
 
     # 2) Native fallback — блокирующие вызовы в executor'е
@@ -93,7 +93,7 @@ def _win_copy(png_bytes: bytes) -> None:
             img = DImage.FromStream(MemoryStream(Array[Byte](png_bytes)))
             data_object.SetImage(img)
             Clipboard.SetDataObject(data_object, True)
-        except Exception as ex:  # noqa: BLE001
+        except Exception as ex:
             errors.append(ex)
 
     # System.Windows.Forms.Clipboard требует STA-поток

@@ -5,6 +5,8 @@ import asyncio
 import flet as ft
 from dasmixer.api.project.project import Project
 
+from dasmixer.utils import logger
+
 
 class SampleSelectDialog:
     def __init__(self, page: ft.Page, project: Project):
@@ -104,7 +106,7 @@ class SampleSelectDialog:
             while dialog.open:
                 await asyncio.sleep(0.1)
         except Exception:
-            pass
+            logger.debug("Sample select dialog wait interrupted", exc_info=True)
 
     def get_selected_text(self, sample_ids: list[int], samples: list) -> str:
         name_map = {s.id: s.name for s in samples}

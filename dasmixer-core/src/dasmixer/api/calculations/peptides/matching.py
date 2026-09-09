@@ -1,4 +1,5 @@
 """Peptide identification matching and selection."""
+import warnings
 from typing import Literal
 
 import pandas as pd
@@ -13,6 +14,12 @@ async def select_preferred_identifications(
 ) -> int:
     """
     Select preferred identifications for all spectra based on criterion.
+
+    .. deprecated::
+        This legacy function uses an N+1-query pattern and a simpler
+        filtering model. Prefer :func:`calculate_preferred_identifications_for_file`
+        (called per spectra file) which mirrors the GUI pipeline and supports
+        trusted/normal pools, de-novo correction and richer quality filters.
 
     Args:
         project: Project instance
@@ -30,6 +37,12 @@ async def select_preferred_identifications(
     Returns:
         Number of spectra processed
     """
+    warnings.warn(
+        "select_preferred_identifications is deprecated; use "
+        "calculate_preferred_identifications_for_file per spectra file instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     logger.info(f"Starting preferred identification selection (criterion: {criterion})")
     logger.debug(f"Tool settings: {tool_settings}")
     counter = 0
@@ -45,11 +58,11 @@ async def select_preferred_identifications(
             if tool_params.get("ignore_criteria", False):
                 idents_not_merged.append(idents.copy())
                 continue
-            max_ppm = tool_params.get("max_ppm", 50000)
-            min_score = tool_params.get("min_score", 0)
-            min_ion_intensity_coverage = tool_params["min_ion_intensity_coverage"]
-            min_len = tool_params.get("min_peptide_length", 7)
-            max_len = tool_params.get("max_peptide_length", 30)
+            max_ppm = tool_params.get("max_ppm", 50000)  # noqa: F841 (pandas @query ref)
+            min_score = tool_params.get("min_score", 0)  # noqa: F841 (pandas @query ref)
+            min_ion_intensity_coverage = tool_params["min_ion_intensity_coverage"]  # noqa: F841 (pandas @query ref)
+            min_len = tool_params.get("min_peptide_length", 7)  # noqa: F841 (pandas @query ref)
+            max_len = tool_params.get("max_peptide_length", 30)  # noqa: F841 (pandas @query ref)
 
 
 

@@ -353,7 +353,7 @@ class ProteinMixin:
 
     async def get_protein_quantification_data(
             self,
-            method: str = None,
+            method: str | None = None,
             subsets: list[str] | None = None,
             protein_id: str | None = None,
             exclude_outliers: bool = True,
@@ -752,8 +752,8 @@ class ProteinMixin:
         # Загружаем uniprot_data для виртуальных полей
         if not df.empty:
             uniprot_list = []
-            for protein_id in df['protein_id']:
-                protein = await self.get_protein(protein_id)
+            for pid in df['protein_id']:
+                protein = await self.get_protein(pid)
                 uniprot_list.append(protein.uniprot_data if protein else None)
             df['uniprot_data'] = uniprot_list
         

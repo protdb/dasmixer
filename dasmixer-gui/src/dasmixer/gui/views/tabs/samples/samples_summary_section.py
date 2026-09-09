@@ -2,6 +2,7 @@
 
 import flet as ft
 from dasmixer.api.project.project import Project
+from dasmixer.gui.views.manage_samples_view.data_manager import SampleDataManager
 
 from .base_section import BaseSection
 from .shared_state import SamplesTabState
@@ -13,6 +14,9 @@ class SamplesSummarySection(BaseSection):
     Heavy per-sample management is opened via "Manage Samples" → ft.View /samples.
 
     No ExpansionPanelList here — this section loads in O(1) (single aggregated query).
+
+    Stats are loaded through ``SampleDataManager`` (the same manager used by
+    ManageSamplesView) so both views share a single data-access path.
     """
 
     def __init__(self, project: Project, state: SamplesTabState, parent_tab):
@@ -22,6 +26,7 @@ class SamplesSummarySection(BaseSection):
         self._err_chip: ft.Chip | None = None
         self._uncached_chip: ft.Chip | None = None
         self._manage_btn: ft.ElevatedButton | None = None
+        self._data_manager = SampleDataManager(project)
         super().__init__(project, state, parent_tab)
 
     # ------------------------------------------------------------------
@@ -82,8 +87,8 @@ class SamplesSummarySection(BaseSection):
     # ------------------------------------------------------------------
 
     async def load_data(self):
-        """Load summary counters from cache — single aggregate query."""
-        summary = await self.project.get_sample_status_summary()
+        """Load summary counters via SampleDataManager — single aggregate query."""
+        summary = await self._data_manager.get_status_summary()
         self._apply_summary(summary)
         self.state.samples_count = summary['total']
 

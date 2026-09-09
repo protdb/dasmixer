@@ -144,14 +144,12 @@ class ImportProjectMixin(ProjectBase):
                 src_id = st['id']
                 matched = False
 
-                if tool_match == 'parser':
-                    if st['parser'] in tgt_tools_by_parser:
-                        tool_id_map[src_id] = tgt_tools_by_parser[st['parser']]
-                        matched = True
-                elif tool_match == 'name':
-                    if st['name'] in tgt_tools_by_name:
-                        tool_id_map[src_id] = tgt_tools_by_name[st['name']]
-                        matched = True
+                if tool_match == 'parser' and st['parser'] in tgt_tools_by_parser:
+                    tool_id_map[src_id] = tgt_tools_by_parser[st['parser']]
+                    matched = True
+                elif tool_match == 'name' and st['name'] in tgt_tools_by_name:
+                    tool_id_map[src_id] = tgt_tools_by_name[st['name']]
+                    matched = True
                 # tool_match=None — don't match, insert as new
 
                 if not matched:
@@ -475,7 +473,7 @@ class ImportProjectMixin(ProjectBase):
             try:
                 await self._db.execute("ROLLBACK")
             except Exception:
-                pass
+                logger.debug("ROLLBACK failed during import cleanup", exc_info=True)
             raise
 
         finally:
@@ -488,11 +486,11 @@ class ImportProjectMixin(ProjectBase):
                     f"PRAGMA cache_size = {old_cache or -2000}"
                 )
             except Exception:
-                pass
+                logger.debug("Failed to restore PRAGMA values after import", exc_info=True)
             try:
                 await self._db.execute("DETACH DATABASE src")
             except Exception:
-                pass
+                logger.debug("Failed to DETACH src database after import", exc_info=True)
             await src_db.close()
 
             # Final save with checkpoint

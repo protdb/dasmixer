@@ -24,6 +24,15 @@ class SampleDataManager:
         all_stats = await self.project.get_all_samples_stats()
         return samples, all_stats, tools_count
 
+    async def get_status_summary(self) -> dict:
+        """Return the aggregated sample status summary counters.
+
+        Single aggregate query (total / ok / warning / error / uncached).
+        Used by both ManageSamplesView and the Samples tab summary section
+        so they share the same data-access path.
+        """
+        return await self.project.get_sample_status_summary()
+
     async def refresh_single(self, sample_id: int) -> tuple:
         """Recalculate stats for one sample.
         Returns (sample, stats). Does NOT write to sample_status_cache."""

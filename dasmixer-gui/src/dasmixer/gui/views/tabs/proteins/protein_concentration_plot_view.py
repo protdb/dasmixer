@@ -288,7 +288,7 @@ class ProteinConcentrationPlotView(BasePlotView):
                     y=subset_df[data_column].apply(lambda x: x * mult_factor if x is not None and not (isinstance(x, float) and pd.isna(x)) else None),
                     x=[subset_name] * len(subset_df),
                     mode='markers',
-                    marker=dict(size=4, color=color, opacity=0.5),
+                    marker={"size": 4, "color": color, "opacity": 0.5},
                     showlegend=False,
                     hoverinfo='y'
                 ))

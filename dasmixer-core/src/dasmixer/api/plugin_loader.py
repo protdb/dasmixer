@@ -141,11 +141,11 @@ def load_identification_plugins() -> list[dict]:
 
         try:
             if entry.is_file():
-                success, error = _load_plugin_file(entry, plugin_id)
+                _, error = _load_plugin_file(entry, plugin_id)
             else:
-                success, error = _load_module_from_dir(entry, plugin_id)
+                _, error = _load_module_from_dir(entry, plugin_id)
         except PluginConflictError as e:
-            success, error = False, str(e)
+            error = str(e)
 
         results.append({
             "id": plugin_id,
@@ -194,11 +194,11 @@ def load_report_plugins() -> list[dict]:
 
         try:
             if entry.is_file():
-                success, error = _load_plugin_file(entry, plugin_id)
+                _, error = _load_plugin_file(entry, plugin_id)
             else:
-                success, error = _load_module_from_dir(entry, plugin_id)
+                _, error = _load_module_from_dir(entry, plugin_id)
         except PluginConflictError as e:
-            success, error = False, str(e)
+            error = str(e)
 
         results.append({
             "id": plugin_id,

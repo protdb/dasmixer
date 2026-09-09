@@ -61,7 +61,7 @@ class VolcanoReport(BaseReport):
                 y=y_data,
                 mode='markers',
                 name=subset,
-                marker=dict(color=color, size=20, opacity=0.6),
+                marker={"color": color, "size": 20, "opacity": 0.6},
                 customdata=list(zip(protein_ids, fc_data, pval_data)),
                 hovertemplate=(
                     '<b>%{customdata[0]}</b><br>' +

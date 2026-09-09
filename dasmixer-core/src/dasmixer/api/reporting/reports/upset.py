@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 from itertools import product
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 from dasmixer.api.reporting._icons import Icons
 
 from ..base import BaseReport
+
+if TYPE_CHECKING:
+    import plotly.graph_objects as go
 
 # ---------------------------------------------------------------------------
 # UpSet plot logic (ported from volcanizer/create_upset.py)
@@ -161,7 +165,7 @@ def plot_upset(df: pd.DataFrame, min_proteins: int = 1) -> go.Figure:
         y=counts,
         text=counts,
         textposition='outside',
-        textfont=dict(size=14, color='black'),
+        textfont={'size': 14, 'color': 'black'},
         hoverinfo='y',
         marker_color='steelblue',
         showlegend=False,
@@ -183,7 +187,7 @@ def plot_upset(df: pd.DataFrame, min_proteins: int = 1) -> go.Figure:
         ]
         fig.add_trace(go.Scatter(
             mode='markers',
-            marker=dict(size=12, color='steelblue'),
+            marker={'size': 12, 'color': 'steelblue'},
             x=x_positions,
             y=y_values,
             name=subset_labels[idx],

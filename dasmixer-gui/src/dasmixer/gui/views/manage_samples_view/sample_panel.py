@@ -65,8 +65,6 @@ def _build_sample_header(
         marker_icon, marker_color = ft.Icons.WARNING_AMBER_OUTLINED, ft.Colors.AMBER_600
 
     has_ident = if_count > 0
-    expected_if = tools_count * sf_count if sf_count > 0 else 0
-    ident_ok = (expected_if == 0) or (if_count == expected_if)
     idents_ok = idents >= min_idents
     proteins_ok = (proteins == 0) or (proteins >= min_proteins)
 

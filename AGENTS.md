@@ -415,6 +415,38 @@ error-prone and must be avoided.
     `process_identificatons_batch` is kept only as a deprecated alias with a
     `DeprecationWarning`; new code (core, CLI, GUI, plugins) must use the
     correct name.
+14. **Logging — named loggers only, never root.** DASMixer uses a single
+    named logger `dasmixer` (created in `dasmixer.utils.logger`), with all
+    module loggers as children that propagate upward. Runtime configuration
+    (level, file handler) is applied from `AppConfig` by
+    `dasmixer.gui.views.settings_view._apply_logging_config` to the
+    `dasmixer` logger — so child loggers inherit it automatically.
+
+    **Rules:**
+    - **Never** call `logging.info(...)`, `logging.debug(...)`, etc.
+      directly — these hit the *root* logger, bypassing the `dasmixer`
+      hierarchy and the user's level/file settings (Ruff `LOG015`).
+    - **Preferred:** import the shared logger:
+      ```python
+      from dasmixer.utils.logger import logger
+      logger.info("message %s", value)
+      ```
+    - **Alternatively** (when a module-specific logger name is desired):
+      ```python
+      import logging
+      logger = logging.getLogger(__name__)  # e.g. "dasmixer.api.foo"
+      ```
+      Since all DASMixer modules are under the `dasmixer` namespace, these
+      are children of the `dasmixer` logger and inherit its level/handlers.
+    - Use **lazy formatting** (`logger.info("x=%s", x)`, not
+      `logger.info(f"x={x}")`) — the format string is only evaluated if the
+      message passes the level check.
+    - Use `logger.exception(exc)` or `logger.debug("...", exc_info=True)`
+      inside `except` blocks — never bare `except: pass` (Ruff `S110`).
+    - **Bootstrap** (before `AppConfig` loads, e.g. `gui/main.py`): the
+      `dasmixer` logger already has a console handler at import time
+      (level INFO), so `logger.*` calls work immediately. No `print()` for
+      diagnostics — use `logger` from the start.
 
 ---
 

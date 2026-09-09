@@ -86,8 +86,6 @@ class PluginsView(ft.View):
         """Build full view content."""
         self._refresh_lists()
 
-        external_ids = _get_external_plugin_ids()
-
         # Identification Parsers section
         ident_section = self._build_section(
             title="Identification Parsers",

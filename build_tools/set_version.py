@@ -54,7 +54,7 @@ def set_version(new_version: str) -> None:
         if replace_exact(path, old, new):
             changes.append((str(rel), description))
         else:
-            errors.append(f"  NOT FOUND in {rel}: {repr(old)}")
+            errors.append(f"  NOT FOUND in {rel}: {old!r}")
 
     # ------------------------------------------------------------------
     # 1. dasmixer-core/pyproject.toml — [project].version
@@ -67,7 +67,7 @@ def set_version(new_version: str) -> None:
         apply(core_toml, f'version = "{old_v}"', f'version = "{new_version}"',
               f"[project].version: {old_v} -> {new_version}")
     else:
-        errors.append(f"  version not found in dasmixer-core/pyproject.toml")
+        errors.append("  version not found in dasmixer-core/pyproject.toml")
 
     # ------------------------------------------------------------------
     # 2. dasmixer-gui/pyproject.toml — [project].version + dep on dasmixer-core
@@ -90,7 +90,7 @@ def set_version(new_version: str) -> None:
               f'"dasmixer-core[all] =={new_version}"',
               f"dep dasmixer-core[all]: {old_dep} -> {new_version}")
     else:
-        errors.append(f"  dasmixer-core[all] dependency not found in dasmixer-gui/pyproject.toml")
+        errors.append("  dasmixer-core[all] dependency not found in dasmixer-gui/pyproject.toml")
 
     # ------------------------------------------------------------------
     # 3. dasmixer-cli/pyproject.toml — [project].version + dep on dasmixer-core
@@ -112,7 +112,7 @@ def set_version(new_version: str) -> None:
               f'"dasmixer-core =={new_version}"',
               f"dep dasmixer-core: {old_dep} -> {new_version}")
     else:
-        errors.append(f"  dasmixer-core dependency not found in dasmixer-cli/pyproject.toml")
+        errors.append("  dasmixer-core dependency not found in dasmixer-cli/pyproject.toml")
 
     # ------------------------------------------------------------------
     # 4. metapackage/pyproject.toml — [project].version + deps на все три пакета
@@ -150,7 +150,7 @@ def set_version(new_version: str) -> None:
         apply(root_toml, f'version = "{old_v}"', f'version = "{new_version}"',
               f"[project].version: {old_v} -> {new_version}")
     else:
-        errors.append(f"  version not found in root pyproject.toml")
+        errors.append("  version not found in root pyproject.toml")
 
     # ------------------------------------------------------------------
     # 6. dasmixer-core/src/dasmixer/versions.py — только APP_VERSION
@@ -166,7 +166,7 @@ def set_version(new_version: str) -> None:
               f'APP_VERSION = "{new_version}"',
               f"APP_VERSION: {old_v} -> {new_version}")
     else:
-        errors.append(f"  APP_VERSION not found in versions.py")
+        errors.append("  APP_VERSION not found in versions.py")
 
     # ------------------------------------------------------------------
     # 7. metapackage/dasmixer/__init__.py — __version__
@@ -181,7 +181,7 @@ def set_version(new_version: str) -> None:
               f'__version__ = "{new_version}"',
               f"__version__: {old_v} -> {new_version}")
     else:
-        errors.append(f"  __version__ not found in metapackage/dasmixer/__init__.py")
+        errors.append("  __version__ not found in metapackage/dasmixer/__init__.py")
 
     # ------------------------------------------------------------------
     # 8. dasmixer.iss — #define MyAppVersion
@@ -196,7 +196,7 @@ def set_version(new_version: str) -> None:
               f'#define MyAppVersion "{new_version}"',
               f"#define MyAppVersion: {old_v} -> {new_version}")
     else:
-        errors.append(f"  MyAppVersion not found in dasmixer.iss")
+        errors.append("  MyAppVersion not found in dasmixer.iss")
 
     # ------------------------------------------------------------------
     # Итоговый отчёт

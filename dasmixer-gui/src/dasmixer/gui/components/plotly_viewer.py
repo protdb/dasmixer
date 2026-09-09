@@ -49,7 +49,7 @@ def show_webview(fig: go.Figure, title: str, max_width: int = 1280, max_height: 
         window_width = min(
             fig.layout.width, max_width,
         )
-        window = webview.create_window(title, html=html, width=window_width, height=window_height)
+        webview.create_window(title, html=html, width=window_width, height=window_height)
         webview.start()
 
 

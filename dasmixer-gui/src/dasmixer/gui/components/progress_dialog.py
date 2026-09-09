@@ -2,6 +2,8 @@
 
 import flet as ft
 
+from dasmixer.utils import logger
+
 
 class ProgressDialog(ft.AlertDialog):
     """
@@ -55,7 +57,7 @@ class ProgressDialog(ft.AlertDialog):
         try:
             self.update()
         except Exception:
-            pass
+            logger.debug("ProgressDialog update failed", exc_info=True)
     
     def is_cancelled(self) -> bool:
         """Check if user cancelled the operation."""

@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 from dasmixer.api.reporting._icons import Icons
+from dasmixer.utils.logger import logger
 from sklearn.decomposition import PCA
 from sklearn.metrics import roc_auc_score
 from sklearn.preprocessing import StandardScaler, label_binarize
@@ -72,8 +73,8 @@ def _build_pca_figure(
             name=str(subset),
             text=text_vals,
             textposition="top center",
-            textfont=dict(size=10),
-            marker=dict(size=12, color=colors.get(str(subset), "#888888"), opacity=0.85),
+            textfont={"size": 10},
+            marker={"size": 12, "color": colors.get(str(subset), "#888888"), "opacity": 0.85},
         ))
 
     pct1 = explained[0] * 100
@@ -106,7 +107,7 @@ def _build_roc_figure(
     fig.add_trace(go.Scatter(
         x=[0, 1], y=[0, 1],
         mode="lines",
-        line=dict(dash="dash", color="gray", width=1),
+        line={"dash": "dash", "color": "gray", "width": 1},
         showlegend=False,
         hoverinfo="skip",
     ))
@@ -118,14 +119,14 @@ def _build_roc_figure(
             y=item["tpr"],
             mode="lines",
             name=f"{subset} (AUC={auc_val:.3f})",
-            line=dict(color=colors.get(subset, "#888888"), width=2),
+            line={"color": colors.get(subset, "#888888"), "width": 2},
         ))
     fig.update_layout(
         title="ROC / AUC — per subset (one-vs-rest)",
         xaxis_title="False Positive Rate",
         yaxis_title="True Positive Rate",
-        xaxis=dict(range=[0, 1]),
-        yaxis=dict(range=[0, 1.02]),
+        xaxis={"range": [0, 1]},
+        yaxis={"range": [0, 1.02]},
         legend_title="Subset",
         template="plotly_white",
     )
@@ -214,6 +215,7 @@ def _compute_roc(
         try:
             auc = roc_auc_score(y_true, pc1)
         except Exception:
+            logger.warning("ROC AUC computation failed for subset '%s', skipping", subset, exc_info=True)
             continue
         if auc < 0.5:
             pc1 = -pc1
@@ -222,7 +224,7 @@ def _compute_roc(
         try:
             fpr, tpr, _ = roc_curve(y_true, pc1)
         except Exception:
-            # Degenerate y_true / non-finite pc1 — skip this subset.
+            logger.warning("ROC curve computation failed for subset '%s', skipping", subset, exc_info=True)
             continue
         results.append({
             "subset": subset,

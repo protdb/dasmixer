@@ -24,6 +24,7 @@ from dasmixer.api.calculations.spectra.ion_match import (
     MatchResult,
     match_predictions,
 )
+from dasmixer.utils.exceptions import DasmixerException
 from dasmixer.utils.lic import get_leucine_combinations
 from dasmixer.utils.logger import logger
 from dasmixer.utils.seqfixer_utils import PTMS, FixedPTM
@@ -165,10 +166,7 @@ def _ident_passes_tool_thresholds(row: dict, tool_params: dict) -> bool:
         return False
     if cov_val is not None and cov_val < min_coverage:
         return False
-    if seq_len < min_len or seq_len > max_len:
-        return False
-    return True
-
+    return not (seq_len < min_len or seq_len > max_len)
 def _filter_worse_idents(df: pd.DataFrame) -> pd.DataFrame:
     res = []
     uq_idents_id = df['identification_id'].unique()
@@ -443,7 +441,7 @@ async def map_proteins(
                 spectrum = spectra_map.get(ident_id)
                 if spectrum is None:
                     # Spectrum data unavailable — skip
-                    raise Exception('Spectre Unreachable!')
+                    raise DasmixerException('Spectre Unreachable!')
 
                 mz_array: list[float] = spectrum['mz_array']
                 intensity_array: list[float] = spectrum['intensity_array']
@@ -455,7 +453,7 @@ async def map_proteins(
 
                 if eff_charge is None:
                     # Cannot compute PPM without charge — skip
-                    raise Exception('Charge unreachable!')
+                    raise DasmixerException('Charge unreachable!')
 
                 isotope_offset = _safe_int(row.get('isotope_offset')) or 0
 

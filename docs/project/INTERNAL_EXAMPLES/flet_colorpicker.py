@@ -1,6 +1,7 @@
 import re
+
 import flet as ft
-from flet_color_pickers import SlidePicker, ColorPicker, PaletteType
+from flet_color_pickers import SlidePicker
 
 check_rgb = re.compile(r"^([a-fA-F0-9]{6})$")
 
@@ -20,12 +21,11 @@ def main(page: ft.Page):
     def on_text_change(e: ft.ControlEvent):
         print(e.control.value)
         text = e.control.value
-        if len(text) == 6:
-            if check_rgb.match(text) is not None:
-                color = f'#ff{e.control.value}'
-                picker.color = color
-                color_preview.bgcolor = color
-                picker.update()
+        if len(text) == 6 and check_rgb.match(text) is not None:
+            color = f'#ff{e.control.value}'
+            picker.color = color
+            color_preview.bgcolor = color
+            picker.update()
 
     color_field = ft.TextField(
         label="Color (hex)",

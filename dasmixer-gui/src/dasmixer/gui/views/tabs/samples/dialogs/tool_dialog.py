@@ -61,7 +61,7 @@ class ToolDialog:
         parsers = registry.get_identification_parsers()
         parser_options = [
             ft.dropdown.Option(key=name, text=name)
-            for name in parsers.keys()
+            for name in parsers
         ]
 
         if not parser_options:

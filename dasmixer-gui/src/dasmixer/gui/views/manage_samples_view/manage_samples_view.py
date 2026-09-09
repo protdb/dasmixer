@@ -302,7 +302,7 @@ class ManageSamplesView(ft.View):
             await self._reload_all_with_loader()
             return
 
-        refreshed_sample, stats = await self._data_manager.refresh_single(sample_id)
+        refreshed_sample, _ = await self._data_manager.refresh_single(sample_id)
         if refreshed_sample is None:
             await self._reload_all_with_loader()
             return

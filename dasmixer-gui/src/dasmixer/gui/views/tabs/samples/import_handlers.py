@@ -168,7 +168,7 @@ class ImportHandlers:
         self,
         file_list,
         tool_id: int,
-        fixed_spectra_file_id: int = None,
+        fixed_spectra_file_id: int | None = None,
         collect_proteins: bool = False,
         is_uniprot_proteins: bool = False,
         on_duplicates: str = "skip",

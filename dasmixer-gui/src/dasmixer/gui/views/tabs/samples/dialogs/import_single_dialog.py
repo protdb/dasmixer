@@ -24,7 +24,7 @@ class ImportSingleDialog:
         project: Project,
         page: ft.Page,
         import_type: str,
-        tool_id: int = None,
+        tool_id: int | None = None,
         on_import_callback=None,
         fixed_sample_name: str | None = None,
         fixed_spectra_file_id: int | None = None,
@@ -124,7 +124,7 @@ class ImportSingleDialog:
 
             parser_options = [
                 ft.DropdownOption(key=name, text=name)
-                for name in parsers.keys()
+                for name in parsers
             ]
 
             if not parser_options:

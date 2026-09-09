@@ -289,7 +289,7 @@ class IonCoverageAction(BaseAction):
             try:
                 dialog.close()
             except Exception:
-                pass
+                logger.debug("Failed to close progress dialog", exc_info=True)
             self.show_error(f"Error: {exc}")
 
 
@@ -374,5 +374,5 @@ class SelectPreferredAction(BaseAction):
             try:
                 dialog.close()
             except Exception:
-                pass
+                logger.debug("Failed to close progress dialog", exc_info=True)
             self.show_error(f"Error: {ex!s}")

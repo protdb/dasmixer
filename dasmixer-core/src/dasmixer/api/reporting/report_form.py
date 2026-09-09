@@ -8,6 +8,8 @@ import copy
 import json
 from typing import TYPE_CHECKING
 
+from dasmixer.utils.logger import logger
+
 if TYPE_CHECKING:
     from dasmixer.api.project.project import Project
 
@@ -108,5 +110,5 @@ class ReportForm(metaclass=ReportFormMeta):
                 if name in instance._fields:
                     instance._fields[name].default = val
         except Exception:
-            pass
+            logger.debug("Failed to restore report form values from JSON", exc_info=True)
         return instance

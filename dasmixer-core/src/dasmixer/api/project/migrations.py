@@ -2,12 +2,13 @@
 
 import logging
 
+from dasmixer.utils.exceptions import DasmixerException
 from dasmixer.versions import MIN_SUPPORTED_PROJECT_VERSION, PROJECT_VERSION
 
 logger = logging.getLogger(__name__)
 
 
-class MigrationError(Exception):
+class MigrationError(DasmixerException):
     """Ошибка при применении миграций проекта."""
 
 
@@ -131,9 +132,9 @@ class MigrationMixin:
                 await self._db.commit()
             except Exception as e:
                 await self._db.rollback()
-                logger.exception("Migration to %s failed: %s", migration['version'], e)
+                logger.exception("Migration to %s failed", migration['version'])
                 raise MigrationError(
-                    f"Migration to version {migration['version']} failed: {e}"
+                    f"Migration to version {migration['version']} failed"
                 ) from e
 
         # Все миграции применены — обновляем версию

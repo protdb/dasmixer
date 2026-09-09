@@ -10,7 +10,6 @@ import flet as ft
 from dasmixer.api.project.project import Project
 from dasmixer.gui.components.plotly_viewer import PlotlyViewer, render_png_async
 from dasmixer.gui.utils import show_snack
-from jinja2 import Template
 
 from dasmixer.utils import logger
 
@@ -426,13 +425,6 @@ class PlotsTab(ft.Container):
         try:
             from docx import Document
             from docx.shared import Inches
-
-            # Load template
-            template_path = (
-                Path(__file__).parent / "templates" / "plots_export.html.j2"
-            )
-            with open(template_path, "r", encoding="utf-8") as f:
-                template = Template(f.read())
 
             # Show progress dialog instead of snack
             if self.page:

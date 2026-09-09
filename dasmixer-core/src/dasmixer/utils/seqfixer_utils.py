@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from itertools import combinations, product
 from typing import Any
 
+from dasmixer.utils.exceptions import DasmixerException
 from dasmixer.utils.logger import logger
 from dasmixer.utils.ppm import calculate_ppm, calculate_theor_mass, get_uncharged_mass
 from pyteomics.proforma import GenericModification, parse, to_proforma
@@ -27,7 +28,7 @@ class FixedPTM:
         try:
             db_mass = self.generic_mod_object.mass
         except (KeyError, ImportError):
-            raise Exception('No data for PTM found! Create one with Composition and add it to pyteomics.mass.unimod!')
+            raise DasmixerException('No data for PTM found! Create one with Composition and add it to pyteomics.mass.unimod!')
         if not self.mono_mass:
             self.mono_mass = self.generic_mod_object.mass
         else:
@@ -114,7 +115,6 @@ def get_possible_ptm(
 ) -> list[str]:
     split_seq, seq_adds = parse(seq)
     canonical_seq = ''.join(x for x, y in split_seq if y is None)
-    canonical_ppm = calculate_ppm(canonical_seq, pepmass, charge)
     inter_ptms = [x for x in ptm_list if x.attach_to is not None]
     n_term_ptms = [None] + [x for x in ptm_list if x.n_term]
     c_term_ptms = [None] + [x for x in ptm_list if x.c_term]

@@ -609,7 +609,7 @@ class ToolSettingsSection(BaseSection):
 
     async def save_all_tool_settings(self):
         """Save settings for all configured tools."""
-        for tool_id in self.state.tool_settings_controls.keys():
+        for tool_id in self.state.tool_settings_controls:
             await self.save_tool_settings(tool_id)
 
     # ------------------------------------------------------------------

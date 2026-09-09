@@ -21,7 +21,8 @@ def mgf_pattern(
     file_pattern: Annotated[str, typer.Option("--pattern", "-p", help="File pattern (e.g., *.mgf)")] = "*.mgf",
     id_pattern: Annotated[str, typer.Option("--id-pattern", "-i", help="Sample ID pattern (e.g., {id}_*.mgf)")] = "{id}*.mgf",
     parser: Annotated[str, typer.Option("--parser", help="Parser name")] = "MGF",
-    group: Annotated[str, typer.Option("--group", "-g", help="Group to assign samples")] = "Control"
+    group: Annotated[str, typer.Option("--group", "-g", help="Group to assign samples")] = "Control",
+    on_duplicates: Annotated[str, typer.Option("--on-duplicates", help="skip|reload|add_as_new — behaviour when a spectra file path already exists")] = "skip",
 ):
     """
     Import MGF files using pattern matching.
@@ -96,6 +97,16 @@ def mgf_pattern(
                         sample_id = file_path.stem
                     
                     try:
+                        # Check for duplicates (mirrors GUI import_handlers)
+                        existing_sf = await project.get_spectra_file_by_path(str(file_path))
+                        if existing_sf is not None:
+                            if on_duplicates == "skip":
+                                typer.echo(f"  Skipping {file_path.name} (already imported)")
+                                continue
+                            elif on_duplicates == "reload":
+                                await project.delete_spectra_file(existing_sf['id'])
+                            # "add_as_new": do nothing, just create a new record
+
                         # Parse file
                         parser_instance = parser_class(str(file_path))
                         spectra_df = await parser_instance.parse_batch()
@@ -137,7 +148,8 @@ def mgf_file(
     file: Annotated[str, typer.Option("--file", "-f", help="Path to MGF file")] = ...,
     sample_id: Annotated[str, typer.Option("--sample-id", "-s", help="Sample ID")] = ...,
     parser: Annotated[str, typer.Option("--parser", help="Parser name")] = "MGF",
-    group: Annotated[str, typer.Option("--group", "-g", help="Group to assign sample")] = "Control"
+    group: Annotated[str, typer.Option("--group", "-g", help="Group to assign sample")] = "Control",
+    on_duplicates: Annotated[str, typer.Option("--on-duplicates", help="skip|reload|add_as_new — behaviour when a spectra file path already exists")] = "skip",
 ):
     """
     Import single MGF file.
@@ -179,6 +191,16 @@ def mgf_file(
             
             typer.echo(f"Importing {file_path.name}...")
             
+            # Check for duplicates (mirrors GUI import_handlers)
+            existing_sf = await project.get_spectra_file_by_path(str(file_path))
+            if existing_sf is not None:
+                if on_duplicates == "skip":
+                    typer.echo(f"Skipping {file_path.name} (already imported)")
+                    return
+                elif on_duplicates == "reload":
+                    await project.delete_spectra_file(existing_sf['id'])
+                # "add_as_new": do nothing, just create a new record
+
             # Parse file
             parser_instance = parser_class(str(file_path))
             spectra_df = await parser_instance.parse_batch()
@@ -220,7 +242,10 @@ async def ident_file(
     sample_id: Annotated[str, typer.Option("--sample-id", "-s", help="Sample name (must exist)")] = ...,
     parser: Annotated[str, typer.Option("--parser", help="Parser name (e.g., PowerNovo2)")] = ...,
     tool: Annotated[str, typer.Option("--tool", help="Tool name (must exist in project)")] = ...,
-    spectra_file_id: Annotated[int, typer.Option("--spectra-file-id", help="Spectra file ID (auto-detected if omitted)")] = None,
+    spectra_file_id: Annotated[int | None, typer.Option("--spectra-file-id", help="Spectra file ID (auto-detected if omitted)")] = None,
+    on_duplicates: Annotated[str, typer.Option("--on-duplicates", help="skip|reload|add_as_new — behaviour when an identification file path already exists")] = "skip",
+    collect_proteins: Annotated[bool, typer.Option("--collect-proteins", help="Collect proteins embedded in the identification file (e.g. MaxQuant)")] = False,
+    is_uniprot_proteins: Annotated[bool, typer.Option("--is-uniprot-proteins/--generic-proteins", help="Treat collected proteins as UniProt-formatted")] = False,
 ):
     """
     Import single identification file.
@@ -242,6 +267,9 @@ async def ident_file(
         parser_name=parser,
         tool_name=tool,
         spectra_file_id=spectra_file_id,
+        on_duplicates=on_duplicates,
+        collect_proteins=collect_proteins,
+        is_uniprot_proteins=is_uniprot_proteins,
     )
 
 
@@ -253,8 +281,12 @@ async def _import_ident_file_internal(
     tool_name: str,
     spectra_file_id: int | None = None,
     quiet: bool = False,
+    on_duplicates: str = "skip",
+    collect_proteins: bool = False,
+    is_uniprot_proteins: bool = False,
 ) -> int:
     """Internal helper to import a single identification file."""
+    import pandas as pd
     from dasmixer.api.config import config as app_config
 
     if not project_path.exists():
@@ -289,6 +321,17 @@ async def _import_ident_file_internal(
             sf_sorted = sf_df.iloc[sf_df["path"].apply(lambda p: Path(p).name).argsort()]
             spectra_file_id = int(sf_sorted.iloc[0]["id"])
 
+        # Check for duplicates (mirrors GUI import_handlers)
+        existing_if = await project.get_identification_file_by_path(str(file_path))
+        if existing_if is not None:
+            if on_duplicates == "skip":
+                if not quiet:
+                    typer.echo(f"Skipping {file_path.name} (already imported)")
+                return 0
+            elif on_duplicates == "reload":
+                await project.delete_identification_file(existing_if['id'])
+            # "add_as_new": do nothing, just create a new record
+
         # Get parser
         try:
             parser_class = registry.get_parser(parser_name, "identification")
@@ -304,7 +347,14 @@ async def _import_ident_file_internal(
         )
 
         # Get spectra ID list
-        parser_instance = parser_class(str(file_path))
+        parser_instance = parser_class(
+            str(file_path),
+            collect_proteins=collect_proteins,
+            is_uniprot_proteins=is_uniprot_proteins,
+        )
+        if getattr(parser_instance, "require_project", False):
+            parser_instance.project = project
+            parser_instance.spectra_file_id = spectra_file_id
         spectra_id_field = getattr(parser_instance, 'spectra_id_field', 'spectrum_id')
         spectra_list = await project.get_spectra_idlist(spectra_file_id, by=spectra_id_field)
 
@@ -312,30 +362,36 @@ async def _import_ident_file_internal(
             typer.echo(f"Warning: No spectra found for spectra file {spectra_file_id}", err=True)
             return 0
 
-        # Build lookup: ID → spectre_id
-        spectra_map = {str(s[spectra_id_field]): s['spectre_id'] for s in spectra_list}
-
         if not quiet:
             typer.echo(f"Importing {file_path.name}...")
 
         total = 0
         batch_size = getattr(app_config, 'identification_batch_size', 1000)
-        async for batch_df, _ in parser_instance.parse_batch(batch_size=batch_size):
+        async for batch_df in parser_instance.parse_batch(batch_size=batch_size):
             if batch_df.empty:
                 continue
+            # Map spectra IDs via pd.merge (mirrors GUI import_handlers)
+            batch_df = pd.merge(
+                batch_df,
+                pd.json_normalize(spectra_list),
+                on=spectra_id_field,
+                how='inner',
+            )
+            batch_df['tool_id'] = tool_obj.id
             batch_df['ident_file_id'] = ident_file_id
-            # Map spectra IDs
-            id_col = spectra_id_field
-            if id_col in batch_df.columns:
-                batch_df['spectre_id'] = batch_df[id_col].astype(str).map(spectra_map)
-                matched = batch_df['spectre_id'].notna()
-                unmatched_count = (~matched).sum()
-                if unmatched_count > 0 and not quiet:
-                    typer.echo(f"  Warning: {unmatched_count} identifications unmatched to spectra")
-                batch_df = batch_df[matched].copy()
             if not batch_df.empty:
                 await project.add_identifications_batch(batch_df)
                 total += len(batch_df)
+
+        # Save proteins collected during parsing (mirrors GUI)
+        if collect_proteins and getattr(parser_instance, "contain_proteins", False) and getattr(parser_instance, "proteins", None):
+            proteins_df = pd.DataFrame([
+                p.to_dict() for p in parser_instance.proteins.values()
+            ])
+            proteins_df['is_uniprot'] = 1 if is_uniprot_proteins else 0
+            await project.add_proteins_batch(proteins_df)
+            if not quiet:
+                typer.echo(f"  Collected {len(parser_instance.proteins)} proteins")
 
         await project.save()
 
@@ -355,6 +411,9 @@ async def ident_pattern(
     id_pattern: Annotated[str, typer.Option("--id-pattern", "-i", help="Sample ID pattern")] = "{id}*.csv",
     parser: Annotated[str, typer.Option("--parser", help="Parser name (e.g., PowerNovo2)")] = ...,
     tool: Annotated[str, typer.Option("--tool", help="Tool name")] = ...,
+    on_duplicates: Annotated[str, typer.Option("--on-duplicates", help="skip|reload|add_as_new — behaviour when an identification file path already exists")] = "skip",
+    collect_proteins: Annotated[bool, typer.Option("--collect-proteins", help="Collect proteins embedded in the identification file")] = False,
+    is_uniprot_proteins: Annotated[bool, typer.Option("--is-uniprot-proteins/--generic-proteins", help="Treat collected proteins as UniProt-formatted")] = False,
 ):
     """
     Import identification files using pattern matching.
@@ -456,6 +515,9 @@ async def ident_pattern(
                 tool_name=tool,
                 spectra_file_id=spectra_map.get(fp_str),
                 quiet=True,
+                on_duplicates=on_duplicates,
+                collect_proteins=collect_proteins,
+                is_uniprot_proteins=is_uniprot_proteins,
             )
             total_imported += result
             total_files += 1

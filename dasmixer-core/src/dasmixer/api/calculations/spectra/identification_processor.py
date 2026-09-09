@@ -37,8 +37,8 @@ def _get_worker_logger() -> logging.Logger:
       the main app log or is discarded if no handlers are configured).
     - log_to_file=True, log_separate_workers=True: each worker writes its own
       per-PID file under log_folder (or the default cache dir).
-    - log_to_file=True, log_separate_workers=False: propagates to root logger
-      so all output is merged into the single dasmixer log file.
+    - log_to_file=True, log_separate_workers=False: propagates to the
+      ``dasmixer`` logger (merged with the main app log).
     """
     global _worker_logger
     if _worker_logger is not None:
@@ -88,7 +88,7 @@ def _get_worker_logger() -> logging.Logger:
             fh.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
             logger.addHandler(fh)
     else:
-        # Propagate to root logger (merged with main app log)
+        # Propagate to the ``dasmixer`` logger (merged with main app log)
         logger.propagate = True
 
     _worker_logger = logger

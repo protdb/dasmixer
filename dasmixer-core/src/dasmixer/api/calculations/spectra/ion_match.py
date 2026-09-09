@@ -170,8 +170,8 @@ def match_predictions(
     ion_matches = {k: max(v) for k, v in get_match_coverage(matches).items()}
     max_matches = max(ion_matches.values()) if ion_matches else 0
     try:
-        max_matches_type = [k for k, v in ion_matches.items() if v == max_matches][0]
-    except IndexError:
+        max_matches_type = next(k for k, v in ion_matches.items() if v == max_matches)
+    except (StopIteration, IndexError):
         max_matches_type = None
 
     top_ints = list(intensity)

@@ -11,25 +11,79 @@ from dasmixer.api.project.project import Project
 app = typer.Typer(help="Run pipeline calculations")
 
 
-def _get_setting(project, key: str, default: str) -> str:
-    """Get a setting from project_settings with fallback."""
-    import asyncio
-    try:
-        rows = asyncio.run_coroutine_threadsafe(
-            project.execute_query(
-                "SELECT value FROM project_settings WHERE key=?",
-                [key],
-            ),
-            None,
-        )
-        # Fallback: use get_setting directly
-        return default
-    except Exception:
-        return default
-
-
 def _parse_bool(val: str) -> bool:
     return val.lower() in ("true", "1", "yes")
+
+
+async def _collect_tool_settings(project) -> dict[int, dict]:
+    """
+    Build tool_settings dict in the format expected by
+    ``calculate_preferred_identifications_for_file``.
+
+    Reads each tool's saved ``settings`` (populated by the GUI in the
+    canonical format) and fills sensible defaults for any missing keys.
+    Shared by both ``preferred`` and ``peptides`` commands.
+    """
+    tools = await project.get_tools()
+    tool_settings: dict[int, dict] = {}
+    for t in tools:
+        ts = dict(t.settings or {})
+        # Ensure keys required by calculate_preferred_identifications_for_file
+        ts.setdefault("ignore_criteria", False)
+        ts.setdefault("max_ppm", 50.0)
+        ts.setdefault("min_score", 0.0)
+        ts.setdefault("min_ion_intensity_coverage", 0.0)
+        ts.setdefault("min_peptide_length", 7)
+        ts.setdefault("max_peptide_length", 30)
+        ts.setdefault("min_spectre_peaks", 1)
+        ts.setdefault("min_top_peaks", 1)
+        ts.setdefault("min_ions_covered", 1)
+        ts.setdefault("min_quality", 0.25)
+        ts.setdefault("min_lcrr", 0.2)
+        ts.setdefault("max_unconfirmed_ptms", 0)
+        ts.setdefault("denovo_correction", False)
+        ts.setdefault("denovo_correction_ppm", 50000)
+        tool_settings[t.id] = ts
+    return tool_settings
+
+
+async def _run_preferred_selection(project, criterion_val: str, sample_id: int | None) -> int:
+    """
+    Select preferred identifications per spectrum using the per-file
+    algorithm (``calculate_preferred_identifications_for_file``),
+    mirroring the GUI pipeline in ``ion_actions.py``.
+
+    Returns the number of spectra files processed.
+    """
+    from dasmixer.api.calculations.peptides.matching import (
+        calculate_preferred_identifications_for_file,
+    )
+
+    tool_settings = await _collect_tool_settings(project)
+    if not tool_settings:
+        typer.echo("No tools configured.")
+        return 0
+
+    spectre_files = await project.get_spectra_files(
+        sample_id=sample_id if sample_id is not None else None
+    )
+    processed = 0
+    total = len(spectre_files)
+    for _, spectra_file in spectre_files.iterrows():
+        file_name = Path(spectra_file["path"]).name if spectra_file.get("path") else f"#{spectra_file['id']}"
+        typer.echo(f"  Processing {file_name} ({processed + 1}/{total})...")
+        idents = await calculate_preferred_identifications_for_file(
+            project,
+            int(spectra_file["id"]),
+            criterion_val,
+            tool_settings,
+        )
+        await project.set_preferred_identifications_for_file(
+            int(spectra_file["id"]),
+            idents,
+        )
+        processed += 1
+    return processed
 
 
 # ---------------------------------------------------------------------------
@@ -40,9 +94,9 @@ def _parse_bool(val: str) -> bool:
 def ion_coverage(
     project_path: Annotated[str, typer.Argument(help="Path to .dasmix project file")],
     recalc_all: Annotated[bool, typer.Option("--recalc-all", help="Recalculate all, including already processed")] = False,
-    sample_id: Annotated[int, typer.Option("--sample-id", help="Limit to one sample ID")] = None,
-    tolerance: Annotated[float, typer.Option("--tolerance", help="PPM tolerance (overrides project setting)")] = None,
-    ions: Annotated[str, typer.Option("--ions", help="Ion types, comma-separated (overrides project setting)")] = None,
+    sample_id: Annotated[int | None, typer.Option("--sample-id", help="Limit to one sample ID")] = None,
+    tolerance: Annotated[float | None, typer.Option("--tolerance", help="PPM tolerance (overrides project setting)")] = None,
+    ions: Annotated[str | None, typer.Option("--ions", help="Ion types, comma-separated (overrides project setting)")] = None,
 ):
     """
     Calculate ion coverage for identifications.
@@ -139,8 +193,8 @@ def ion_coverage(
 @app.command()
 def preferred(
     project_path: Annotated[str, typer.Argument(help="Path to .dasmix project file")],
-    criterion: Annotated[str, typer.Option("--criterion", help="Selection criterion: ppm or intensity")] = None,
-    sample_id: Annotated[int, typer.Option("--sample-id", help="Limit to one sample ID")] = None,
+    criterion: Annotated[str | None, typer.Option("--criterion", help="Selection criterion: ppm or intensity")] = None,
+    sample_id: Annotated[int | None, typer.Option("--sample-id", help="Limit to one sample ID")] = None,
 ):
     """
     Select preferred identifications per spectrum.
@@ -151,27 +205,9 @@ def preferred(
             if criterion_val is None:
                 criterion_val = await project.get_setting("preferred_criterion", "intensity")
 
-            from dasmixer.api.calculations.peptides.matching import (
-                select_preferred_identifications,
-            )
-
-            # Build tool_settings from project_settings
-            tools = await project.get_tools()
-            tool_settings = {}
-            for t in tools:
-                tid = t.id
-                ts = dict(t.settings or {})
-                ts.setdefault("score_min", await project.get_setting(f"tool_{tid}_score_min", "0"))
-                ts.setdefault("ppm_max", await project.get_setting(f"tool_{tid}_ppm_max", "20"))
-                ts.setdefault("coverage_min", await project.get_setting(f"tool_{tid}_coverage_min", "0"))
-                ts.setdefault("length_min", await project.get_setting(f"tool_{tid}_length_min", "5"))
-                tool_settings[tid] = ts
-
-            count = await select_preferred_identifications(
-                project, criterion_val, tool_settings, sample_id=sample_id,
-            )
+            processed = await _run_preferred_selection(project, criterion_val, sample_id)
             await project.save()
-            typer.echo(f"✓ Selected {count} preferred identifications")
+            typer.echo(f"✓ Processed {processed} spectra files (preferred identifications selected)")
 
     try:
         asyncio.run(_run())
@@ -189,10 +225,10 @@ def preferred(
 @app.command()
 def peptide_match(
     project_path: Annotated[str, typer.Argument(help="Path to .dasmix project file")],
-    fasta: Annotated[str, typer.Option("--fasta", help="Path to FASTA file (overrides project setting)")] = None,
-    sample_id: Annotated[int, typer.Option("--sample-id", help="Limit to one sample ID")] = None,
-    threshold: Annotated[float, typer.Option("--threshold", help="Identity threshold")] = None,
-    batch_size: Annotated[int, typer.Option("--batch-size", help="Batch size")] = None,
+    fasta: Annotated[str | None, typer.Option("--fasta", help="Path to FASTA file (overrides project setting)")] = None,
+    sample_id: Annotated[int | None, typer.Option("--sample-id", help="Limit to one sample ID")] = None,
+    threshold: Annotated[float | None, typer.Option("--threshold", help="Identity threshold")] = None,
+    batch_size: Annotated[int | None, typer.Option("--batch-size", help="Batch size")] = None,
 ):
     """
     Match peptide identifications to protein sequences.
@@ -254,9 +290,9 @@ def peptide_match(
 @app.command()
 def protein_idents(
     project_path: Annotated[str, typer.Argument(help="Path to .dasmix project file")],
-    min_peptides: Annotated[int, typer.Option("--min-peptides", help="Minimum peptides per protein")] = None,
-    min_unique: Annotated[int, typer.Option("--min-unique", help="Minimum unique evidence")] = None,
-    sample_id: Annotated[int, typer.Option("--sample-id", help="Limit to one sample ID")] = None,
+    min_peptides: Annotated[int | None, typer.Option("--min-peptides", help="Minimum peptides per protein")] = None,
+    min_unique: Annotated[int | None, typer.Option("--min-unique", help="Minimum unique evidence")] = None,
+    sample_id: Annotated[int | None, typer.Option("--sample-id", help="Limit to one sample ID")] = None,
 ):
     """
     Calculate protein identifications from peptide matches.
@@ -323,16 +359,16 @@ def protein_idents(
 @app.command()
 def lfq(
     project_path: Annotated[str, typer.Argument(help="Path to .dasmix project file")],
-    empai: Annotated[bool, typer.Option("--empai", help="Enable emPAI")] = None,
-    ibaq: Annotated[bool, typer.Option("--ibaq", help="Enable iBAQ")] = None,
-    nsaf: Annotated[bool, typer.Option("--nsaf", help="Enable NSAF")] = None,
-    top3: Annotated[bool, typer.Option("--top3", help="Enable Top3")] = None,
-    enzyme: Annotated[str, typer.Option("--enzyme", help="Digestion enzyme")] = None,
-    min_length: Annotated[int, typer.Option("--min-length", help="Min peptide length")] = None,
-    max_length: Annotated[int, typer.Option("--max-length", help="Max peptide length")] = None,
-    max_cleavage: Annotated[int, typer.Option("--max-cleavage", help="Max missed cleavages")] = None,
-    empai_base: Annotated[float, typer.Option("--empai-base", help="emPAI base value")] = None,
-    sample_id: Annotated[int, typer.Option("--sample-id", help="Limit to one sample ID")] = None,
+    empai: Annotated[bool | None, typer.Option("--empai", help="Enable emPAI")] = None,
+    ibaq: Annotated[bool | None, typer.Option("--ibaq", help="Enable iBAQ")] = None,
+    nsaf: Annotated[bool | None, typer.Option("--nsaf", help="Enable NSAF")] = None,
+    top3: Annotated[bool | None, typer.Option("--top3", help="Enable Top3")] = None,
+    enzyme: Annotated[str | None, typer.Option("--enzyme", help="Digestion enzyme")] = None,
+    min_length: Annotated[int | None, typer.Option("--min-length", help="Min peptide length")] = None,
+    max_length: Annotated[int | None, typer.Option("--max-length", help="Max peptide length")] = None,
+    max_cleavage: Annotated[int | None, typer.Option("--max-cleavage", help="Max missed cleavages")] = None,
+    empai_base: Annotated[float | None, typer.Option("--empai-base", help="emPAI base value")] = None,
+    sample_id: Annotated[int | None, typer.Option("--sample-id", help="Limit to one sample ID")] = None,
 ):
     """
     Calculate protein quantification (LFQ).
@@ -421,9 +457,9 @@ def lfq(
 @app.command()
 def peptides(
     project_path: Annotated[str, typer.Argument(help="Path to .dasmix project file")],
-    fasta: Annotated[str, typer.Option("--fasta", help="Path to FASTA file")] = None,
-    criterion: Annotated[str, typer.Option("--criterion", help="Selection criterion: ppm or intensity")] = None,
-    sample_id: Annotated[int, typer.Option("--sample-id", help="Limit to one sample ID")] = None,
+    fasta: Annotated[str | None, typer.Option("--fasta", help="Path to FASTA file")] = None,
+    criterion: Annotated[str | None, typer.Option("--criterion", help="Selection criterion: ppm or intensity")] = None,
+    sample_id: Annotated[int | None, typer.Option("--sample-id", help="Limit to one sample ID")] = None,
 ):
     """
     Run full peptide calculation pipeline:
@@ -508,12 +544,7 @@ def peptides(
             if criterion_val is None:
                 criterion_val = await project.get_setting("preferred_criterion", "intensity")
 
-            from dasmixer.api.calculations.peptides.matching import (
-                select_preferred_identifications,
-            )
-            await select_preferred_identifications(
-                project, criterion_val, tool_settings, sample_id=sample_id,
-            )
+            await _run_preferred_selection(project, criterion_val, sample_id)
             await project.save()
 
             typer.echo("✓ Peptide calculations complete!")

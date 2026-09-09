@@ -113,8 +113,8 @@ class TableImporter(IdentificationParser, ABC):
         
         if name is not None:
             try:
-                return [x for x in self.sheets if x.name == name][0].data
-            except IndexError:
+                return next(x for x in self.sheets if x.name == name).data
+            except StopIteration:
                 available = [s.name for s in self.sheets]
                 raise ValueError(
                     f"No sheet with name '{name}'. Available sheets: {available}"
@@ -122,8 +122,8 @@ class TableImporter(IdentificationParser, ABC):
         
         if no is not None:
             try:
-                return [x for x in self.sheets if x.no == no][0].data
-            except IndexError:
+                return next(x for x in self.sheets if x.no == no).data
+            except StopIteration:
                 raise ValueError(
                     f"No sheet with number {no}. Available: 0-{len(self.sheets)-1}"
                 )

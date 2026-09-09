@@ -124,7 +124,7 @@ class DetectionSection(BaseSection):
             ProteinIdentificationsAction,
         )
         action = ProteinIdentificationsAction(self.project, self.page)
-        total = await action.run(
+        await action.run(
             min_peptides=min_pep,
             min_uq_evidence=min_uq,
             sample_id=sample_id,

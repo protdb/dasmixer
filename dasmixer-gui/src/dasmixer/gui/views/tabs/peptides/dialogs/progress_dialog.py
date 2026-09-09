@@ -232,6 +232,6 @@ class ProgressDialog:
             await asyncio.sleep(auto_close_delay)
             self.close()
             return result
-        except Exception as ex:
+        except Exception:
             self.close()
-            raise ex
+            raise

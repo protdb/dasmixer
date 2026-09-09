@@ -200,27 +200,26 @@ class PlotMixin:
                     'identity': None
                 })
                 tool_seqs.add(tool_seq)
-            if get_matched and row.get('protein_id', None) is not None:
-                if row['matched_sequence_modified'] != row['sequence']:
-                    tool_seq_protein = f'{row["tool"]}:{row["matched_sequence_modified"]}'
-                    if tool_seq_protein not in tool_seqs:
-                        tool_seqs.add(tool_seq_protein)
-                        plots.append({
-                            'tool': row['tool'],
-                            'sequence': row['matched_sequence_modified'],
-                            'protein_id': row['protein_id'],
-                            'gene': row['gene'],
-                            'is_preferred': row['is_preferred'],
-                            'ppm': row['matched_ppm'],
-                            'score': row['score'],
-                            'intensity_coverage': row['matched_coverage_percent'],
-                            # Quality/LCRR are not (re)calculated for matched
-                            # sequences on a partial protein match.
-                            'quality': None,
-                            'lcrr': None,
-                            'matched': True,
-                            'identity': row['identity']
-                        })
+            if get_matched and row.get('protein_id', None) is not None and row['matched_sequence_modified'] != row['sequence']:
+                tool_seq_protein = f'{row["tool"]}:{row["matched_sequence_modified"]}'
+                if tool_seq_protein not in tool_seqs:
+                    tool_seqs.add(tool_seq_protein)
+                    plots.append({
+                        'tool': row['tool'],
+                        'sequence': row['matched_sequence_modified'],
+                        'protein_id': row['protein_id'],
+                        'gene': row['gene'],
+                        'is_preferred': row['is_preferred'],
+                        'ppm': row['matched_ppm'],
+                        'score': row['score'],
+                        'intensity_coverage': row['matched_coverage_percent'],
+                        # Quality/LCRR are not (re)calculated for matched
+                        # sequences on a partial protein match.
+                        'quality': None,
+                        'lcrr': None,
+                        'matched': True,
+                        'identity': row['identity']
+                    })
         headers = []
         sequences = []
 

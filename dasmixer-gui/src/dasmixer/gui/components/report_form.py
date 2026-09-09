@@ -323,7 +323,7 @@ class ReportForm(_CoreReportForm):
         self._built = False
 
         # Copy nested mutable defaults for GUI-specific fields
-        for attr_name, field in self._fields.items():
+        for field in self._fields.values():
             if isinstance(field, MultiSubsetSelector):
                 field._checkboxes = {}
                 field._control = None

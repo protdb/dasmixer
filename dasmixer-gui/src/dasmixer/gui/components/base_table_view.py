@@ -266,7 +266,7 @@ class BaseTableView(ft.Container):
             await self.project.set_setting(setting_key, str(value))
 
     async def _load_filters_from_project(self):
-        for key in self.filter.keys():
+        for key in self.filter:
             setting_key = f"table_view_{self.table_view_name}_filter_{key}"
             value = await self.project.get_setting(setting_key)
             if value is not None:

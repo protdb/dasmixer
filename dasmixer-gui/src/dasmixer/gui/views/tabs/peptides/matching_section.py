@@ -52,7 +52,7 @@ class MatchingSection(BaseSection):
                 return
 
             # Validate and save all tool settings
-            for tool_id in self.state.tool_settings_controls.keys():
+            for tool_id in self.state.tool_settings_controls:
                 is_valid, error_msg = tool_settings_section.validate_tool_settings(tool_id)
                 if not is_valid:
                     self.show_warning(f"Validation error: {error_msg}")

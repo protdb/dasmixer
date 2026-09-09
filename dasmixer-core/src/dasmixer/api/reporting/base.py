@@ -245,7 +245,7 @@ class BaseReport(ABC):
         font_size = int(self._project_settings.get('plot_font_size', 12))
         fig.update_layout(
             template='plotly_white',
-            font=dict(size=font_size),
+            font={"size": font_size},
             width=int(self._project_settings.get('plot_width', 1200)),
             height=int(self._project_settings.get('plot_height', 800)),
         )

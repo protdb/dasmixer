@@ -1,6 +1,7 @@
 """Mixin for peptide match operations (CRUD and metrics)."""
 
 import pandas as pd
+from dasmixer.utils.exceptions import DasmixerException
 from dasmixer.utils.logger import logger
 
 
@@ -102,7 +103,7 @@ class PeptideMixin:
             # Note: No auto-save for batch efficiency
             logger.debug(f"Added {len(rows_to_insert)} peptide matches, skipped: {skipped}")
             if skipped > (len(rows_to_insert) / 2):
-                raise Exception("Too many bad proteins in data, check if library were loaded!")
+                raise DasmixerException("Too many bad proteins in data, check if library were loaded!")
     
     async def get_peptide_matches(
         self,

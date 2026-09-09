@@ -223,7 +223,7 @@ class BasePlotView(ft.Container):
             await self.project.set_setting(setting_key, value_str)
 
     async def _load_settings_from_project(self):
-        for key in self.plot_settings.keys():
+        for key in self.plot_settings:
             setting_key = f"plot_view_{self.plot_type_name}_{key}"
             value = await self.project.get_setting(setting_key)
             if value is not None:
@@ -284,7 +284,7 @@ class BasePlotView(ft.Container):
     async def _apply_global_settings(self, fig: go.Figure) -> go.Figure:
         font_size = await self.project.get_setting("global_plot_font_size")
         if font_size:
-            fig.update_layout(font=dict(size=int(font_size)))
+            fig.update_layout(font={"size": int(font_size)})
         return fig
 
     async def _display_plot(self, fig: go.Figure):

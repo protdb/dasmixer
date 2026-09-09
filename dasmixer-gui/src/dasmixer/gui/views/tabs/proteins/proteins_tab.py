@@ -130,7 +130,7 @@ class ProteinsTab(ft.Container):
     
     def _on_table_mode_change(self, e):
         """Handle table mode switching."""
-        selected_mode = list(e.control.selected)[0]
+        selected_mode = next(iter(e.control.selected))
         
         if selected_mode == "identifications":
             self.active_table_container.content = self.identifications_table

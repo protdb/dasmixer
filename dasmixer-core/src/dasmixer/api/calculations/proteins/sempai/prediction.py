@@ -158,10 +158,8 @@ def _estimate_missed_cleavages(peptide_sequence: str) -> int:
     """
     missed = 0
     for i, aa in enumerate(peptide_sequence[:-1]):  # Exclude last AA
-        if aa in ['K', 'R']:
-            # Check if followed by proline (trypsin exception)
-            if i + 1 < len(peptide_sequence) and peptide_sequence[i + 1] != 'P':
-                missed += 1
+        if aa in ['K', 'R'] and i + 1 < len(peptide_sequence) and peptide_sequence[i + 1] != 'P':
+            missed += 1
     return missed
 
 

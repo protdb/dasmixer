@@ -1,9 +1,9 @@
-import logging
 import re
 from collections.abc import AsyncIterator
 from copy import deepcopy
 
 import pandas as pd
+from dasmixer.utils.logger import logger
 from pyteomics.mass import calculate_mass
 from pyteomics.proforma import GenericModification, to_proforma
 
@@ -65,7 +65,7 @@ class PeptideShakerImporter(TableImporter):
             elif seq.startswith('Q'):
                 start = 'pyroQ'
             else:
-                logging.warning(f'pyro-term at wrong residue in {sequence}')
+                logger.warning(f'pyro-term at wrong residue in {sequence}')
         if start is not None:
             start = [GenericModification(terminal_ptm[start])]
         if end is not None:
@@ -115,13 +115,13 @@ class PeptideShakerImporter(TableImporter):
         )
         if len(df.query("seq_no != seq_no")):
             # TODO: correct logging with list of entities
-            logging.warning("mismatched peptide ids")
+            logger.warning("mismatched peptide ids")
 
         proformas = []
 
         for _, row in df.iterrows():
             pf = deepcopy(seqs.get(row['Sequence'], []))
-            logging.debug("pf=%s", pf)
+            logger.debug("pf=%s", pf)
             if len(pf) == 0:
                 proformas.append(None)
             elif len(pf) == 1:
@@ -132,8 +132,8 @@ class PeptideShakerImporter(TableImporter):
         df['proforma'] = proformas
         bad_pfs = df.query("proforma != proforma")
         if len(bad_pfs) > 0:
-            logging.warning(f"reqorlds with bat proforma: {len(bad_pfs)}")
-            logging.debug("bad_pfs:\n%s", bad_pfs.to_markdown(index=False))
+            logger.warning(f"reqorlds with bat proforma: {len(bad_pfs)}")
+            logger.debug("bad_pfs:\n%s", bad_pfs.to_markdown(index=False))
         return df.query("proforma == proforma").copy()
 
     async def parse_batch(
@@ -142,18 +142,18 @@ class PeptideShakerImporter(TableImporter):
     ) -> AsyncIterator[pd.DataFrame]:
         result = await self.get_merged_data()
         rename_cols = renames.mapping
-        logging.debug("rename_cols=%s", rename_cols)
-        logging.debug("result.columns=%s", result.columns)
-        logging.debug("result head:\n%s", result.head(10).to_markdown(index=False))
-        for col in rename_cols.keys():
+        logger.debug("rename_cols=%s", rename_cols)
+        logger.debug("result.columns=%s", result.columns)
+        logger.debug("result head:\n%s", result.head(10).to_markdown(index=False))
+        for col in rename_cols:
             if col not in result.columns:
                 result[col] = None
         result.rename(columns=rename_cols, inplace=True)
-        logging.debug("result.columns after rename=%s", result.columns)
-        logging.debug("rename_cols present=%s", [col for col in rename_cols.keys() if col in result.columns])
+        logger.debug("result.columns after rename=%s", result.columns)
+        logger.debug("rename_cols present=%s", [col for col in rename_cols if col in result.columns])
         sheet_df = result[[col for col in rename_cols.values() if col in result.columns]]
         cursor = 0
-        logging.debug("sheet_df head:\n%s", sheet_df.head(10).to_markdown(index=False))
+        logger.debug("sheet_df head:\n%s", sheet_df.head(10).to_markdown(index=False))
         while cursor < len(sheet_df):
             batch = sheet_df[cursor:cursor + batch_size]
             yield batch
@@ -169,5 +169,5 @@ class PeptideShakerImporter(TableImporter):
             matching_sheet = matching_sheet[['m/z', 'RT', 'Theoretical Mass', 'Sequence']]
             return True
         except (KeyError, ValueError) as e:
-            logging.exception(e)
+            logger.exception(e)
             return False

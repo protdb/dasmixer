@@ -53,8 +53,8 @@ def create_project(
 @app.command()
 def configure(
     project_path: Annotated[str, typer.Argument(help="Path to .dasmix project file")],
-    key: Annotated[str, typer.Option("--key", "-k", help="Setting key")] = None,
-    value: Annotated[str, typer.Option("--value", "-v", help="Setting value")] = None,
+    key: Annotated[str | None, typer.Option("--key", "-k", help="Setting key")] = None,
+    value: Annotated[str | None, typer.Option("--value", "-v", help="Setting value")] = None,
     list_settings: Annotated[bool, typer.Option("--list", "-l", help="List all settings")] = False,
 ):
     """

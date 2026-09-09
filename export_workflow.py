@@ -15,9 +15,9 @@ Outputs:
 import asyncio
 from pathlib import Path
 
-from dasmixer.api.project.project import Project
 from dasmixer.api.calculations.spectra.ion_match import IonMatchParameters
 from dasmixer.api.calculations.spectra.plot_flow import make_full_spectrum_plot
+from dasmixer.api.project.project import Project
 
 ION_TYPES = ["b", "y"]
 ION_TOLERANCE = 20.0

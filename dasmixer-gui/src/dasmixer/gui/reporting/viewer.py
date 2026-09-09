@@ -34,7 +34,7 @@ def _show_html_in_webview(html_content: str, title: str = "Report Viewer"):
         webbrowser.open(Path(temp_path).as_uri())
     else:
         import webview
-        window = webview.create_window(title, html=html_content)
+        webview.create_window(title, html=html_content)
         webview.start()
 
 

@@ -24,7 +24,7 @@ def run_gui(project_path: str | None = None):
     """
     def main(page: ft.Page):
         logger.debug("[app] main() called, creating DASMixerApp...")
-        app = DASMixerApp(page, project_path)
+        DASMixerApp(page, project_path)
 
     ft.app(target=main)
 

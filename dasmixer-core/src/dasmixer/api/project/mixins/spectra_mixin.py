@@ -126,12 +126,11 @@ class SpectraMixin:
             if peaks_count is None and 'mz_array' in row and row['mz_array'] is not None:
                 peaks_count = len(row['mz_array'])
             charge_array_common_value = row.get('charge_array_common_value', None)
-            if charge_array_common_value is not None:
-                if type(charge_array_common_value) is float:
-                    if np.isnan(charge_array_common_value):
-                        charge_array_common_value = None
-                    else:
-                        charge_array_common_value = int(charge_array_common_value)
+            if charge_array_common_value is not None and type(charge_array_common_value) is float:
+                if np.isnan(charge_array_common_value):
+                    charge_array_common_value = None
+                else:
+                    charge_array_common_value = int(charge_array_common_value)
             rows_to_insert.append((
                 spectra_file_id,
                 int(row['seq_no']),

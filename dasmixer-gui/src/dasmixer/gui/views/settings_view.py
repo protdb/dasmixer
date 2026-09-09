@@ -11,21 +11,38 @@ from dasmixer.utils import logger
 
 
 def _apply_logging_config(cfg) -> None:
-    """Configure root logger based on AppConfig settings."""
+    """Configure the application logger hierarchy from AppConfig settings.
+
+    DASMixer uses a single named logger ``dasmixer`` (created in
+    ``dasmixer.utils.logger``) with a console handler attached at import
+    time. All module-level loggers are children of ``dasmixer`` (either via
+    ``from dasmixer.utils.logger import logger`` or
+    ``logging.getLogger("dasmixer.<...>")``) and propagate to it.
+
+    This function reconfigures the ``dasmixer`` logger:
+
+    - Sets its level from ``cfg.log_level`` (DEBUG/INFO/WARNING/...).
+    - When ``cfg.log_to_file`` is True, attaches a daily file handler to
+      ``cfg.log_folder`` (or the default ``~/.cache/dasmixer/logs/``).
+
+    The console handler installed by ``setup_logger`` is preserved — only
+    file handlers are removed/replaced to avoid duplicates on re-save.
+    """
     import logging
     from datetime import datetime
     from pathlib import Path
 
-    root = logging.getLogger()
+    dasmixer_log = logging.getLogger("dasmixer")
 
-    # Remove any existing file handlers to avoid duplicates on re-save
-    for h in list(root.handlers):
+    # Remove existing *file* handlers only — keep the console handler
+    # installed by setup_logger() at import time.
+    for h in list(dasmixer_log.handlers):
         if isinstance(h, logging.FileHandler):
             h.close()
-            root.removeHandler(h)
+            dasmixer_log.removeHandler(h)
 
     level = getattr(logging, cfg.log_level, logging.INFO)
-    root.setLevel(level)
+    dasmixer_log.setLevel(level)
 
     if cfg.log_to_file:
         log_dir = (
@@ -40,7 +57,7 @@ def _apply_logging_config(cfg) -> None:
         fh.setFormatter(logging.Formatter(
             "%(asctime)s %(name)s %(levelname)s %(message)s"
         ))
-        root.addHandler(fh)
+        dasmixer_log.addHandler(fh)
 
 _LARGE_BATCH_THRESHOLD = 100_000
 _LARGE_BATCH_WARNING = (
@@ -473,7 +490,6 @@ class SettingsView(ft.View):
     async def _confirm_large_batch(self, large_fields: list[str]) -> bool:
         """Show warning dialog for very large batch sizes. Returns True if confirmed."""
         result: list[bool] = [False]
-        dialog_closed = ft.Event()
 
         def on_confirm(_):
             result[0] = True

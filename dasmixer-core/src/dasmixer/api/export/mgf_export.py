@@ -431,7 +431,7 @@ async def export_mgf(
 
             else:
                 fpath = os.path.join(output_dir, f"{base_name}.mgf")
-                with open(fpath, "w", encoding="utf-8") as f:
+                with open(fpath, "w", encoding="utf-8") as f:  # noqa: ASYNC230 — pyteomics mgf.write() needs sync file object
                     await _write_mgf_to_file(
                         project, f, spectrum_ids, need_ident, tool_id,
                         write_offset, write_spectra_charge, write_seq, seq_type,

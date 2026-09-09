@@ -171,7 +171,7 @@ def generate_spectrum_plot(
             hovertemplate=(
                 "%{customdata[1]} %{customdata[0]}<br>M/z: %{x}, Int.: %{y}<extra></extra>"
             ),
-            marker = dict(color="rgba(0,0,0,0)"),
+            marker = {'color': "rgba(0,0,0,0)"},
             mode='markers'
         ), row=row_no, col=1)
         for _, row in df.iterrows():
@@ -185,10 +185,10 @@ def generate_spectrum_plot(
                 go.Bar(
                     x=[row['mz']],
                     y=[row['intensity']],
-                    marker=dict(
-                        color='lightgray',
-                        line=dict(color=color, width=2)
-                    ),
+                    marker={
+                        'color': 'lightgray',
+                        'line': {'color': color, 'width': 2}
+                    },
                     showlegend=False,
                     hovertext=None
 
@@ -206,10 +206,10 @@ def generate_spectrum_plot(
                 text=row.get('label', ''),
                 showarrow=False,
                 yshift=10,
-                font=dict(
-                    color=get_ion_type_color(row['ion_type']),
-                    size=font_size * 0.6  # Slightly smaller for annotations
-                ),
+                font={
+                    'color': get_ion_type_color(row['ion_type']),
+                    'size': font_size * 0.6  # Slightly smaller for annotations
+                },
                 row=row_no,
                 col=1
             )
@@ -219,8 +219,8 @@ def generate_spectrum_plot(
         title_text='m/z',
         row=num_plots,
         col=1,
-        title_font=dict(size=font_size),
-        tickfont=dict(size=font_size)
+        title_font={'size': font_size},
+        tickfont={'size': font_size}
     )
     
     for i in range(1, num_plots + 1):
@@ -228,8 +228,8 @@ def generate_spectrum_plot(
             title_text='Intensity',
             row=i,
             col=1,
-            title_font=dict(size=font_size),
-            tickfont=dict(size=font_size)
+            title_font={'size': font_size},
+            tickfont={'size': font_size}
         )
     
     # Update layout

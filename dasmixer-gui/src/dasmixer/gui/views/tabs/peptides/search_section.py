@@ -195,11 +195,12 @@ class SearchSection(BaseSection):
                 color=ft.Colors.AMBER,
                 size=16
             ) if row.get('is_preferred') else ft.Container(width=16)
-            
+
             seq_display = str(row.get('sequence', ''))[:20]
             if len(str(row.get('sequence', ''))) > 20:
                 seq_display += "..."
-            
+
+            row_data = row.to_dict()
             rows.append(
                 ft.Container(
                     content=ft.Row([
@@ -226,7 +227,7 @@ class SearchSection(BaseSection):
                             icon=ft.Icons.VISIBILITY,
                             tooltip="View spectrum",
                             icon_size=16,
-                            on_click=lambda e, r=row.to_dict(): self.page.run_task(
+                            on_click=lambda e, r=row_data: self.page.run_task(
                                 self.view_identification, e, r
                             )
                         )

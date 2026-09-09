@@ -300,8 +300,7 @@ def _expand_unlocalized(sequence: str, ptm_list: list[FixedPTM]) -> list[str]:
             "Reducing each group to first+last sites only.",
             _estimate(), _MAX_UNLOCALIZED_COMBOS,
         )
-        for code in group_sites:
-            sites = group_sites[code]
+        for code, sites in group_sites.items():
             if len(sites) > 2:
                 group_sites[code] = [sites[0], sites[-1]]
 
@@ -460,7 +459,7 @@ class SeqFixer:
                        only when step 1's direct hit already satisfied
                        target_ppm.
         """
-        split, params, canonical = _split_and_strip(sequence)
+        _, _, canonical = _split_and_strip(sequence)
         canonical_split, canonical_params = parse(canonical)  # mods-free split
 
         # Build the original params object (bare, no override)
@@ -564,7 +563,7 @@ class SeqFixer:
                 extended_ptm_codes.add(ep.code)
 
         # Parse matched_sequence (canonical — should have no mods)
-        matched_split, matched_params, matched_canonical = _split_and_strip(matched_sequence)
+        matched_split, matched_params, _ = _split_and_strip(matched_sequence)
 
         # Corrected pepmass for given isotope_offset
         corrected_pepmass = pepmass - isotope_offset * self.isotope_step / charge
@@ -833,5 +832,5 @@ class SeqFixer:
                         seen[code] = FixedPTM(code=code, attach_to=aa)
                     except Exception:
                         # Skip mods that cannot be resolved in the DB
-                        pass
+                        _seqfixer_log.debug("Skipping unresolvable PTM code %r", code, exc_info=True)
         return list(seen.values())

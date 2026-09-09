@@ -9,8 +9,8 @@ Example:
 """
 
 import asyncio
-import sys
 import json
+import sys
 
 sys.path.insert(0, "dasmixer-core/src")
 
@@ -53,11 +53,10 @@ async def inspect_spectra(project_path: str, limit: int = 3):
 
             ca = full.get("charge_array")
             if ca is not None:
-                import numpy as np
                 print(f"  charge_array type         : {type(ca).__name__}, dtype={ca.dtype}, shape={ca.shape}")
                 print(f"  charge_array[:5]          : {ca[:5].tolist()}")
             else:
-                print(f"  charge_array              : None")
+                print("  charge_array              : None")
 
             print(f"  pepmass                   : {full.get('pepmass')!r}  (type: {type(full.get('pepmass')).__name__})")
             print(f"  intensity                 : {full.get('intensity')!r}")
@@ -69,7 +68,7 @@ async def inspect_spectra(project_path: str, limit: int = 3):
                 print(f"  all_params keys           : {list(all_params.keys())}")
                 print(f"  all_params                : {json.dumps(all_params, ensure_ascii=False, default=str)}")
             else:
-                print(f"  all_params                : None / empty")
+                print("  all_params                : None / empty")
 
             mz = full.get("mz_array")
             if mz is not None:

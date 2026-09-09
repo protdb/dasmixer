@@ -167,6 +167,6 @@ class LFQAction(BaseAction):
             try:
                 dialog.close()
             except Exception:
-                pass
+                logger.debug("Failed to close progress dialog", exc_info=True)
             self.show_error(f"Error: {ex!s}")
             return 0
