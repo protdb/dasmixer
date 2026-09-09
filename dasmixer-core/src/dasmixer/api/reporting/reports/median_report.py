@@ -1,6 +1,8 @@
 import pandas as pd
 import plotly.graph_objects as go
+
 from ..base import BaseReport
+
 
 class MedianReport(BaseReport):
     """Median Report class."""
@@ -100,4 +102,5 @@ class MedianReport(BaseReport):
         return [], [('Full statistic offload', df, False)]
 
 from ..registry import registry
+
 registry.register(MedianReport)

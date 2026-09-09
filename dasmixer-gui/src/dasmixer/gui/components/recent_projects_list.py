@@ -1,7 +1,8 @@
 """Reusable component for displaying the recent projects list."""
 
-import flet as ft
 from pathlib import Path
+
+import flet as ft
 
 
 class RecentProjectsList(ft.Column):

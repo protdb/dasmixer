@@ -2,9 +2,9 @@
 
 import flet as ft
 import pandas as pd
-
-from dasmixer.gui.components.base_table_view import BaseTableView
 from dasmixer.api.project.project import Project
+from dasmixer.gui.components.base_table_view import BaseTableView
+
 from dasmixer.utils import logger
 
 _MAX_SEQ_LEN = 31

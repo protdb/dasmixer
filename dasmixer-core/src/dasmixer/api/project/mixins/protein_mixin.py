@@ -1,9 +1,9 @@
 """Mixin for protein operations, identification results, and quantification."""
 
 import pandas as pd
+from dasmixer.utils.logger import logger
 
 from ..dataclasses import Protein
-from dasmixer.utils.logger import logger
 
 
 class ProteinMixin:
@@ -642,7 +642,7 @@ class ProteinMixin:
                 try:
                     from pyteomics import mass
                     return mass.calculate_mass(sequence=seq)
-                except:
+                except Exception:
                     return None
             
             df['weight'] = df['sequence'].apply(calc_weight)

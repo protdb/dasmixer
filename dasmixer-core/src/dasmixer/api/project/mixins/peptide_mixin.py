@@ -1,7 +1,6 @@
 """Mixin for peptide match operations (CRUD and metrics)."""
 
 import pandas as pd
-
 from dasmixer.utils.logger import logger
 
 
@@ -97,8 +96,7 @@ class PeptideMixin:
                 try:
                     await self._execute(query, r)
                 except Exception as e:
-                    print(query)
-                    print(r)
+                    logger.debug("peptide_match insert failed: query=%s row=%s", query, r)
                     logger.exception(e)
                     skipped += 1
             # Note: No auto-save for batch efficiency

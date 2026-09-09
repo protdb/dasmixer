@@ -1,10 +1,11 @@
 """Tool settings section for peptides tab."""
 
 import flet as ft
-
 from dasmixer.utils.seqfixer_utils import PTMS
-from .base_section import BaseSection
+
 from dasmixer.utils import logger
+
+from .base_section import BaseSection
 
 # Full list of available PTM codes from PTMS registry
 _ALL_PTM_CODES: list[str] = [ptm.code for ptm in PTMS]
@@ -59,7 +60,7 @@ class ToolSettingsSection(BaseSection):
 
         except Exception as ex:
             logger.exception(f"Error refreshing tools: {ex}")
-            self.show_error(f"Error loading tools: {str(ex)}")
+            self.show_error(f"Error loading tools: {ex!s}")
 
     def _create_tool_controls(self, tool) -> dict:
         """

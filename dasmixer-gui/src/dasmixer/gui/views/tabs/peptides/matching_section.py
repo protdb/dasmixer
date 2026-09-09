@@ -1,12 +1,10 @@
 """Preferred identification matching section."""
-from pathlib import Path
 
 import flet as ft
 
-from dasmixer.api.calculations.peptides.matching import calculate_preferred_identifications_for_file
-from .base_section import BaseSection
 from dasmixer.utils import logger
-from .dialogs.progress_dialog import ProgressDialog
+
+from .base_section import BaseSection
 
 
 class MatchingSection(BaseSection):
@@ -73,7 +71,7 @@ class MatchingSection(BaseSection):
 
         except Exception as ex:
             logger.exception("Error")
-            self.show_error(f"Error: {str(ex)}")
+            self.show_error(f"Error: {ex!s}")
     
     def _get_ion_match_params(self):
         """Get IonMatchParameters from shared state."""

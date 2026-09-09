@@ -10,7 +10,7 @@ Maps peptide identifications to proteins via BLAST (npysearch), then:
 """
 
 import math
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
 
 try:
     import npysearch as npy
@@ -18,15 +18,18 @@ except ImportError:  # pragma: no cover
     npy = None  # type: ignore[assignment]
 
 import pandas as pd
-
-from dasmixer.api import Project
-from dasmixer.utils.logger import logger
-from dasmixer.api.calculations.ppm import SeqFixer, SeqMatchParams
 from dasmixer.api.calculations.ppm.dataclasses import SeqResults
-from dasmixer.api.calculations.spectra.ion_match import IonMatchParameters, match_predictions, MatchResult
+from dasmixer.api.calculations.spectra.ion_match import (
+    IonMatchParameters,
+    MatchResult,
+    match_predictions,
+)
 from dasmixer.utils.lic import get_leucine_combinations
+from dasmixer.utils.logger import logger
 from dasmixer.utils.seqfixer_utils import PTMS, FixedPTM
 
+from dasmixer.api import Project
+from dasmixer.api.calculations.ppm import SeqFixer, SeqMatchParams
 
 # ---------------------------------------------------------------------------
 # Internal helpers
@@ -384,7 +387,7 @@ async def map_proteins(
             # Identify which identification IDs need spectra
             # ----------------------------------------------------------------
             partial_ids: list[int] = [int(x) for x in blast_df.loc[blast_df['Identity'] < 1.0, 'id'].unique()]
-            print(partial_ids)
+            logger.debug("partial_ids count=%d", len(partial_ids))
             spectra_map: dict[int, dict] = {}
             if partial_ids:
                 logger.debug(f'reading spectra for {len(partial_ids)}')

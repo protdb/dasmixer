@@ -1,7 +1,7 @@
 """SampleDataManager — encapsulates sample stats loading and refresh operations."""
 
-from dasmixer.api.project.project import Project
 from dasmixer.api.project.dataclasses import Sample
+from dasmixer.api.project.project import Project
 
 
 class SampleDataManager:

@@ -1,13 +1,14 @@
 """Main Reports Tab."""
 
 import flet as ft
-
 from dasmixer.api.project.project import Project
 from dasmixer.api.reporting.registry import registry
-from .shared_state import ReportsTabState
-from .settings_section import SettingsSection
-from .report_item import ReportItem
+
 from dasmixer.utils import logger
+
+from .report_item import ReportItem
+from .settings_section import SettingsSection
+from .shared_state import ReportsTabState
 
 
 class ReportsTab(ft.Container):
@@ -128,7 +129,9 @@ class ReportsTab(ft.Container):
             traceback.print_exc()
     
     async def _export_all_to_folder(self, folder_path: str):
-        from dasmixer.gui.views.tabs.peptides.dialogs.progress_dialog import ProgressDialog
+        from dasmixer.gui.views.tabs.peptides.dialogs.progress_dialog import (
+            ProgressDialog,
+        )
         
         selected = [
             item for item in self.report_items

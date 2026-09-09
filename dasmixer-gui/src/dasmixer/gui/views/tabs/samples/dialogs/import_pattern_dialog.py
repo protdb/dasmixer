@@ -1,13 +1,14 @@
 """Dialog for pattern-based file import."""
 
-import flet as ft
-from pathlib import Path
 from dataclasses import dataclass
-from typing import Optional, List
-from dasmixer.api.project.project import Project
+from pathlib import Path
+
+import flet as ft
 from dasmixer.api.inputs.registry import registry
-from dasmixer.utils.seek_files import seek_files
+from dasmixer.api.project.project import Project
 from dasmixer.gui.utils import show_snack
+from dasmixer.utils.seek_files import seek_files
+
 from dasmixer.utils import logger
 
 
@@ -30,7 +31,7 @@ class ImportPatternDialog:
         project: Project,
         page: ft.Page,
         import_type: str,
-        tool_id: Optional[int] = None,
+        tool_id: int | None = None,
         on_import_callback=None
     ):
         """
@@ -58,7 +59,7 @@ class ImportPatternDialog:
         self.group_dropdown = None
         self.files_list = None
         self.dialog = None
-        self._file_entries: List[FileEntry] = []
+        self._file_entries: list[FileEntry] = []
         self._import_btn = None
         self.cb_collect_proteins = None
         self.cb_is_uniprot = None
@@ -376,8 +377,11 @@ class ImportPatternDialog:
             spectra_file_ids: dict[str, int] = {}   # str(Path) -> spectre_file.id
             unmatched_paths: set[str] = set()
             if self.import_type == "identifications":
-                from dasmixer.utils.ident_spectra_pairing import resolve_ident_to_spectra_mapping
                 from collections import defaultdict
+
+                from dasmixer.utils.ident_spectra_pairing import (
+                    resolve_ident_to_spectra_mapping,
+                )
 
                 # Group found files by sample_id (normalized)
                 by_sample: dict[str, list[Path]] = defaultdict(list)

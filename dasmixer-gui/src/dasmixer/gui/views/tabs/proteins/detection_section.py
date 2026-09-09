@@ -1,11 +1,9 @@
 """Detection section - protein identification calculation."""
 
+
 import flet as ft
-import asyncio
 
 from .base_section import BaseSection
-from dasmixer.gui.views.tabs.peptides.dialogs.progress_dialog import ProgressDialog
-from dasmixer.api.calculations.proteins.map_identifications import find_protein_identifications
 
 
 class DetectionSection(BaseSection):
@@ -122,7 +120,9 @@ class DetectionSection(BaseSection):
         await self.project.set_setting('proteins_min_peptides', str(min_pep))
         await self.project.set_setting('proteins_min_unique_evidence', str(min_uq))
 
-        from dasmixer.gui.actions.protein_ident_action import ProteinIdentificationsAction
+        from dasmixer.gui.actions.protein_ident_action import (
+            ProteinIdentificationsAction,
+        )
         action = ProteinIdentificationsAction(self.project, self.page)
         total = await action.run(
             min_peptides=min_pep,

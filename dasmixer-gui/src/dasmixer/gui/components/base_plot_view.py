@@ -1,16 +1,21 @@
 """Base class for all plot views with save/export functionality."""
 
-import flet as ft
-import plotly.graph_objects as go
 import json
 import multiprocessing
 
+import flet as ft
+import plotly.graph_objects as go
 from dasmixer.api.config import config
 from dasmixer.api.project.project import Project
-from dasmixer.gui.components.plotly_viewer import PlotlyViewer, show_webview, render_png_async
 from dasmixer.gui.components.clipboard import copy_png_to_clipboard
-from dasmixer.utils import logger
+from dasmixer.gui.components.plotly_viewer import (
+    PlotlyViewer,
+    render_png_async,
+    show_webview,
+)
 from dasmixer.gui.utils import show_snack
+
+from dasmixer.utils import logger
 
 WINDOW_HEAD_GAP = 200
 

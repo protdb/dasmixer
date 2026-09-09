@@ -1,13 +1,14 @@
 """CLI commands for importing data files."""
 
-import typer
-from pathlib import Path
 import asyncio
 from collections import defaultdict
+from pathlib import Path
 from typing import Annotated
-from dasmixer.api.project.project import Project
-from dasmixer.api.inputs.registry import registry
+
+import typer
 from dasmixer.api.config import config
+from dasmixer.api.inputs.registry import registry
+from dasmixer.api.project.project import Project
 from dasmixer.utils.seek_files import seek_files
 
 app = typer.Typer(help="Import data files")
@@ -526,8 +527,9 @@ def fasta(
             typer.echo(f"  Generic entries: {int(generic_count)}")
 
     try:
-        import pandas as pd
         import asyncio
+
+        import pandas as pd
         asyncio.run(_import())
     except typer.Exit:
         raise
@@ -560,11 +562,14 @@ def import_maxquant(
     Example:
         dasmixer-cli import maxquant project.dasmix /data/mq/mqpar.xml --tool-name MaxQuant
     """
-    from dasmixer.api.inputs.complex.MaxQuantProject.mqpar_parser import get_paths_from_mqpar
-    from dasmixer.api.inputs.complex.MaxQuantProject.importer import (
-        MaxQuantImportOptions, run_maxquant_import,
-    )
     from dasmixer.api.config import config as app_config
+    from dasmixer.api.inputs.complex.MaxQuantProject.importer import (
+        MaxQuantImportOptions,
+        run_maxquant_import,
+    )
+    from dasmixer.api.inputs.complex.MaxQuantProject.mqpar_parser import (
+        get_paths_from_mqpar,
+    )
 
     async def _run():
         mqpar_paths = get_paths_from_mqpar(mqpar_path)

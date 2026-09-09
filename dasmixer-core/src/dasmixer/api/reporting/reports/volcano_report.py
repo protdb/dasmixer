@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+import plotly.graph_objects as go
 from dasmixer.api.reporting._icons import Icons
 from scipy.stats import false_discovery_control, mannwhitneyu, ttest_ind
-import plotly.graph_objects as go
-from ..base import BaseReport
 from smart_round import format_dataframe
+
+from ..base import BaseReport
 
 
 class VolcanoReport(BaseReport):
@@ -293,4 +294,5 @@ class VolcanoReport(BaseReport):
 
 
 from ..registry import registry
+
 registry.register(VolcanoReport)

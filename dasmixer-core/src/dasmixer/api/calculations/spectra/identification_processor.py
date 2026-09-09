@@ -2,14 +2,20 @@ import logging
 import os
 import time
 import traceback
+import warnings
 from pathlib import Path
 from typing import Literal
 
-from dasmixer.api.calculations.ppm import SeqFixer, SeqMatchParams
 from dasmixer.api.calculations.ppm.seqfixer import _expand_unlocalized
-from dasmixer.utils.seqfixer_utils import PTMS, FixedPTM
-from dasmixer.api.calculations.spectra.ion_match import IonMatchParameters, match_predictions, MatchResult
+from dasmixer.api.calculations.spectra.ion_match import (
+    IonMatchParameters,
+    MatchResult,
+    match_predictions,
+)
 from dasmixer.utils.ppm import calculate_theor_mass, get_ppm_for_masses
+from dasmixer.utils.seqfixer_utils import PTMS
+
+from dasmixer.api.calculations.ppm import SeqFixer, SeqMatchParams
 
 # ---------------------------------------------------------------------------
 # Per-worker file logger
@@ -295,7 +301,7 @@ def process_matched_peptide():
 # Batch entry point (called from ProcessPoolExecutor)
 # ---------------------------------------------------------------------------
 
-def process_identificatons_batch(
+def process_identifications_batch(
     batch: list[dict],
     params_dict: dict,
     fragment_charges: list[int],
@@ -416,3 +422,17 @@ def process_identificatons_batch(
 
     log.info("=== batch DONE   size=%d  results=%d ===", len(batch), len(results))
     return results
+
+
+# Deprecated alias for the original (mis-spelled) name. New code should use
+# process_identifications_batch. Kept for backward compatibility with any
+# external code or plugins importing the old name.
+def process_identificatons_batch(*args, **kwargs):
+    """Deprecated alias for :func:`process_identifications_batch` (typo in name)."""
+    warnings.warn(
+        "'process_identificatons_batch' is deprecated; use "
+        "'process_identifications_batch' instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return process_identifications_batch(*args, **kwargs)

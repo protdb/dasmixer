@@ -2,8 +2,9 @@
 
 import flet as ft
 
-from .base_section import BaseSection
 from dasmixer.utils import logger
+
+from .base_section import BaseSection
 
 
 class FastaSection(BaseSection):
@@ -80,7 +81,9 @@ class FastaSection(BaseSection):
 
     async def _open_load_dialog(self, e):
         """Open the FASTA load dialog."""
-        from dasmixer.gui.views.tabs.peptides.dialogs.load_fasta_dialog import LoadFastaDialog
+        from dasmixer.gui.views.tabs.peptides.dialogs.load_fasta_dialog import (
+            LoadFastaDialog,
+        )
         dialog = LoadFastaDialog(
             project=self.project,
             page=self.page,

@@ -2,17 +2,19 @@
 
 import flet as ft
 from dasmixer.api.project.project import Project
-from .shared_state import SamplesTabState
+
+from dasmixer.utils import logger
+
+from .dialogs.import_mode_dialog import ImportModeDialog
+from .dialogs.import_pattern_dialog import ImportPatternDialog
+from .dialogs.import_single_dialog import ImportSingleDialog
 from .groups_section import GroupsSection
-from .tools_section import ToolsSection
+from .import_handlers import ImportHandlers
 from .import_section import ImportSection
 from .maxquant_import_section import MaxQuantImportSection
 from .samples_summary_section import SamplesSummarySection
-from .import_handlers import ImportHandlers
-from .dialogs.import_mode_dialog import ImportModeDialog
-from .dialogs.import_pattern_dialog import ImportPatternDialog
-from dasmixer.utils import logger
-from .dialogs.import_single_dialog import ImportSingleDialog
+from .shared_state import SamplesTabState
+from .tools_section import ToolsSection
 
 
 class SamplesTab(ft.Container):

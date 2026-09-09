@@ -1,16 +1,17 @@
 """Individual report item component."""
 
-import json
-import flet as ft
 from datetime import datetime
 from pathlib import Path
 
+import flet as ft
 from dasmixer.api.project.project import Project
 from dasmixer.api.reporting.base import BaseReport
 from dasmixer.gui.reporting.viewer import ReportViewer
-from .shared_state import ReportsTabState
 from dasmixer.gui.utils import show_snack
+
 from dasmixer.utils import logger
+
+from .shared_state import ReportsTabState
 
 
 class ReportItem(ft.Container):
@@ -163,7 +164,6 @@ class ReportItem(ft.Container):
         saved = await self.project.get_report_parameters(self.report_class.name)
         if saved:
             try:
-                from dasmixer.gui.components.report_form import ReportForm
                 self._form = self.report_class.parameters.from_json_str(saved, self.project)
             except Exception:
                 self._form = self.report_class.parameters(self.project)
@@ -360,7 +360,9 @@ class ReportItem(ft.Container):
         if not self.current_report_id:
             return
 
-        from dasmixer.gui.views.tabs.peptides.dialogs.progress_dialog import ProgressDialog
+        from dasmixer.gui.views.tabs.peptides.dialogs.progress_dialog import (
+            ProgressDialog,
+        )
         dialog = ProgressDialog(self.page, "Exporting Report")
         dialog.show()
         

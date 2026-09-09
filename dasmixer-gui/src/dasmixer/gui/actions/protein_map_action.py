@@ -4,12 +4,13 @@ import asyncio
 from typing import Any
 
 import flet as ft
+from dasmixer.api.calculations.peptides.protein_map import map_proteins
+from dasmixer.api.config import config as _config
+from dasmixer.api.project.project import Project
+from dasmixer.gui.views.tabs.peptides.shared_state import PeptidesTabState
 
 from dasmixer.utils import logger
-from dasmixer.api.project.project import Project
-from dasmixer.api.config import config as _config
-from dasmixer.api.calculations.peptides.protein_map import map_proteins
-from dasmixer.gui.views.tabs.peptides.shared_state import PeptidesTabState
+
 from .base import BaseAction
 
 
@@ -84,7 +85,9 @@ class MatchProteinsAction(BaseAction):
         else:
             await self.project.clear_peptide_matches()
 
-        from dasmixer.gui.views.tabs.peptides.dialogs.progress_dialog import ProgressDialog
+        from dasmixer.gui.views.tabs.peptides.dialogs.progress_dialog import (
+            ProgressDialog,
+        )
         dialog = ProgressDialog(self.page, "Matching Proteins")
         dialog.show()
         dialog.update_progress(0, "Mapping...")
@@ -147,4 +150,4 @@ class MatchProteinsAction(BaseAction):
                 dialog.close()
             except Exception:
                 pass
-            self.show_error(f"Error: {str(ex)}")
+            self.show_error(f"Error: {ex!s}")

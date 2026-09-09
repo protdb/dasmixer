@@ -1,14 +1,13 @@
 """Application configuration stored in system folder."""
 
-from pathlib import Path
-from pydantic_settings import BaseSettings, SettingsConfigDict
-import typer
 import json
 import sys
 import tempfile
-from typing import Any
+from pathlib import Path
 
+import typer
 from dasmixer.utils.logger import logger
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class AppConfig(BaseSettings):

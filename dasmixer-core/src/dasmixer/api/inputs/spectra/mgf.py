@@ -1,14 +1,15 @@
 """MGF (Mascot Generic Format) spectral data parser."""
 
-from typing import AsyncIterator
 import re
+from collections.abc import AsyncIterator
 
-import pandas as pd
 import numpy as np
-from pyteomics.mgf import MGF
+import pandas as pd
 from pyteomics.auxiliary.structures import PyteomicsError
+from pyteomics.mgf import MGF
 
 from dasmixer.utils import logger
+
 from .base import SpectralDataParser
 
 

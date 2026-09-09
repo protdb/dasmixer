@@ -1,13 +1,12 @@
 """CLI commands for running pipeline calculations."""
 
-import json
-import typer
+import asyncio
 from pathlib import Path
 from typing import Annotated
-import asyncio
-import pandas as pd
-from dasmixer.api.project.project import Project
+
+import typer
 from dasmixer.api.config import config as app_config
+from dasmixer.api.project.project import Project
 
 app = typer.Typer(help="Run pipeline calculations")
 
@@ -72,7 +71,10 @@ def ion_coverage(
                 ion_match_ions = ions
 
             from dasmixer.api.calculations.ppm.seqfixer import SeqfixerParams
-            from dasmixer.api.calculations.spectra.ion_match import IonMatchParameters, process_identificatons_batch
+            from dasmixer.api.calculations.spectra.identification_processor import (
+                process_identifications_batch,
+            )
+            from dasmixer.api.calculations.spectra.ion_match import IonMatchParameters
 
             seqfixer_params = SeqfixerParams(
                 min_charge=int(seqfixer_min_charge),
@@ -107,11 +109,10 @@ def ion_coverage(
             batch_size = getattr(app_config, 'identification_processing_batch_size', 500)
             processed = 0
 
-            import concurrent.futures
             with typer.progressbar(length=total, label="Processing") as progress:
                 for start in range(0, total, batch_size):
                     batch = idents_df.iloc[start:start + batch_size]
-                    data_rows = process_identificatons_batch(
+                    data_rows = process_identifications_batch(
                         batch, ion_params, seqfixer_params,
                     )
                     if data_rows:
@@ -146,10 +147,13 @@ def preferred(
     """
     async def _run():
         async with Project(path=Path(project_path), create_if_not_exists=False) as project:
-            if criterion is None:
-                criterion = await project.get_setting("preferred_criterion", "intensity")
+            criterion_val = criterion
+            if criterion_val is None:
+                criterion_val = await project.get_setting("preferred_criterion", "intensity")
 
-            from dasmixer.api.calculations.peptides.matching import select_preferred_identifications
+            from dasmixer.api.calculations.peptides.matching import (
+                select_preferred_identifications,
+            )
 
             # Build tool_settings from project_settings
             tools = await project.get_tools()
@@ -164,7 +168,7 @@ def preferred(
                 tool_settings[tid] = ts
 
             count = await select_preferred_identifications(
-                project, criterion, tool_settings, sample_id=sample_id,
+                project, criterion_val, tool_settings, sample_id=sample_id,
             )
             await project.save()
             typer.echo(f"✓ Selected {count} preferred identifications")
@@ -259,15 +263,19 @@ def protein_idents(
     """
     async def _run():
         async with Project(path=Path(project_path), create_if_not_exists=False) as project:
-            if min_peptides is None:
-                min_peptides = int(await project.get_setting("proteins_min_peptides", "2"))
-            if min_unique is None:
-                min_unique = int(await project.get_setting("proteins_min_unique_evidence", "1"))
+            min_peptides_val = min_peptides
+            min_unique_val = min_unique
+            if min_peptides_val is None:
+                min_peptides_val = int(await project.get_setting("proteins_min_peptides", "2"))
+            if min_unique_val is None:
+                min_unique_val = int(await project.get_setting("proteins_min_unique_evidence", "1"))
 
-            await project.set_setting("proteins_min_peptides", str(min_peptides))
-            await project.set_setting("proteins_min_unique_evidence", str(min_unique))
+            await project.set_setting("proteins_min_peptides", str(min_peptides_val))
+            await project.set_setting("proteins_min_unique_evidence", str(min_unique_val))
 
-            from dasmixer.api.calculations.proteins.map_identifications import find_protein_identifications
+            from dasmixer.api.calculations.proteins.map_identifications import (
+                find_protein_identifications,
+            )
 
             # Get joined peptide data
             filters = {}
@@ -288,7 +296,7 @@ def protein_idents(
             sequences_db = dict(zip(proteins_df['id'], proteins_df['sequence']))
 
             prot_idents_df = find_protein_identifications(
-                joined_data, sequences_db, min_peptides, min_unique,
+                joined_data, sequences_db, min_peptides_val, min_unique_val,
             )
 
             if prot_idents_df.empty:
@@ -460,7 +468,10 @@ def peptides(
             # Step 2: Ion coverage
             typer.echo("Step 2/3: Calculating ion coverage...")
             from dasmixer.api.calculations.ppm.seqfixer import SeqfixerParams
-            from dasmixer.api.calculations.spectra.ion_match import IonMatchParameters, process_identificatons_batch
+            from dasmixer.api.calculations.spectra.identification_processor import (
+                process_identifications_batch,
+            )
+            from dasmixer.api.calculations.spectra.ion_match import IonMatchParameters
 
             ion_match_ions = await project.get_setting("ion_match_ions", "b,y")
             ion_match_tolerance = await project.get_setting("ion_match_tolerance", "20.0")
@@ -486,19 +497,22 @@ def peptides(
                 batch_size = getattr(app_config, 'identification_processing_batch_size', 500)
                 for start in range(0, len(idents_df), batch_size):
                     batch = idents_df.iloc[start:start + batch_size]
-                    data_rows = process_identificatons_batch(batch, ion_params, seqfixer_params)
+                    data_rows = process_identifications_batch(batch, ion_params, seqfixer_params)
                     if data_rows:
                         await project.put_identification_data_batch(data_rows)
                 await project.save()
 
             # Step 3: Select preferred
             typer.echo("Step 3/3: Selecting preferred identifications...")
-            if criterion is None:
-                criterion = await project.get_setting("preferred_criterion", "intensity")
+            criterion_val = criterion
+            if criterion_val is None:
+                criterion_val = await project.get_setting("preferred_criterion", "intensity")
 
-            from dasmixer.api.calculations.peptides.matching import select_preferred_identifications
+            from dasmixer.api.calculations.peptides.matching import (
+                select_preferred_identifications,
+            )
             await select_preferred_identifications(
-                project, criterion, tool_settings, sample_id=sample_id,
+                project, criterion_val, tool_settings, sample_id=sample_id,
             )
             await project.save()
 

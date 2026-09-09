@@ -1,11 +1,12 @@
 """Mixin for spectra file and spectra operations."""
 
 import json
+
 import numpy as np
 import pandas as pd
+from dasmixer.utils.logger import logger
 
 from ..array_utils import compress_array, decompress_array
-from dasmixer.utils.logger import logger
 
 
 class SpectraMixin:

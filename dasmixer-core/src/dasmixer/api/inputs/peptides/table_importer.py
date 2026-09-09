@@ -1,16 +1,16 @@
 """Table-based identification parsers for CSV, XLS, XLSX formats."""
 
-import csv
-from dataclasses import dataclass, asdict
 from abc import ABC, abstractmethod
-from typing import AsyncIterator
-import pandas as pd
-import aiofiles
-import aiocsv
+from collections.abc import AsyncIterator
+from dataclasses import asdict, dataclass
 
-from .base import IdentificationParser
+import aiocsv
+import aiofiles
+import pandas as pd
 from dasmixer.api.project.dataclasses import Protein
 from dasmixer.utils.logger import logger
+
+from .base import IdentificationParser
 
 
 class TableSheet:
@@ -453,7 +453,6 @@ class LargeCSVImporter(IdentificationParser, ABC):
         Returns:
             Processed row dict with standard column names
         """
-        pass
 
     async def parse_batch(
         self,

@@ -7,9 +7,9 @@ import pandas as pd
 import plotly.graph_objects as go
 from dasmixer.api.reporting._icons import Icons
 from sklearn.decomposition import PCA
-from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import roc_auc_score
-from sklearn.preprocessing import label_binarize
+from sklearn.preprocessing import StandardScaler, label_binarize
+
 from ..base import BaseReport
 
 # ---------------------------------------------------------------------------
@@ -374,4 +374,5 @@ class PCAReport(BaseReport):
 
 
 from ..registry import registry
+
 registry.register(PCAReport)

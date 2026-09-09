@@ -1,16 +1,20 @@
 """MaxQuant project import dialog — 3-screen wizard: parse → configure → progress."""
 
-import flet as ft
 from pathlib import Path
 
-from dasmixer.api.project.project import Project
-from dasmixer.api.inputs.complex.MaxQuantProject.mqpar_parser import (
-    get_paths_from_mqpar, MQParPaths,
-)
+import flet as ft
 from dasmixer.api.inputs.complex.MaxQuantProject.importer import (
-    MaxQuantImportOptions, run_maxquant_import, MaxQuantImportProgress,
+    MaxQuantImportOptions,
+    MaxQuantImportProgress,
+    run_maxquant_import,
 )
+from dasmixer.api.inputs.complex.MaxQuantProject.mqpar_parser import (
+    MQParPaths,
+    get_paths_from_mqpar,
+)
+from dasmixer.api.project.project import Project
 from dasmixer.gui.utils import show_snack
+
 from dasmixer.utils import logger
 
 

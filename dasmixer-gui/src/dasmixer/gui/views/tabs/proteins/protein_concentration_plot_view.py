@@ -1,12 +1,11 @@
 """Plot view for protein concentrations (boxplot/violin)."""
 
 import flet as ft
-import plotly.graph_objects as go
 import numpy as np
 import pandas as pd
-
-from dasmixer.gui.components.base_plot_view import BasePlotView
+import plotly.graph_objects as go
 from dasmixer.api.project.project import Project
+from dasmixer.gui.components.base_plot_view import BasePlotView
 from dasmixer.gui.utils import show_snack
 
 

@@ -1,9 +1,8 @@
 """MaxQuant project import section."""
 
 import flet as ft
-from dasmixer.api.project.project import Project
+
 from .base_section import BaseSection
-from .shared_state import SamplesTabState
 
 
 class MaxQuantImportSection(BaseSection):

@@ -4,14 +4,14 @@ __all__ = ['clipboard', 'color_picker', 'plotly_viewer', 'progress_dialog', 'rep
 
 from .color_picker import ColorPickerField
 from .report_form import (
-    ReportForm,
-    ReportParamBase,
-    ToolSelector,
-    EnumSelector,
     BoolSelector,
+    EnumSelector,
     FloatSelector,
     IntSelector,
-    SubsetSelector,
     MultiSubsetSelector,
+    ReportForm,
+    ReportParamBase,
     StringSelector,
+    SubsetSelector,
+    ToolSelector,
 )

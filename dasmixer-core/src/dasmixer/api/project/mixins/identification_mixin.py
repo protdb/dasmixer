@@ -4,9 +4,8 @@ import json
 from typing import Any
 
 import pandas as pd
-
-from dasmixer.utils.logger import logger
 from dasmixer.api.project.dataclasses import IdentificationWithSpectrum
+from dasmixer.utils.logger import logger
 
 
 class IdentificationMixin:

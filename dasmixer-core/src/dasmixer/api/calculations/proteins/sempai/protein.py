@@ -2,26 +2,23 @@
 Protein class for quantitative proteomics analysis.
 """
 
-import warnings
-from typing import List, Optional, Union, Tuple, Dict, Any
 import logging
+import warnings
+from typing import Any, Union
 
-import numpy as np
 from uniprot_meta_tool import UniprotData
 
-from .utils import (
-    digest_protein,
-    calculate_peptide_features,
-    remove_modifications,
-    match_observed_peptides,
-    DigestionParams,
-)
-from .exceptions import ValidationError, DataError
 from .algorithms import (
     calculate_empai_value,
-    calculate_nsaf_value,
     calculate_ibaq_value,
     calculate_top3_value,
+)
+from .exceptions import DataError, ValidationError
+from .utils import (
+    DigestionParams,
+    calculate_peptide_features,
+    digest_protein,
+    remove_modifications,
 )
 
 logger = logging.getLogger(__name__)
@@ -57,13 +54,13 @@ class Protein:
     def __init__(
         self,
         accession: str,
-        sequence: Optional[Union[str, "BioPythonSequence"]] = None,
-        peptides: Optional[List[Union[str, "BioPythonSequence"]]] = None,
+        sequence: Union[str, "BioPythonSequence"] | None = None,
+        peptides: list[Union[str, "BioPythonSequence"]] | None = None,
         is_uniprot: bool = True,
-        intensities: Optional[List[float]] = None,
-        psm_counts: Optional[List[int]] = None,
+        intensities: list[float] | None = None,
+        psm_counts: list[int] | None = None,
         empai_base: float = 10.0,
-        observable_parameters: Optional[DigestionParams] = None,
+        observable_parameters: DigestionParams | None = None,
     ):
         """
         Initialize a Protein object.
@@ -106,7 +103,7 @@ class Protein:
         # Set peptides and psm_counts together to avoid conflicts
         self._set_peptides_with_psm_counts(peptides or [], psm_counts)
         
-    def _set_peptides_with_psm_counts(self, peptides: List[Union[str, "BioPythonSequence"]], psm_counts: Optional[List[int]]) -> None:
+    def _set_peptides_with_psm_counts(self, peptides: list[Union[str, "BioPythonSequence"]], psm_counts: list[int] | None) -> None:
         """Set peptides and PSM counts together to maintain consistency."""
         # Convert any BioPython sequences to strings
         clean_peptides = []
@@ -174,12 +171,12 @@ class Protein:
         self._empai = None
     
     @property
-    def sequence(self) -> Optional[str]:
+    def sequence(self) -> str | None:
         """Get protein sequence as string."""
         return self._sequence
     
     @sequence.setter
-    def sequence(self, value: Optional[Union[str, "BioPythonSequence"]]) -> None:
+    def sequence(self, value: Union[str, "BioPythonSequence"] | None) -> None:
         """Set protein sequence and reset cached values."""
         if value is None and self._is_uniprot:
             # Fetch from UniProt
@@ -202,23 +199,23 @@ class Protein:
         self._reset_cache()
     
     @property
-    def peptides(self) -> List[str]:
+    def peptides(self) -> list[str]:
         """Get list of observed peptides."""
         return self._peptides
     
     @peptides.setter
-    def peptides(self, value: List[Union[str, "BioPythonSequence"]]) -> None:
+    def peptides(self, value: list[Union[str, "BioPythonSequence"]]) -> None:
         """Set peptides and reset cached values."""
         # When setting peptides independently, reset PSM counts to defaults
         self._set_peptides_with_psm_counts(value, None)
     
     @property
-    def intensities(self) -> List[float]:
+    def intensities(self) -> list[float]:
         """Get list of peptide intensities."""
         return self._intensities
     
     @intensities.setter
-    def intensities(self, value: Optional[List[float]]) -> None:
+    def intensities(self, value: list[float] | None) -> None:
         """Set peptide intensities and reset cached values."""
         self._intensities = value or []
         # Validate length if provided
@@ -232,12 +229,12 @@ class Protein:
         self._top3 = None
     
     @property
-    def psm_counts(self) -> List[int]:
+    def psm_counts(self) -> list[int]:
         """Get list of PSM counts."""
         return self._psm_counts
     
     @psm_counts.setter
-    def psm_counts(self, value: Optional[List[int]]) -> None:
+    def psm_counts(self, value: list[int] | None) -> None:
         """Set PSM counts and reset cached values."""
         if value is None:
             self._psm_counts = [1] * len(self._peptides)
@@ -263,7 +260,7 @@ class Protein:
         return self._observable_parameters
     
     @observable_parameters.setter
-    def observable_parameters(self, value: Optional[DigestionParams]) -> None:
+    def observable_parameters(self, value: DigestionParams | None) -> None:
         """Set observable parameters and reset cached values."""
         # Always ensure we have a DigestionParams object
         self._observable_parameters = value or DigestionParams()
@@ -289,7 +286,7 @@ class Protein:
             raise ValidationError(f"No sequence available for protein {self._accession}")
         return self._sequence
     
-    def _get_theoretical_peptides(self) -> List[Dict[str, Any]]:
+    def _get_theoretical_peptides(self) -> list[dict[str, Any]]:
         """Get theoretical peptides (cached)."""
         if self._theoretical_peptides is None:
             sequence = self._ensure_sequence()
@@ -423,7 +420,7 @@ class Protein:
         return self._ibaq
     
     @property
-    def top3(self) -> Optional[float]:
+    def top3(self) -> float | None:
         """
         Get Top3 value (lazy evaluation).
         
@@ -441,7 +438,7 @@ class Protein:
         """Check if protein has intensity data for iBAQ/Top3 calculations."""
         return len(self._intensities) > 0
     
-    def get_coverage(self) -> Tuple[int, float]:
+    def get_coverage(self) -> tuple[int, float]:
         """
         Calculate sequence coverage by observed peptides.
         
@@ -457,7 +454,7 @@ class Protein:
         
         return self._coverage_data
     
-    def _get_simple_coverage(self) -> Tuple[int, float]:
+    def _get_simple_coverage(self) -> tuple[int, float]:
         """Simple coverage calculation without alignment."""
         sequence = self._ensure_sequence()
         covered = set()
@@ -476,7 +473,7 @@ class Protein:
         
         return coverage_aa, coverage_percent
     
-    def _get_alignment_coverage(self) -> Tuple[int, float]:
+    def _get_alignment_coverage(self) -> tuple[int, float]:
         """Coverage calculation using Bio.Align (more accurate)."""
         sequence = self._ensure_sequence()
         aligner = PairwiseAligner()
@@ -514,7 +511,7 @@ class Protein:
         
         return coverage_aa, coverage_percent
     
-    def get_theoretical_coverage(self) -> Tuple[int, float]:
+    def get_theoretical_coverage(self) -> tuple[int, float]:
         """
         Calculate theoretical maximum sequence coverage.
         
@@ -620,8 +617,8 @@ class Protein:
     def compare_parameters(
         self,
         other_params: DigestionParams,
-        metrics: Optional[List[str]] = None
-    ) -> Dict[str, Tuple[float, float]]:
+        metrics: list[str] | None = None
+    ) -> dict[str, tuple[float, float]]:
         """
         Compare current parameters with other parameters.
         

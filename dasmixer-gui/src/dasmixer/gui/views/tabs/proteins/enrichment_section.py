@@ -1,6 +1,7 @@
 import flet as ft
-from .base_section import BaseSection
 from dasmixer.api.calculations.proteins.enrich import enrich_proteins
+
+from .base_section import BaseSection
 
 
 class EnrichmentSection(BaseSection):

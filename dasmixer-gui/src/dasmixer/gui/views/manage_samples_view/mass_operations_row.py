@@ -1,6 +1,6 @@
 """MassOperationsRow — row of mass-operation buttons between UpdateRow and panels."""
 
-from typing import Callable, Awaitable
+from collections.abc import Awaitable, Callable
 
 import flet as ft
 

@@ -2,9 +2,11 @@
 
 import flet as ft
 from dasmixer.api.project.project import Project
-from .shared_state import ReportsTabState
 from dasmixer.gui.utils import show_snack
+
 from dasmixer.utils import logger
+
+from .shared_state import ReportsTabState
 
 
 class SettingsSection(ft.Container):

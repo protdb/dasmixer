@@ -1,13 +1,15 @@
 """Dialog for creating and editing identification tools."""
 
 import flet as ft
-from dasmixer.api.project.project import Project
-from dasmixer.api.project.dataclasses import Tool
 from dasmixer.api.inputs.registry import registry
-from ..constants import get_default_color
+from dasmixer.api.project.dataclasses import Tool
+from dasmixer.api.project.project import Project
 from dasmixer.gui.components.color_picker import ColorPickerField
 from dasmixer.gui.utils import show_snack
+
 from dasmixer.utils import logger
+
+from ..constants import get_default_color
 
 
 class ToolDialog:

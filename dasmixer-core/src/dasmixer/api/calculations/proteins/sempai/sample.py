@@ -2,25 +2,24 @@
 ProteomicSample class for sample-level quantitative analysis.
 """
 
-from typing import List, Optional, Union, Literal, Dict, Any
 import logging
 import warnings
+from typing import Any, Literal
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
-from .protein import Protein
 from .algorithms import (
-    normalize_values,
-    calculate_nsaf_normalized,
-    calculate_absolute_concentrations_total_protein,
     calculate_absolute_concentrations_reference_standard,
+    calculate_absolute_concentrations_total_protein,
     calculate_combined_absolute_concentrations,
+    calculate_nsaf_normalized,
     convert_concentrations_to_molar,
-    convert_concentrations_to_mass,
+    normalize_values,
     validate_mass_balance,
 )
 from .exceptions import ValidationError
+from .protein import Protein
 
 logger = logging.getLogger(__name__)
 
@@ -35,12 +34,12 @@ class ProteomicSample:
     
     def __init__(
         self,
-        proteins: List[Protein],
-        total_protein_gl: Optional[float] = None,
-        reference_protein_gl: Optional[float] = None,
-        reference_protein_accession: Optional[str] = None,
+        proteins: list[Protein],
+        total_protein_gl: float | None = None,
+        reference_protein_gl: float | None = None,
+        reference_protein_accession: str | None = None,
         # backward-compat alias
-        albumin_gl: Optional[float] = None,
+        albumin_gl: float | None = None,
     ):
         """
         Initialize a ProteomicSample.
@@ -73,36 +72,36 @@ class ProteomicSample:
             warnings.warn("Duplicate protein accessions found in sample")
     
     @property
-    def proteins(self) -> List[Protein]:
+    def proteins(self) -> list[Protein]:
         """Get list of proteins in the sample."""
         return self._proteins
     
     @proteins.setter
-    def proteins(self, value: List[Protein]) -> None:
+    def proteins(self, value: list[Protein]) -> None:
         """Set proteins and validate."""
         if not value:
             raise ValidationError("Sample must contain at least one protein")
         self._proteins = value
     
     @property
-    def total_protein_gl(self) -> Optional[float]:
+    def total_protein_gl(self) -> float | None:
         """Get total protein concentration in g/L."""
         return self._total_protein_gl
     
     @total_protein_gl.setter
-    def total_protein_gl(self, value: Optional[float]) -> None:
+    def total_protein_gl(self, value: float | None) -> None:
         """Set total protein concentration."""
         if value is not None and value <= 0:
             raise ValidationError("Total protein concentration must be positive")
         self._total_protein_gl = value
     
     @property
-    def reference_protein_gl(self) -> Optional[float]:
+    def reference_protein_gl(self) -> float | None:
         """Get reference protein concentration in g/L."""
         return self._reference_protein_gl
 
     @reference_protein_gl.setter
-    def reference_protein_gl(self, value: Optional[float]) -> None:
+    def reference_protein_gl(self, value: float | None) -> None:
         """Set reference protein concentration."""
         if value is not None and value <= 0:
             raise ValidationError("Reference protein concentration must be positive")
@@ -110,16 +109,16 @@ class ProteomicSample:
 
     # backward-compat property
     @property
-    def albumin_gl(self) -> Optional[float]:
+    def albumin_gl(self) -> float | None:
         """Deprecated alias for reference_protein_gl."""
         return self._reference_protein_gl
 
     @albumin_gl.setter
-    def albumin_gl(self, value: Optional[float]) -> None:
+    def albumin_gl(self, value: float | None) -> None:
         """Deprecated alias for reference_protein_gl."""
         self.reference_protein_gl = value
 
-    def _get_reference_protein(self) -> Optional[Protein]:
+    def _get_reference_protein(self) -> Protein | None:
         """
         Find the reference protein in the sample.
 
@@ -142,17 +141,14 @@ class ProteomicSample:
         return None
 
     # backward-compat alias
-    def _get_albumin_protein(self) -> Optional[Protein]:
+    def _get_albumin_protein(self) -> Protein | None:
         """Deprecated alias for _get_reference_protein."""
         return self._get_reference_protein()
     
     def get_results(
         self,
         all_protein_details: bool = True,
-        quantification_methods: Union[
-            Literal['NSAF', 'iBAQ', 'emPAI', 'Top3', 'all'],
-            List[Literal['NSAF', 'iBAQ', 'emPAI', 'Top3']]
-        ] = 'all',
+        quantification_methods: Literal['NSAF', 'iBAQ', 'emPAI', 'Top3', 'all'] | list[Literal['NSAF', 'iBAQ', 'emPAI', 'Top3']] = 'all',
         calculate_coverage: bool = True,
         absolute_concentrations: Literal['all', 'gramm', 'mol', 'none'] = 'all'
     ) -> pd.DataFrame:
@@ -269,9 +265,9 @@ class ProteomicSample:
     
     def _add_absolute_concentrations(
         self,
-        results: Dict[str, List],
-        normalized_values: Dict[str, List[float]],
-        methods: List[str],
+        results: dict[str, list],
+        normalized_values: dict[str, list[float]],
+        methods: list[str],
         conc_type: Literal['all', 'gramm', 'mol']
     ) -> None:
         """Add absolute concentration calculations to results."""
@@ -368,7 +364,7 @@ class ProteomicSample:
         
         return True
     
-    def get_summary_statistics(self) -> Dict[str, Any]:
+    def get_summary_statistics(self) -> dict[str, Any]:
         """
         Get summary statistics for the sample.
         

@@ -6,6 +6,7 @@ from pathlib import Path, PurePosixPath, PureWindowsPath
 
 from lxml import etree
 
+
 @dataclass
 class PathInfo:
     path: Path

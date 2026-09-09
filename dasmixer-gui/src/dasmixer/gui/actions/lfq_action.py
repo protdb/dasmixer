@@ -3,12 +3,12 @@
 import asyncio
 
 import flet as ft
-import pandas as pd
+from dasmixer.api.calculations.proteins.lfq import calculate_lfq
+from dasmixer.api.project.project import Project
+from dasmixer.gui.views.tabs.proteins.shared_state import ProteinsTabState
 
 from dasmixer.utils import logger
-from dasmixer.api.project.project import Project
-from dasmixer.api.calculations.proteins.lfq import calculate_lfq
-from dasmixer.gui.views.tabs.proteins.shared_state import ProteinsTabState
+
 from .base import BaseAction
 
 
@@ -45,7 +45,9 @@ class LFQAction(BaseAction):
             self.show_warning("No LFQ methods selected. Configure in Proteins tab.")
             return 0
 
-        from dasmixer.gui.views.tabs.peptides.dialogs.progress_dialog import ProgressDialog
+        from dasmixer.gui.views.tabs.peptides.dialogs.progress_dialog import (
+            ProgressDialog,
+        )
 
         dialog = ProgressDialog(self.page, "Calculating LFQ")
         dialog.show()
@@ -166,5 +168,5 @@ class LFQAction(BaseAction):
                 dialog.close()
             except Exception:
                 pass
-            self.show_error(f"Error: {str(ex)}")
+            self.show_error(f"Error: {ex!s}")
             return 0

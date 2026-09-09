@@ -1,9 +1,9 @@
 """Project view - main workspace with tabs (lazy-loaded, suspend/resume on switch)."""
 
 import flet as ft
-from dasmixer.utils import logger
 from dasmixer.api.project.project import Project
 
+from dasmixer.utils import logger
 
 # Tab definitions: (label, icon, factory_import_path, factory_class_name)
 _TAB_DEFS = [
@@ -39,8 +39,8 @@ def _collect_suspendable(control) -> list:
     A control is suspendable if it has both suspend() and resume() methods
     and custom marker attribute.
     """
-    from dasmixer.gui.components.base_table_view import BaseTableView
     from dasmixer.gui.components.base_plot_view import BasePlotView
+    from dasmixer.gui.components.base_table_view import BaseTableView
 
     found = []
     

@@ -12,11 +12,11 @@ Output:
 
 from __future__ import annotations
 
-import numpy as np
 import pandas as pd
 from dasmixer.api.reporting._icons import Icons
 
 from ..base import BaseReport
+
 # No extra form parameters needed — the report uses all identified proteins
 # and the project LFQ settings (enzyme, min/max length, missed cleavages).
 
@@ -271,7 +271,7 @@ class ToolCoverageReport(BaseReport):
                 "Std (%)": round(float(s.std()), 2) if len(s) else None,
                 "Min (%)": round(float(s.min()), 2) if len(s) else None,
                 "Max (%)": round(float(s.max()), 2) if len(s) else None,
-                "N proteins": int(len(s)),
+                "N proteins": len(s),
             })
         stats_df = pd.DataFrame(stat_rows)
 
@@ -292,4 +292,5 @@ class ToolCoverageReport(BaseReport):
 
 
 from ..registry import registry
+
 registry.register(ToolCoverageReport)

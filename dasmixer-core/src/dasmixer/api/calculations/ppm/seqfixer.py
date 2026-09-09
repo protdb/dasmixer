@@ -11,22 +11,20 @@ Covers two scenarios:
 """
 # from __future__ import annotations
 
+import logging as _logging
 from copy import deepcopy
 from itertools import combinations, product
 from typing import Literal
 
-from pyteomics import mass as pymass
-from pyteomics.proforma import parse, to_proforma, GenericModification, TagBase
-
-from .dataclasses import SeqMatchParams, SeqResults
 from dasmixer.utils.ppm import (
     calculate_theor_mass,
     get_ppm_for_masses,
-    PROTON_MASS,
 )
 from dasmixer.utils.seqfixer_utils import FixedPTM, PossiblePTMPosition
+from pyteomics.proforma import TagBase, parse, to_proforma
 
-import logging as _logging
+from .dataclasses import SeqMatchParams, SeqResults
+
 _seqfixer_log = _logging.getLogger("dasmixer.seqfixer")
 
 # ── isotope-offset mass constants ────────────────────────────────────────────
@@ -131,7 +129,7 @@ def _count_ptm_combos(n_sites: int, max_ptm: int, n_term_combos: int) -> int:
     """Estimate total PTM combo iterations (internal × terminal)."""
     from math import comb
     total = 0
-    for lim in range(0, max_ptm + 1):
+    for lim in range(max_ptm + 1):
         total += comb(n_sites, lim)
     return total * n_term_combos
 
@@ -251,8 +249,9 @@ def _expand_unlocalized(sequence: str, ptm_list: list[FixedPTM]) -> list[str]:
         Falls back to the canonical sequence (mods stripped) when no valid
         placement can be found.
     """
+    from itertools import combinations as _combinations
+    from itertools import product as _product
     from math import comb as _comb
-    from itertools import product as _product, combinations as _combinations
 
     split, params, canonical = _split_and_strip(sequence)
     unlocalized: list = params.get("unlocalized_modifications") or []
@@ -709,7 +708,7 @@ class SeqFixer:
         best_abs_ppm = float("inf")
 
         for z in range(min_z, max_z + 1):
-            for offset in range(0, self.max_isotope_offset + 1):
+            for offset in range(self.max_isotope_offset + 1):
                 corrected = pepmass - offset * self.isotope_step / z
                 ppm = get_ppm_for_masses(corrected, neutral_mass, z)
                 abs_ppm = abs(ppm)
@@ -768,7 +767,7 @@ class SeqFixer:
 
         all_hits: list[SeqMatchParams] = []
 
-        for offset in range(0, self.max_isotope_offset + 1):
+        for offset in range(self.max_isotope_offset + 1):
             # Isotope correction: shift experimental mass to account for
             # selecting the (offset)-th isotope peak instead of monoisotopic.
             # pepmass_corrected = pepmass - offset * step / charge

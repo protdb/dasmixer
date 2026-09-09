@@ -1,14 +1,14 @@
 """Project database schema migrations."""
 
 import logging
-from dasmixer.versions import PROJECT_VERSION, MIN_SUPPORTED_PROJECT_VERSION
+
+from dasmixer.versions import MIN_SUPPORTED_PROJECT_VERSION, PROJECT_VERSION
 
 logger = logging.getLogger(__name__)
 
 
 class MigrationError(Exception):
     """Ошибка при применении миграций проекта."""
-    pass
 
 
 def _version_lt(a: str, b: str) -> bool:

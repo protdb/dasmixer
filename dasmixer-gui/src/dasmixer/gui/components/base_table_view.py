@@ -1,10 +1,12 @@
 """Base class for all table views with pagination and filtering."""
 
+from collections.abc import Callable
+
 import flet as ft
 import pandas as pd
-from typing import Callable
-from dasmixer.utils import logger
 from dasmixer.gui.utils import show_snack
+
+from dasmixer.utils import logger
 
 
 class BaseTableView(ft.Container):
@@ -426,9 +428,7 @@ class BaseTableView(ft.Container):
                 if col == self.plot_id_field:
                     plot_id_value = str(value)
 
-                if value is None:
-                    display_value = ""
-                elif isinstance(value, float) and pd.isna(value):
+                if value is None or isinstance(value, float) and pd.isna(value):
                     display_value = ""
                 elif isinstance(value, float):
                     display_value = f"{value:.4f}"
@@ -579,7 +579,9 @@ class BaseTableView(ft.Container):
             if self.page:
                 self.page.update()
 
-            from dasmixer.gui.views.tabs.peptides.dialogs.progress_dialog import ProgressDialog
+            from dasmixer.gui.views.tabs.peptides.dialogs.progress_dialog import (
+                ProgressDialog,
+            )
             progress = ProgressDialog(self.page, "Exporting Table")
             progress.show()
 

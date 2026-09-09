@@ -1,8 +1,11 @@
+from typing import Literal
+
 import pandas as pd
-from typing import Literal, Optional
-from dasmixer.api.project import Project
 from dasmixer.utils.logger import logger
-from .sempai import Protein, ProteomicSample, DigestionParams
+
+from dasmixer.api.project import Project
+
+from .sempai import DigestionParams, Protein, ProteomicSample
 
 
 async def calculate_lfq(

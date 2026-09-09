@@ -1,13 +1,9 @@
 """Import additional data dialog for samples."""
 
-import json
 import asyncio
-from typing import Callable, Awaitable
 
 import flet as ft
 import pandas as pd
-
-from dasmixer.utils import logger
 from dasmixer.api.project.project import Project
 
 

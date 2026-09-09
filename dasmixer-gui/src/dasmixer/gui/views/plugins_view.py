@@ -1,21 +1,21 @@
 """Plugins management view."""
 
 import os
-import sys
 import subprocess
-import flet as ft
+import sys
 from pathlib import Path
 
+import flet as ft
 from dasmixer.api.config import config
-from dasmixer.api.plugin_loader import (
-    get_identification_plugins_dir,
-    get_reports_plugins_dir,
-    install_plugin_file,
-    delete_plugin,
-)
 
 # Import registries to enumerate built-ins
 from dasmixer.api.inputs.registry import registry as inputs_registry
+from dasmixer.api.plugin_loader import (
+    delete_plugin,
+    get_identification_plugins_dir,
+    get_reports_plugins_dir,
+    install_plugin_file,
+)
 from dasmixer.api.reporting.registry import registry as reports_registry
 from dasmixer.gui.utils import show_snack
 

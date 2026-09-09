@@ -16,7 +16,7 @@ from dasmixer.api.inputs.spectra.mgf import MGFParser
 from dasmixer.api.inputs.peptides.PowerNovo2 import PowerNovo2Importer
 from dasmixer.api.inputs.proteins.fasta import FastaParser
 from dasmixer.api.calculations.spectra.identification_processor import (
-    process_identificatons_batch,
+    process_identifications_batch,
 )
 from dasmixer.api.calculations.peptides.protein_map import map_proteins
 from dasmixer.api.calculations.proteins.map_identifications import (
@@ -182,7 +182,7 @@ async def run_pipeline(
             if not batch:
                 break
             worker_dicts = [item.to_worker_dict() for item in batch]
-            results = process_identificatons_batch(
+            results = process_identifications_batch(
                 batch=worker_dicts,
                 params_dict=ION_PARAMS,
                 fragment_charges=FRAGMENT_CHARGES,

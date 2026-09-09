@@ -10,7 +10,6 @@ from dasmixer.api.reporting._icons import Icons
 
 from ..base import BaseReport
 
-
 # ---------------------------------------------------------------------------
 # UpSet plot logic (ported from volcanizer/create_upset.py)
 # ---------------------------------------------------------------------------
@@ -43,7 +42,7 @@ def place_to_groups(df: pd.DataFrame) -> pd.DataFrame:
     for protein in proteins:
         rec = {'protein': protein}
         for subset in subsets:
-            rec[subset] = int(len(df.query('subset == @subset & uniprot_id == @protein')))
+            rec[subset] = len(df.query('subset == @subset & uniprot_id == @protein'))
         presence_records.append(rec)
     presence_df = pd.json_normalize(presence_records)
 
@@ -95,7 +94,7 @@ def get_intersection_proteins(df: pd.DataFrame) -> pd.DataFrame:
     for protein in proteins:
         rec = {'protein': protein}
         for subset in subsets:
-            rec[subset] = int(len(df.query('subset == @subset & uniprot_id == @protein')))
+            rec[subset] = len(df.query('subset == @subset & uniprot_id == @protein'))
         presence_records.append(rec)
     presence_df = pd.json_normalize(presence_records)
 
@@ -291,4 +290,5 @@ class UpsetReport(BaseReport):
 
 
 from ..registry import registry
+
 registry.register(UpsetReport)

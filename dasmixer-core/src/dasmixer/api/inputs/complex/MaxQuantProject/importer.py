@@ -1,19 +1,20 @@
 """Orchestrates full MaxQuant project import into an existing (or new) DASMixer Project."""
 
 import asyncio
-import pandas as pd
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable, Awaitable
 
-from dasmixer.api.project.project import Project
-from dasmixer.api.inputs.spectra.mgf import MGFParser
+import pandas as pd
+from dasmixer.api.config import config as app_config
+from dasmixer.api.config import get_maxquant_import_temp_dir
 from dasmixer.api.inputs.peptides.MQ_Evidences import MaxQuantEvidenceParser
 from dasmixer.api.inputs.proteins.fasta import FastaParser
-from dasmixer.api.config import config as app_config, get_maxquant_import_temp_dir
+from dasmixer.api.inputs.spectra.mgf import MGFParser
+from dasmixer.api.project.project import Project
+
 from dasmixer.utils import logger
 
-from .mqpar_parser import MQParPaths, RawFile
 from .apl_convert import load_and_merge, process_apl
 from .progress import MaxQuantImportProgress
 

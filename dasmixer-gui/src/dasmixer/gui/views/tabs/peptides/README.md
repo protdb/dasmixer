@@ -10,7 +10,7 @@ Each section is responsible for specific functionality and shares state via `Pep
 ```
 peptides/
 ├── __init__.py                    # Exports PeptidesTab
-├── peptides_tab_new.py            # Main tab - composes all sections
+├── peptides_tab.py                # Main tab - composes all sections
 ├── shared_state.py                # Shared state object
 ├── base_section.py                # Base class for all UI sections
 │

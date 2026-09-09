@@ -4,8 +4,8 @@ Core-side: handles values only (no flet builds).
 GUI-side subclass adds build() and get_container().
 """
 
-import json
 import copy
+import json
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:

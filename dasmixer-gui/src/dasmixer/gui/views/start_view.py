@@ -1,9 +1,8 @@
 """Start view - project selection screen."""
 
 import flet as ft
-
-from dasmixer.gui.utils import get_asset_path
 from dasmixer.gui.components.recent_projects_list import RecentProjectsList
+from dasmixer.gui.utils import get_asset_path
 from dasmixer.versions import APP_VERSION
 
 

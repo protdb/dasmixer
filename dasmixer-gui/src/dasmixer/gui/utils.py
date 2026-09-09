@@ -9,7 +9,6 @@ from pathlib import Path
 import flet as ft
 from flet.controls.base_page import BasePage
 
-
 # ---------------------------------------------------------------------------
 # Global child-process registry
 # ---------------------------------------------------------------------------
@@ -99,6 +98,7 @@ def cleanup_temp_html_files(max_age_hours: float = 24.0) -> None:
     import time
 
     from dasmixer.api.config import get_temp_html_dir
+
     from dasmixer.utils import logger
 
     temp_dir = get_temp_html_dir()

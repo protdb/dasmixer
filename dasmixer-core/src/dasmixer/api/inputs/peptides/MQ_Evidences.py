@@ -1,8 +1,8 @@
 """MaxQuant Evidence.txt file parser."""
 
 import pandas as pd
-from .table_importer import SimpleTableImporter, ColumnRenames
 
+from .table_importer import ColumnRenames, SimpleTableImporter
 
 # Column mapping for MaxQuant evidence.txt
 renames = ColumnRenames(

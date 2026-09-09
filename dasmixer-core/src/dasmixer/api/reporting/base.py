@@ -2,21 +2,23 @@
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
-from pathlib import Path
-from typing import Optional, TYPE_CHECKING
-import pandas as pd
-import gzip
-import pickle
-import json
 import base64
+import gzip
+import json
+import pickle
+from abc import ABC, abstractmethod
 from datetime import datetime
-from ..project import Project
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+import pandas as pd
 from dasmixer.api.reporting._icons import Icons
 
+from ..project import Project
+
 if TYPE_CHECKING:
-    from dasmixer.api.reporting.report_form import ReportForm
     import plotly.graph_objects as go
+    from dasmixer.api.reporting.report_form import ReportForm
 
 
 class BaseReport(ABC):
@@ -39,16 +41,16 @@ class BaseReport(ABC):
 
     # Typed parameter form class (set in subclasses to a ReportForm subclass).
     # When set, ReportItem will render a Parameters dialog instead of TextArea.
-    parameters: "type[ReportForm] | None" = None
+    parameters: type[ReportForm] | None = None
     
     def __init__(
         self,
         project: Project,
-        plots: Optional[list[tuple[str, go.Figure]]] = None,
-        tables: Optional[list[tuple[str, pd.DataFrame, bool]]] = None,
-        project_settings: Optional[dict] = None,
-        tools_settings: Optional[list[dict]] = None,
-        report_settings: Optional[dict] = None
+        plots: list[tuple[str, go.Figure]] | None = None,
+        tables: list[tuple[str, pd.DataFrame, bool]] | None = None,
+        project_settings: dict | None = None,
+        tools_settings: list[dict] | None = None,
+        report_settings: dict | None = None
     ):
         """
         Initialize report.
@@ -107,7 +109,6 @@ class BaseReport(ABC):
                 - plots: list[tuple[name, figure]]
                 - tables: list[tuple[name, dataframe, show_in_ui]]
         """
-        pass
     
     async def generate(self, params: dict) -> None:
         """
@@ -246,7 +247,7 @@ class BaseReport(ABC):
             template='plotly_white',
             font=dict(size=font_size),
             width=int(self._project_settings.get('plot_width', 1200)),
-            height=int(self._project_settings.get('plot_height')),
+            height=int(self._project_settings.get('plot_height', 800)),
         )
         fig.update_annotations(font_size=font_size)
         
@@ -301,9 +302,9 @@ class BaseReport(ABC):
     @classmethod
     async def load_from_db(
         cls,
-        project: 'Project',
+        project: Project,
         report_id: int
-    ) -> 'BaseReport':
+    ) -> BaseReport:
         """
         Load report from database by ID.
         

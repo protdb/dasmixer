@@ -1,9 +1,10 @@
 """Mixin for importing data from another .dasmix project file."""
 
-import aiosqlite
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Literal
+from typing import Literal
 
+import aiosqlite
 from dasmixer.api.project.core.base import ProjectBase
 from dasmixer.utils.logger import logger
 

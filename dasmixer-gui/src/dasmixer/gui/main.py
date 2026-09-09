@@ -5,12 +5,11 @@ Launches the Flet-based GUI. Optionally opens a project file.
 Creates a new project if the file doesn't exist.
 """
 
-import logging
 import multiprocessing
-import typer
-from typing import Annotated
 from pathlib import Path
+from typing import Annotated
 
+import typer
 from dasmixer.versions import APP_VERSION
 
 # Configure logging based on saved settings
@@ -24,7 +23,10 @@ except Exception as _log_init_exc:
 # Load external plugins before anything else.
 # Results are stored as module-level variable so PluginsView can access them.
 try:
-    from dasmixer.api.plugin_loader import load_identification_plugins, load_report_plugins
+    from dasmixer.api.plugin_loader import (
+        load_identification_plugins,
+        load_report_plugins,
+    )
     _plugin_load_results: list[dict] = (
         load_identification_plugins() + load_report_plugins()
     )
@@ -113,6 +115,7 @@ def _ensure_chrome() -> None:
     """
     import os
     import sys
+
     import kaleido
 
     app_dir = Path(typer.get_app_dir("dasmixer"))

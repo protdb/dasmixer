@@ -1,9 +1,8 @@
 """Import section - import spectra files."""
 
 import flet as ft
-from dasmixer.api.project.project import Project
+
 from .base_section import BaseSection
-from .shared_state import SamplesTabState
 
 
 class ImportSection(BaseSection):

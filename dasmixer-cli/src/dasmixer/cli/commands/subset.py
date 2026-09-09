@@ -1,10 +1,11 @@
 """CLI commands for managing comparison groups (subsets)."""
 
-import typer
-from pathlib import Path
 import asyncio
-from dasmixer.api.project.project import Project
+from pathlib import Path
 from typing import Annotated
+
+import typer
+from dasmixer.api.project.project import Project
 
 app = typer.Typer(help="Manage comparison groups")
 

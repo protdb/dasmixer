@@ -3,18 +3,18 @@
 from .core import ProjectLifecycle
 from .migrations import MigrationMixin
 from .mixins import (
-    SubsetMixin,
-    ToolMixin,
-    SampleMixin,
-    SpectraMixin,
     IdentificationMixin,
-    PeptideMixin,
-    JoinedPeptideDataMixin,
-    ProteinMixin,
     ImportProjectMixin,
+    JoinedPeptideDataMixin,
+    PeptideMixin,
     PlotMixin,
+    ProteinMixin,
     QueryMixin,
     ReportMixin,
+    SampleMixin,
+    SpectraMixin,
+    SubsetMixin,
+    ToolMixin,
 )
 
 
@@ -76,4 +76,4 @@ class Project(
         fundamental database operations used by all mixins.
     """
     
-    pass  # All functionality is provided by mixins
+    # All functionality is provided by mixins

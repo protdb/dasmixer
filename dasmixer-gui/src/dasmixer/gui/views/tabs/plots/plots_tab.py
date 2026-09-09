@@ -4,16 +4,14 @@ import asyncio
 import base64
 import tempfile
 from datetime import datetime
-from functools import partial
 from pathlib import Path
-from typing import Optional
 
 import flet as ft
-from jinja2 import Template
-
 from dasmixer.api.project.project import Project
 from dasmixer.gui.components.plotly_viewer import PlotlyViewer, render_png_async
 from dasmixer.gui.utils import show_snack
+from jinja2 import Template
+
 from dasmixer.utils import logger
 
 
@@ -420,7 +418,9 @@ class PlotsTab(ft.Container):
         PNG rendering is offloaded to a thread pool via render_png_async so
         the event loop stays free during Kaleido calls.
         """
-        from dasmixer.gui.views.tabs.peptides.dialogs.progress_dialog import ProgressDialog
+        from dasmixer.gui.views.tabs.peptides.dialogs.progress_dialog import (
+            ProgressDialog,
+        )
         
         dialog = None
         try:

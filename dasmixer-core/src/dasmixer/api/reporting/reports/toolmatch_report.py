@@ -3,9 +3,9 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 from dasmixer.api.reporting._icons import Icons
+from dasmixer.utils.logger import logger
 
 from ..base import BaseReport
-from dasmixer.utils.logger import logger
 
 
 class ToolMatchReport(BaseReport):
@@ -232,4 +232,5 @@ class ToolMatchReport(BaseReport):
 
 
 from ..registry import registry
+
 registry.register(ToolMatchReport)

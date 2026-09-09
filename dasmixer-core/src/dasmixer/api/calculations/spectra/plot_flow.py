@@ -1,7 +1,9 @@
-from .ion_match import IonMatchParameters, match_predictions, get_matches_dataframe, MatchResult
-from .plot_matches import generate_spectrum_plot
 from typing import Any
+
 from dasmixer.utils.logger import logger
+
+from .ion_match import IonMatchParameters, get_matches_dataframe, match_predictions
+from .plot_matches import generate_spectrum_plot
 
 
 def make_full_spectrum_plot(

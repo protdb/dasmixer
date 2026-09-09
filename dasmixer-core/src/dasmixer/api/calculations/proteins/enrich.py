@@ -1,7 +1,8 @@
-from uniprot_meta_tool import UniprotData
-from dasmixer.api.project import Project
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
 
+from uniprot_meta_tool import UniprotData
+
+from dasmixer.api.project import Project
 from dasmixer.utils import logger
 
 

@@ -4,11 +4,10 @@ import gzip
 import io
 import os
 import zipfile
-from typing import Awaitable, Callable
+from collections.abc import Awaitable, Callable
 
 import numpy as np
 from pyteomics import mgf
-
 
 _BATCH_SIZE = 500  # спектров за один батч
 

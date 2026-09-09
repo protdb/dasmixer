@@ -5,26 +5,24 @@ Imported early during GUI startup to patch report classes
 with their flet-based parameter forms.
 """
 
-from dasmixer.api.reporting.reports.pca_report import PCAReport
-from dasmixer.api.reporting.reports.volcano_report import VolcanoReport
-from dasmixer.api.reporting.reports.median_report import MedianReport
-from dasmixer.api.reporting.reports.toolmatch_report import ToolMatchReport
 from dasmixer.api.reporting.reports.coverage_report import ToolCoverageReport
-from dasmixer.api.reporting.reports.upset import UpsetReport
+from dasmixer.api.reporting.reports.median_report import MedianReport
+from dasmixer.api.reporting.reports.pca_report import PCAReport
 from dasmixer.api.reporting.reports.sample_report import SampleReport
-
+from dasmixer.api.reporting.reports.toolmatch_report import ToolMatchReport
+from dasmixer.api.reporting.reports.upset import UpsetReport
+from dasmixer.api.reporting.reports.volcano_report import VolcanoReport
 from dasmixer.gui.components.report_form import (
-    ReportForm,
-    ToolSelector,
     BoolSelector,
-    IntSelector,
-    FloatSelector,
-    SubsetSelector,
-    MultiSubsetSelector,
-    LFQSelector,
     EnumSelector,
+    FloatSelector,
+    IntSelector,
+    LFQSelector,
+    MultiSubsetSelector,
+    ReportForm,
+    SubsetSelector,
+    ToolSelector,
 )
-
 
 # ---------------------------------------------------------------------------
 # PCA Report Form

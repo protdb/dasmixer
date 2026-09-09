@@ -1,11 +1,12 @@
+import warnings
+from copy import deepcopy
 from dataclasses import dataclass
 from itertools import combinations, product
 from typing import Any
-from copy import deepcopy
 
+from dasmixer.utils.logger import logger
 from dasmixer.utils.ppm import calculate_ppm, calculate_theor_mass, get_uncharged_mass
-from pyteomics.proforma import parse, GenericModification, to_proforma
-import warnings
+from pyteomics.proforma import GenericModification, parse, to_proforma
 
 PROTON_MASS = 1.007276
 
@@ -25,7 +26,7 @@ class FixedPTM:
         self.generic_mod_object = GenericModification(self.code)
         try:
             db_mass = self.generic_mod_object.mass
-        except (KeyError, ImportError) as e:
+        except (KeyError, ImportError):
             raise Exception('No data for PTM found! Create one with Composition and add it to pyteomics.mass.unimod!')
         if not self.mono_mass:
             self.mono_mass = self.generic_mod_object.mass
@@ -60,19 +61,19 @@ class PossibleSequenceCreator:
         self.charge = charge
 
     def get_sequence_version(self, positions: list[PossiblePTMPosition], c_term: None | FixedPTM = None, n_term: None | FixedPTM = None) -> PossibleSequence:
-        print(positions, c_term, n_term)
+        logger.debug("get_sequence_version positions=%s c_term=%s n_term=%s", positions, c_term, n_term)
         res_seq = deepcopy(self.canonical_sequence_split)
         params = deepcopy(self.canonical_sequence_params)
-        print(params)
+        logger.debug("params=%s", params)
         if c_term is not None:
             params['c_term'] = [c_term.generic_mod_object]
         if n_term is not None:
             params['n_term'] = [n_term.generic_mod_object]
-        print(params)
+        logger.debug("params after term=%s", params)
         for pos in positions:
             res_seq[pos.idx] = (pos.amino, [pos.ptm])
         seq_proforma = to_proforma(res_seq, **params)
-        print(seq_proforma)
+        logger.debug("seq_proforma=%s", seq_proforma)
         ppm = calculate_ppm(seq_proforma, self.pepmass, self.charge)
         return PossibleSequence(
             seq_proforma,
@@ -119,8 +120,7 @@ def get_possible_ptm(
     c_term_ptms = [None] + [x for x in ptm_list if x.c_term]
     term_combos = list(product(n_term_ptms, c_term_ptms))
     seq_creator = PossibleSequenceCreator(canonical_seq, pepmass, charge)
-    print(split_seq)
-    print(seq_adds)
+    logger.debug("split_seq=%s seq_adds=%s", split_seq, seq_adds)
     ptm_sites = []
     for idx, pos in enumerate(split_seq):
         if pos[1] is not None:
@@ -146,8 +146,7 @@ def get_possible_ptm(
                 continue #  skip the case with PTMs on the same AA
             for n_term, c_term in term_combos:
                 pos_seq = seq_creator.get_sequence_version(list(combo), n_term=n_term, c_term=c_term)
-                print(pos_seq)
-                print(calculate_theor_mass(pos_seq.sequence) - get_uncharged_mass(pepmass, charge))
+                logger.debug("pos_seq=%s theor_diff=%s", pos_seq, calculate_theor_mass(pos_seq.sequence) - get_uncharged_mass(pepmass, charge))
                 if pos_seq.ppm_abs <= max_ppm:
                     possible_sequences.append(pos_seq)
     return [x.sequence for x in possible_sequences]

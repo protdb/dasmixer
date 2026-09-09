@@ -201,9 +201,17 @@ CREATE TABLE IF NOT EXISTS protein_quantification_result (
 CREATE INDEX IF NOT EXISTS idx_prot_quant_ident ON protein_quantification_result(protein_identification_id);
 CREATE INDEX IF NOT EXISTS idx_prot_quant_algo ON protein_quantification_result(algorithm);
 
--- Sample status cache (Stage 11)
+-- DEPRECATED: sample_status_cache (Stage 11).
 -- Stores pre-computed aggregated statistics per sample for fast panel rendering.
 -- Updated whenever stats are recalculated; read on project open.
+--
+-- This table and the cache methods on SampleMixin were deprecated in v0.7.0a4:
+-- get_all_samples_stats() now computes fresh stats fast enough (~0.6s) that
+-- caching is unnecessary. The cache methods (get_cached_sample_stats,
+-- upsert_sample_status_cache[_batch], invalidate_sample_status_cache,
+-- compute_and_cache_sample_stats) have been removed from SampleMixin.
+-- The table itself is kept here for backward compatibility with existing
+-- .dasmix project files; it will be dropped in a future schema migration.
 CREATE TABLE IF NOT EXISTS sample_status_cache (
     sample_id INTEGER PRIMARY KEY,
     spectra_files_count INTEGER NOT NULL DEFAULT 0,

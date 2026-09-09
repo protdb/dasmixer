@@ -1,10 +1,11 @@
 """CLI commands for managing project tools."""
 
+import asyncio
 import json
-import typer
 from pathlib import Path
 from typing import Annotated
-import asyncio
+
+import typer
 from dasmixer.api.project.project import Project
 
 app = typer.Typer(help="Manage project tools")

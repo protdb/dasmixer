@@ -1,11 +1,13 @@
 """Base class for identification data parsers."""
 
 from abc import abstractmethod
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
+
 import pandas as pd
+from dasmixer.api.project.dataclasses import Protein
+
 from dasmixer.api import Project
 
-from dasmixer.api.project.dataclasses import Protein
 from ..base import BaseImporter
 
 
@@ -117,7 +119,6 @@ class IdentificationParser(BaseImporter):
         Raises:
             ValueError: If neither scans nor seq_no columns are present.
         """
-        pass
 
     @property
     def proteins(self) -> dict[str, 'Protein']:

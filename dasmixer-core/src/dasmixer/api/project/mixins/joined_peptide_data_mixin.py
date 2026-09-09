@@ -1,7 +1,6 @@
 """Mixin for joined peptide data queries (spectre + identification + peptide_match)."""
 
 import pandas as pd
-
 from dasmixer.utils.logger import logger
 
 

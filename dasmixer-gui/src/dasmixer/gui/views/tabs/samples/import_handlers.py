@@ -1,12 +1,13 @@
 """Import handlers for spectra and identifications."""
 
+
 import flet as ft
 import pandas as pd
-from pathlib import Path
-from dasmixer.api.project.project import Project
-from dasmixer.api.inputs.registry import registry
 from dasmixer.api.config import config as _config
+from dasmixer.api.inputs.registry import registry
+from dasmixer.api.project.project import Project
 from dasmixer.gui.utils import show_snack
+
 from dasmixer.utils import logger
 
 
@@ -67,7 +68,7 @@ class ImportHandlers:
             for i, (file_path, sample_id) in enumerate(file_list):
                 progress_text.value = f"Importing {file_path.name} ({i+1}/{total_files})..."
                 progress_bar.value = i / total_files
-                progress_details.value = f"Processing file..."
+                progress_details.value = "Processing file..."
                 progress_text.update()
                 progress_bar.update()
                 progress_details.update()
@@ -160,7 +161,7 @@ class ImportHandlers:
             progress_dialog.open = False
             self.page.update()
             
-            show_snack(self.page, f"Import error: {str(ex)}", ft.Colors.RED_400)
+            show_snack(self.page, f"Import error: {ex!s}", ft.Colors.RED_400)
             self.page.update()
     
     async def import_identification_files(
@@ -218,7 +219,7 @@ class ImportHandlers:
                 spectra_file_id_hint = rest[0] if rest else None
                 progress_text.value = f"Importing {file_path.name} ({i+1}/{total_files})..."
                 progress_bar.value = i / total_files
-                progress_details.value = f"Processing file..."
+                progress_details.value = "Processing file..."
                 progress_text.update()
                 progress_bar.update()
                 progress_details.update()
@@ -374,7 +375,7 @@ class ImportHandlers:
             progress_dialog.open = False
             self.page.update()
 
-            show_snack(self.page, f"Import error: {str(ex)}", ft.Colors.RED_400)
+            show_snack(self.page, f"Import error: {ex!s}", ft.Colors.RED_400)
             self.page.update()
 
     async def _save_proteins_batch(self, proteins_df: pd.DataFrame) -> None:
@@ -557,5 +558,5 @@ class ImportHandlers:
             logger.exception(ex)
             progress_dialog.open = False
             self.page.update()
-            show_snack(self.page, f"Import error: {str(ex)}", ft.Colors.RED_400)
+            show_snack(self.page, f"Import error: {ex!s}", ft.Colors.RED_400)
             self.page.update()

@@ -3,17 +3,16 @@ from dataclasses import dataclass
 from typing import Literal
 
 import pandas as pd
-from peptacular.fragmentation import Fragmenter, Fragment
-from peptacular.score import (
-    get_fragment_matches,
-    FragmentMatch,
-    get_match_coverage
+from dasmixer.utils.logger import logger
+from peptacular.fragmentation import Fragment, Fragmenter
+from peptacular.score import FragmentMatch, get_fragment_matches, get_match_coverage
 
+from .quality_calculations import (
+    calculate_longest_consec_run_ratio,
+    calculate_peptide_quality,
+    calculate_unconfirmed_ptms,
 )
 
-from .quality_calculations import (calculate_peptide_quality,
-                                   calculate_longest_consec_run_ratio,
-                                   calculate_unconfirmed_ptms)
 
 def _get_matched_intensity_percentage(
     fragment_matches: list[FragmentMatch], intensities: list[float]
@@ -150,7 +149,7 @@ def match_predictions(
         )
 
     # Generate theoretical fragments
-    print(params, sequence)
+    logger.debug("match_predictions params=%s sequence=%s", params, sequence)
     frags = Fragmenter(sequence).fragment(
         params.ions,
         params.charges,

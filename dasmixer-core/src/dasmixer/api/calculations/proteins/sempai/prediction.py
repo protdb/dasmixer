@@ -8,25 +8,22 @@ The algorithm analyzes observed peptides directly without requiring theoretical
 matching, making it suitable for de novo sequencing data and non-tryptic peptides.
 """
 
-import warnings
 import logging
-from typing import Iterable, Optional, List, Dict, Any
+import warnings
+from collections.abc import Iterable
+from typing import Any
 
 import numpy as np
 import pandas as pd
-from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import accuracy_score, roc_auc_score, precision_score, recall_score
 
-from uniprot_meta_tool import UniprotData
-
-from .exceptions import ValidationError, DataError, CalibrationError
+from .exceptions import CalibrationError, ValidationError
+from .protein import Protein
 from .utils import (
     DigestionParams,
     calculate_peptide_features,
     remove_modifications,
 )
-from .protein import Protein
 
 logger = logging.getLogger(__name__)
 
@@ -48,10 +45,10 @@ class PredictionParameters(DigestionParams):
 
 
 def analyze_observed_peptides(
-    peptides: List[str],
-    intensities: List[float],
+    peptides: list[str],
+    intensities: list[float],
     enable_ml_model: bool = False
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Analyze observed peptides to extract statistical patterns.
     
@@ -168,7 +165,7 @@ def _estimate_missed_cleavages(peptide_sequence: str) -> int:
     return missed
 
 
-def _calculate_feature_correlations(df: pd.DataFrame) -> Dict[str, float]:
+def _calculate_feature_correlations(df: pd.DataFrame) -> dict[str, float]:
     """Calculate correlations between peptide features."""
     numeric_cols = ['mass', 'length', 'gravy', 'basic_residues', 'charge', 'intensity', 'missed_cleavages']
     available_cols = [col for col in numeric_cols if col in df.columns]
@@ -190,7 +187,7 @@ def _calculate_feature_correlations(df: pd.DataFrame) -> Dict[str, float]:
     return correlations
 
 
-def _build_intensity_prediction_model(df: pd.DataFrame) -> Dict[str, Any]:
+def _build_intensity_prediction_model(df: pd.DataFrame) -> dict[str, Any]:
     """
     Build a model to predict peptide intensity from features.
     
@@ -416,7 +413,7 @@ def predict_parameters_from_observations(
     return params
 
 
-def _check_parameter_quality(params: DigestionParams, analysis: Dict[str, Any]) -> None:
+def _check_parameter_quality(params: DigestionParams, analysis: dict[str, Any]) -> None:
     """Check parameter quality and issue warnings if needed."""
     
     # Check diversity
@@ -496,8 +493,8 @@ def predict_parameters_from_protein(
 def predict_parameters(
     peptides: Iterable[str],
     intensities: Iterable[float],
-    digestion_accession: Optional[str] = None,  # Now optional and ignored
-    sequence: Optional[str] = None,  # Now optional and ignored
+    digestion_accession: str | None = None,  # Now optional and ignored
+    sequence: str | None = None,  # Now optional and ignored
     **kwargs
 ) -> DigestionParams:
     """
@@ -590,7 +587,7 @@ def predict_and_apply_parameters(
     return apply_parameters_to_protein(protein, params)
 
 
-def get_prediction_summary(params: DigestionParams) -> Dict[str, Any]:
+def get_prediction_summary(params: DigestionParams) -> dict[str, Any]:
     """
     Get a summary of prediction results.
     

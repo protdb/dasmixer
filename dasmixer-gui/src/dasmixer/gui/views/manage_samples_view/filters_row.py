@@ -1,9 +1,8 @@
 """SamplesFilterRow — filter controls for Manage Samples View."""
 
-from typing import Callable, Awaitable
+from collections.abc import Awaitable, Callable
 
 import flet as ft
-
 from dasmixer.api.project.dataclasses import Subset
 
 

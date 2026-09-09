@@ -5,9 +5,12 @@ This module is intentionally free of any project/DB imports so it can be
 safely used inside a multiprocessing.Pool without pickling issues.
 """
 
-from dasmixer.api.calculations.spectra.ion_match import IonMatchParameters, match_predictions
-from dasmixer.utils.ppm import calculate_ppm_and_charge, calculate_theor_mass
+from dasmixer.api.calculations.spectra.ion_match import (
+    IonMatchParameters,
+    match_predictions,
+)
 from dasmixer.utils.logger import logger
+from dasmixer.utils.ppm import calculate_ppm_and_charge, calculate_theor_mass
 
 
 def process_identification_batch(

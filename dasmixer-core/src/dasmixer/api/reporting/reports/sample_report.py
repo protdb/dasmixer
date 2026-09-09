@@ -84,4 +84,5 @@ class SampleReport(BaseReport):
 
 # Register on import
 from ..registry import registry
+
 registry.register(SampleReport)

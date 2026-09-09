@@ -1,11 +1,10 @@
 """SampleViewPanel — a single sample panel with checkbox, header and body."""
 
 import json
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Awaitable
 
 import flet as ft
-
 from dasmixer.api.project.dataclasses import Sample
 
 

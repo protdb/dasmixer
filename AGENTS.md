@@ -10,7 +10,7 @@ This document provides essential context for AI coding agents working on the DAS
 
 - **Lab:** Laboratory of Structural Proteomics, IBMC, Moscow
 - **Repo:** `git@github.com:protdb/dasmixer.git`
-- **Version:** 0.5.0
+- **Version:** 0.7.3a1 (APP_VERSION) / PROJECT_VERSION 0.7.2
 
 **MOST IMPORTANT DOCUMENT WITH DETAILS:** `docs/project/MASTER_SPEC_NEW.md`
 
@@ -67,9 +67,9 @@ All four packages install into `site-packages/dasmixer/` — Python merges them 
 
 ---
 
-## Flet 0.80.5 — Critical API Notes
+## Flet 0.81.0 — Critical API Notes
 
-Flet 0.80.5 introduced breaking API changes. Always use the new API:
+Flet 0.81.0 introduced breaking API changes. Always use the new API:
 
 | Old (broken)                    | New (correct)                                                                 |
 |---------------------------------|-------------------------------------------------------------------------------|
@@ -83,7 +83,7 @@ Flet 0.80.5 introduced breaking API changes. Always use the new API:
 | `page.window_width`             | `page.window.width`                                                           |
 | `ft.ElevatedButton(text="...")` | `ft.ElevatedButton(content=ft.Text("..."))`                                   | 
 
-**FilePicker pattern (correct for 0.80.5):**
+**FilePicker pattern (correct for 0.81.0):**
 ```python
 files = await ft.FilePicker().pick_files(
     dialog_title="Open File",
@@ -103,7 +103,7 @@ file_path = await ft.FilePicker().save_file(
 )
 ```
 
-**Routing in 0.80.5:** `page.on_route_change` handler receives no argument (unlike older versions).
+**Routing in 0.81.0:** `page.on_route_change` handler receives no argument (unlike older versions).
 Use the pattern in `dasmixer/gui/app.py:DASMixerApp._route_change`.
 
 ---
@@ -119,6 +119,7 @@ api/
 ├── project/
 │   ├── project.py         # Project class (composed from mixins)
 │   ├── schema.py          # SQLite schema SQL
+│   ├── migrations.py      # MigrationMixin — project version migrations
 │   ├── dataclasses.py     # Subset, Tool, Sample, Protein, IdentificationWithSpectrum
 │   ├── array_utils.py     # compress_array / decompress_array (numpy ↔ bytes)
 │   ├── core/
@@ -231,8 +232,12 @@ All methods are **async**. The database uses WAL mode and has foreign keys enabl
 **Samples** (`mixins/sample_mixin.py`):
 - `add_sample(name, subset_id, additions, outlier)` → `Sample`
 - `get_samples(subset_id?)` → `list[Sample]`
-- `get_sample_stats(id)`, `get_cached_sample_stats(id)`
-- `compute_and_cache_sample_stats(id)`
+- `get_sample_stats(id)`, `get_all_samples_stats()` → `dict[int, dict]`
+- `get_sample_status_summary(...)`
+- `get_sample_counts_by_subset()`, `get_subset_sample_counts()`
+- Note: `sample_status_cache` table is **DEPRECATED** (kept in schema for
+  backward compat, see v0.7.0a4 changelog). Cache methods were removed;
+  always use `get_all_samples_stats()` for fresh stats.
 
 **Spectra** (`mixins/spectra_mixin.py`):
 - `add_spectra_file(sample_id, format, path)` → `int`
@@ -351,6 +356,45 @@ App dir location:
 
 ---
 
+## Changelog
+
+Changelogs live in `docs/project/changes/`, one file per version:
+`vX.Y.Z(.preN).md` (e.g. `v0.7.3a1.md`, `v0.7.2.md`).
+
+**Changelogs are written or extended only on the developer's explicit
+request.** The agent must NOT create or modify changelog files on its own
+initiative. When asked, follow the existing format (see recent files like
+`v0.7.3a1.md`): a header line `# vX.Y.Z`, a `**Date:** YYYY-MM-DD`, then
+`## Summary`, `## Core Changes`, `## GUI Changes`, `## CLI Changes`,
+`## Fixes`, etc. with subsections per feature/fix.
+
+---
+
+## Versioning
+
+Version constants live in `dasmixer-core/src/dasmixer/versions.py`:
+- `APP_VERSION` — the application (GUI/CLI) version, shown to users.
+- `PROJECT_VERSION` — the `.dasmix` project file format version; bumped when
+  the DB schema or stored data shape changes. May lag behind `APP_VERSION`.
+- `MIN_SUPPORTED_PROJECT_VERSION` — lowest project version the migrator can
+  upgrade from.
+
+**The agent must NOT change version numbers in code on its own.** The only
+exception is an explicit developer request to bump `PROJECT_VERSION` (when a
+schema migration is added). `APP_VERSION` and the `__version__` in
+`metapackage/dasmixer/__init__.py`, the `version` fields in all
+`pyproject.toml` files, and `dasmixer.iss` are all updated together by the
+build script:
+
+```
+python build_tools/set_version.py <new_version>
+```
+
+That script touches every file that carries a version, so manual edits are
+error-prone and must be avoided.
+
+---
+
 ## Development Rules
 
 1. **All Project methods must be async** — use `await` everywhere.
@@ -365,6 +409,12 @@ App dir location:
 10. **Namespace packages**: directories `src/dasmixer/` in each subpackage must NOT contain `__init__.py`.
 11. **Core reports** must not import from `dasmixer.gui.*`. Use `dasmixer.api.reporting._icons` for icons, set `parameters = None`.
 12. **pyproject.toml** changes: use path dependencies in `[tool.poetry.dependencies]` for local dev (`{path = "..", develop = true}`), keep `[project.dependencies]` for PyPI versions.
+13. **Batch entry point naming:** the public batch function in
+    `dasmixer.api.calculations.spectra.identification_processor` is
+    `process_identifications_batch`. The old (mis-spelled) name
+    `process_identificatons_batch` is kept only as a deprecated alias with a
+    `DeprecationWarning`; new code (core, CLI, GUI, plugins) must use the
+    correct name.
 
 ---
 
@@ -403,5 +453,3 @@ Config file: `{app_dir}/config.json`.
 | `dasmixer-gui/src/dasmixer/gui/reports/forms.py` | GUI report forms + monkey-patch |
 | `dasmixer-gui/src/dasmixer/gui/components/report_form.py` | GUI ReportForm (flet-based) |
 | `docs/project/MASTER_SPEC_NEW.md` | Full current project specification |
-| `docs/project/spec/0.5.0_SPEC.md` | 0.5.0 implementation spec |
-| `docs/project/changes/v0.5.0.md` | 0.5.0 changelog |

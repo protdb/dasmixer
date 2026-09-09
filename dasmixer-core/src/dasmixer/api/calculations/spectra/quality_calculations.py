@@ -1,6 +1,7 @@
 from peptacular import FragmentMatch
 from pyteomics.proforma import parse
 
+
 def calculate_peptide_quality(
         matches: list[FragmentMatch],
         sequence: str,

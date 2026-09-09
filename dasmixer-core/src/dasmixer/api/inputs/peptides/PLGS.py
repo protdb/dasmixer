@@ -1,9 +1,12 @@
 import re
+
 import pandas as pd
-from .table_importer import SimpleTableImporter, ColumnRenames
-from pyteomics.proforma import parse, to_proforma, GenericModification
 from dasmixer.utils.logger import logger
+from pyteomics.proforma import GenericModification, parse, to_proforma
+
 from dasmixer.api.project import Protein
+
+from .table_importer import ColumnRenames, SimpleTableImporter
 
 renames = ColumnRenames(
     scans='precursor.leID',

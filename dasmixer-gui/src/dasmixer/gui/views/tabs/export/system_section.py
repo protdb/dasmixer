@@ -1,12 +1,11 @@
-import os
 from datetime import datetime
 
 import flet as ft
-
 from dasmixer.api.export.shared_state import ExportTabState
 from dasmixer.api.export.system_export import TABLE_QUERIES, export_system_data
 from dasmixer.gui.components.progress_dialog import ProgressDialog
 from dasmixer.gui.utils import show_snack
+
 from dasmixer.utils import logger
 
 

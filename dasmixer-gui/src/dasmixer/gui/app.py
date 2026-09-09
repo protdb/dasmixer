@@ -2,14 +2,16 @@
 
 import asyncio
 import os
-import flet as ft
+import traceback
 from pathlib import Path
+
+import flet as ft
 from dasmixer.api.config import config
 from dasmixer.api.project.project import Project
-import traceback
-from dasmixer.gui.utils import show_snack, get_asset_path, cleanup_temp_html_files
-from dasmixer.gui.components.progress_dialog import ProgressDialog
 from dasmixer.gui.components.merge_options_dialog import MergeOptionsDialog
+from dasmixer.gui.components.progress_dialog import ProgressDialog
+from dasmixer.gui.utils import cleanup_temp_html_files, get_asset_path, show_snack
+
 from dasmixer.utils import logger
 
 
@@ -168,7 +170,7 @@ class DASMixerApp:
 
     def _view_pop(self, e=None):
         """Handle back navigation (system back button)."""
-        logger.debug(f"[route] view_pop triggered")
+        logger.debug("[route] view_pop triggered")
         if len(self.page.views) > 1:
             self.page.views.pop()
         top_view = self.page.views[-1]
@@ -402,8 +404,6 @@ class DASMixerApp:
         Проверяет версию открытого проекта и предлагает миграцию или предупреждает
         о несовместимости.
         """
-        from dasmixer.api.project.migrations import MigrationError
-        from dasmixer.versions import PROJECT_VERSION
 
         needs_migration = await self.current_project.needs_migration()
         is_too_new = await self.current_project.is_version_too_new()

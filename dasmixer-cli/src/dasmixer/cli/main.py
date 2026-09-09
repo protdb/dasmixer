@@ -4,16 +4,15 @@ DASMixer CLI — entry point for the `dasmixer-cli` command.
 Provides command-line tools for project management without GUI.
 """
 
-import typer
 from typing import Annotated
-from pathlib import Path
 
+import typer
 from dasmixer.versions import APP_VERSION
-from dasmixer.cli.commands import project, subset, import_data
-from dasmixer.cli.commands import portable
+
+from dasmixer.cli.commands import calculate as calculate_cmd
+from dasmixer.cli.commands import import_data, portable, project, subset
 from dasmixer.cli.commands import import_project as import_project_cmd
 from dasmixer.cli.commands import tool as tool_cmd
-from dasmixer.cli.commands import calculate as calculate_cmd
 
 app = typer.Typer(
     name="dasmixer-cli",

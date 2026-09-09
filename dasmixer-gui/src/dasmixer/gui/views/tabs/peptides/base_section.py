@@ -1,12 +1,14 @@
 """Base class for peptides tab sections."""
 
-import flet as ft
 from abc import ABC, abstractmethod
 
+import flet as ft
 from dasmixer.api.project.project import Project
-from .shared_state import PeptidesTabState
 from dasmixer.gui.utils import show_snack
+
 from dasmixer.utils import logger
+
+from .shared_state import PeptidesTabState
 
 
 class BaseSection(ft.Container, ABC):
@@ -47,7 +49,6 @@ class BaseSection(ft.Container, ABC):
         Returns:
             Flet control representing section UI
         """
-        pass
     
     async def load_data(self):
         """
@@ -55,7 +56,6 @@ class BaseSection(ft.Container, ABC):
         
         Override in subclasses if needed.
         """
-        pass
     
     async def save_settings(self):
         """
@@ -63,7 +63,6 @@ class BaseSection(ft.Container, ABC):
         
         Override in subclasses if needed.
         """
-        pass
     
     def show_error(self, message: str):
         """Show error snackbar using context."""

@@ -10,21 +10,21 @@ Refactored into a thin orchestrator that delegates to:
 """
 
 import asyncio
-from typing import Callable, Awaitable
+from collections.abc import Awaitable, Callable
 
 import flet as ft
-
 from dasmixer.api.project.dataclasses import Sample
 from dasmixer.api.project.project import Project
 from dasmixer.gui.utils import show_snack
+
 from dasmixer.utils import logger
 
 from .data_manager import SampleDataManager
-from .update_row import UpdateRow
-from .sample_panel import SampleViewPanel, compute_sample_status
-from .mass_operations_row import MassOperationsRow
 from .filters_row import SamplesFilterRow
+from .mass_operations_row import MassOperationsRow
 from .pagination_row import SamplesPaginationRow
+from .sample_panel import SampleViewPanel, compute_sample_status
+from .update_row import UpdateRow
 
 
 class ManageSamplesView(ft.View):
@@ -661,7 +661,9 @@ class ManageSamplesView(ft.View):
             self._show_error(f"Error: {ex}")
 
     async def _add_spectra_file(self, sample: Sample):
-        from dasmixer.gui.views.tabs.samples.dialogs.import_single_dialog import ImportSingleDialog
+        from dasmixer.gui.views.tabs.samples.dialogs.import_single_dialog import (
+            ImportSingleDialog,
+        )
         from dasmixer.gui.views.tabs.samples.import_handlers import ImportHandlers
 
         async def on_complete():
@@ -707,7 +709,9 @@ class ManageSamplesView(ft.View):
         self.page.update()
 
     async def _do_add_identification_file(self, sf_id: int, sample: Sample, tool_id: int):
-        from dasmixer.gui.views.tabs.samples.dialogs.import_single_dialog import ImportSingleDialog
+        from dasmixer.gui.views.tabs.samples.dialogs.import_single_dialog import (
+            ImportSingleDialog,
+        )
         from dasmixer.gui.views.tabs.samples.import_handlers import ImportHandlers
 
         async def on_complete():
@@ -792,7 +796,9 @@ class ManageSamplesView(ft.View):
 
     async def _action_protein_identifications(self, sample: Sample):
         min_pep, min_uq = self._get_protein_detection_params()
-        from dasmixer.gui.actions.protein_ident_action import ProteinIdentificationsAction
+        from dasmixer.gui.actions.protein_ident_action import (
+            ProteinIdentificationsAction,
+        )
         action = ProteinIdentificationsAction(self.project, self.page)
         await action.run(min_peptides=min_pep, min_uq_evidence=min_uq, sample_id=sample.id)
         await self.refresh_single_panel(sample.id)

@@ -1,9 +1,10 @@
 """CLI commands for portable project utilities (checkpoint, vacuum)."""
 
-import typer
+import asyncio
 from pathlib import Path
 from typing import Annotated
-import asyncio
+
+import typer
 from dasmixer.api.project.project import Project
 
 app = typer.Typer(help="Portable project utilities")

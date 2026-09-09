@@ -1,12 +1,12 @@
 """DropFileDialog — two-step dialog for dropping spectra/identification files."""
 
+from collections.abc import Awaitable, Callable
 from pathlib import Path
-from typing import Callable, Awaitable
 
 import flet as ft
-
 from dasmixer.api.project.project import Project
 from dasmixer.gui.utils import show_snack
+
 from dasmixer.utils import logger
 
 
@@ -152,9 +152,7 @@ class DropFileDialog:
             for sf in detail:
                 if mode == "spectra_all":
                     files.append({'id': int(sf['id']), 'path': sf['path'], 'type': 'Spectra'})
-                elif mode == "spectra_keep_first":
-                    pass  # handled below
-                elif mode == "spectra_keep_last":
+                elif mode == "spectra_keep_first" or mode == "spectra_keep_last":
                     pass  # handled below
                 elif mode in ("ident_all", "ident_by_tool"):
                     for ident_file in sf.get('ident_files', []):

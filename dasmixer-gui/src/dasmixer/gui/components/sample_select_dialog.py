@@ -3,7 +3,6 @@
 import asyncio
 
 import flet as ft
-
 from dasmixer.api.project.project import Project
 
 

@@ -1,10 +1,12 @@
 """Dialog for editing sample properties."""
 
-import flet as ft
 import json
-from dasmixer.api.project.project import Project
+
+import flet as ft
 from dasmixer.api.project.dataclasses import Sample
+from dasmixer.api.project.project import Project
 from dasmixer.gui.utils import show_snack
+
 from dasmixer.utils import logger
 
 
@@ -50,7 +52,7 @@ class SampleDialog:
         if self.sample.additions:
             try:
                 additions_text = json.dumps(self.sample.additions, indent=2, ensure_ascii=False)
-            except:
+            except Exception:
                 additions_text = str(self.sample.additions)
         
         # Create fields

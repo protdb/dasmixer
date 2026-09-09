@@ -1,10 +1,12 @@
 """Actions section - main peptide calculation workflow."""
 
 import asyncio
+
 import flet as ft
 
-from .base_section import BaseSection
 from dasmixer.utils import logger
+
+from .base_section import BaseSection
 
 
 class ActionsSection(BaseSection):

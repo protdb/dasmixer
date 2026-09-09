@@ -1,8 +1,9 @@
 """Reads MaxQuant msms.txt/msmsScans.txt and converts .apl spectra files to enriched MGF + companion CSV identification files."""
 
 import re
-import pandas as pd
 from pathlib import Path
+
+import pandas as pd
 
 APL_TYPE_MAP = {
     'peak': {'msms_type': 'MSMS', 'scans_type': 'PEAK', 'header_suffix': '_peak_'},

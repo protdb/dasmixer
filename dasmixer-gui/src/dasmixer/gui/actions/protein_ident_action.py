@@ -3,10 +3,13 @@
 import asyncio
 
 import flet as ft
+from dasmixer.api.calculations.proteins.map_identifications import (
+    find_protein_identifications,
+)
+from dasmixer.api.project.project import Project
 
 from dasmixer.utils import logger
-from dasmixer.api.project.project import Project
-from dasmixer.api.calculations.proteins.map_identifications import find_protein_identifications
+
 from .base import BaseAction
 
 
@@ -38,7 +41,9 @@ class ProteinIdentificationsAction(BaseAction):
         Returns:
             Total number of protein identifications saved.
         """
-        from dasmixer.gui.views.tabs.peptides.dialogs.progress_dialog import ProgressDialog
+        from dasmixer.gui.views.tabs.peptides.dialogs.progress_dialog import (
+            ProgressDialog,
+        )
 
         dialog = ProgressDialog(self.page, "Calculating Protein Identifications")
         dialog.show()
@@ -109,5 +114,5 @@ class ProteinIdentificationsAction(BaseAction):
                 dialog.close()
             except Exception:
                 pass
-            self.show_error(f"Error: {str(ex)}")
+            self.show_error(f"Error: {ex!s}")
             return 0

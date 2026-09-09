@@ -1,8 +1,8 @@
 """Input parsers package with automatic registration."""
 
-from .registry import registry
-from .base import BaseImporter
 from ...utils import logger
+from .base import BaseImporter
+from .registry import registry
 
 # Import base classes for external use
 try:
@@ -74,8 +74,8 @@ def register_parsers():
 register_parsers()
 
 __all__ = [
-    'registry',
     'BaseImporter',
+    'IdentificationParser',
     'SpectralDataParser',
-    'IdentificationParser'
+    'registry'
 ]

@@ -1,12 +1,15 @@
 """Groups section - manage comparison groups."""
 
 import asyncio
+
 import flet as ft
 from dasmixer.api.project.project import Project
-from .base_section import BaseSection
-from .shared_state import SamplesTabState
+
 from dasmixer.utils import logger
+
+from .base_section import BaseSection
 from .dialogs.group_dialog import GroupDialog
+from .shared_state import SamplesTabState
 
 
 class GroupsSection(BaseSection):
@@ -135,13 +138,13 @@ class GroupsSection(BaseSection):
                 confirm_dialog.open = False
                 self.page.update()
                 
-                self.show_warning(f"Cannot delete: {str(ex)}")
+                self.show_warning(f"Cannot delete: {ex!s}")
             except Exception as ex:
                 logger.exception(ex)
                 confirm_dialog.open = False
                 self.page.update()
                 
-                self.show_error(f"Error: {str(ex)}")
+                self.show_error(f"Error: {ex!s}")
         
         confirm_dialog = ft.AlertDialog(
             title=ft.Text("Delete Group?"),

@@ -1,11 +1,13 @@
 """Settings view — application settings screen."""
 
 import os
+
 import flet as ft
-from dasmixer.utils import logger
 from dasmixer.api.config import config
-from dasmixer.gui.utils import show_snack
 from dasmixer.gui.components.color_picker import ColorPickerField
+from dasmixer.gui.utils import show_snack
+
+from dasmixer.utils import logger
 
 
 def _apply_logging_config(cfg) -> None:
@@ -402,7 +404,7 @@ class SettingsView(ft.View):
                 self._cpu_threads_field.border_color = None
                 self._cpu_threads_field.update()
             except ValueError:
-                errors.append(f"'Max CPU Threads': must be a positive integer or empty")
+                errors.append("'Max CPU Threads': must be a positive integer or empty")
                 self._cpu_threads_field.border_color = ft.Colors.RED
                 self._cpu_threads_field.update()
 

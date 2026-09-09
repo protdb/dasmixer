@@ -1,8 +1,9 @@
 """Universal progress dialog."""
 
-import time
-import flet as ft
 import asyncio
+import time
+
+import flet as ft
 
 
 def _fmt_seconds(seconds: float) -> str:

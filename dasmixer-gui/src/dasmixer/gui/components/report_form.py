@@ -8,11 +8,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import flet as ft
-
+from dasmixer.api.reporting.report_form import (
+    ReportForm as _CoreReportForm,
+)
 from dasmixer.api.reporting.report_form import (
     ReportParamBase as _CoreReportParamBase,
-    ReportFormMeta as _CoreReportFormMeta,
-    ReportForm as _CoreReportForm,
 )
 
 if TYPE_CHECKING:
@@ -33,7 +33,7 @@ class ReportParamBase(_CoreReportParamBase):
         super().__init__(label=label, default=default)
         self._control: ft.Control | None = None  # Created in build()
 
-    async def build(self, project: "Project") -> ft.Control:
+    async def build(self, project: Project) -> ft.Control:
         """Build flet control. Must be called once before get_value/set_value."""
         raise NotImplementedError
 
@@ -59,7 +59,7 @@ class ToolSelector(ReportParamBase):
     def __init__(self, label: str | None = None, default: str | None = None):
         super().__init__(label=label, default=default)
 
-    async def build(self, project: "Project") -> ft.Control:
+    async def build(self, project: Project) -> ft.Control:
         tools = await project.get_tools()
         options = [ft.DropdownOption(key=t.name, text=t.name) for t in tools]
         initial = self.default
@@ -81,7 +81,7 @@ class EnumSelector(ReportParamBase):
         super().__init__(label=label, default=default)
         self.values = values
 
-    async def build(self, project: "Project") -> ft.Control:
+    async def build(self, project: Project) -> ft.Control:
         options = [ft.DropdownOption(key=v, text=v) for v in self.values]
         initial = self.default if self.default is not None and self.default in self.values else (
             self.values[0] if self.values else None
@@ -101,7 +101,7 @@ class BoolSelector(ReportParamBase):
     def __init__(self, label: str | None = None, default: bool = False):
         super().__init__(label=label, default=default)
 
-    async def build(self, project: "Project") -> ft.Control:
+    async def build(self, project: Project) -> ft.Control:
         self._control = ft.Checkbox(
             label=self.label,
             value=bool(self.default),
@@ -115,7 +115,7 @@ class FloatSelector(ReportParamBase):
     def __init__(self, label: str | None = None, default: float = 0.0):
         super().__init__(label=label, default=default)
 
-    async def build(self, project: "Project") -> ft.Control:
+    async def build(self, project: Project) -> ft.Control:
         self._control = ft.TextField(
             label=self.label,
             value=str(self.default),
@@ -131,7 +131,7 @@ class IntSelector(ReportParamBase):
     def __init__(self, label: str | None = None, default: int = 0):
         super().__init__(label=label, default=default)
 
-    async def build(self, project: "Project") -> ft.Control:
+    async def build(self, project: Project) -> ft.Control:
         self._control = ft.TextField(
             label=self.label,
             value=str(self.default),
@@ -147,7 +147,7 @@ class SubsetSelector(ReportParamBase):
     def __init__(self, label: str | None = None, default: str | None = None):
         super().__init__(label=label, default=default)
 
-    async def build(self, project: "Project") -> ft.Control:
+    async def build(self, project: Project) -> ft.Control:
         subsets = await project.get_subsets()
         options = [ft.DropdownOption(key=s.name, text=s.name) for s in subsets]
         initial = self.default
@@ -174,7 +174,7 @@ class MultiSubsetSelector(ReportParamBase):
         super().__init__(label=label, default=default or [])
         self._checkboxes: dict[str, ft.Checkbox] = {}
 
-    async def build(self, project: "Project") -> ft.Control:
+    async def build(self, project: Project) -> ft.Control:
         subsets = await project.get_subsets()
         self._checkboxes = {}
         checkboxes = []
@@ -208,7 +208,7 @@ class StringSelector(ReportParamBase):
     def __init__(self, label: str | None = None, default: str = ""):
         super().__init__(label=label, default=default)
 
-    async def build(self, project: "Project") -> ft.Control:
+    async def build(self, project: Project) -> ft.Control:
         self._control = ft.TextField(
             label=self.label,
             value=str(self.default),
@@ -240,7 +240,7 @@ class LFQSelector(ReportParamBase):
         self._method_dropdown: ft.Dropdown | None = None
         self._value_radio: ft.RadioGroup | None = None
 
-    async def build(self, project: "Project") -> ft.Control:
+    async def build(self, project: Project) -> ft.Control:
         """Строит Dropdown + RadioGroup."""
         method_options = [
             ft.DropdownOption(key="emPAI", text="emPAI"),
@@ -318,7 +318,7 @@ class ReportForm(_CoreReportForm):
         values = form.get_values()        # dict for _generate_impl
     """
 
-    def __init__(self, project: "Project"):
+    def __init__(self, project: Project):
         super().__init__(project)
         self._built = False
 

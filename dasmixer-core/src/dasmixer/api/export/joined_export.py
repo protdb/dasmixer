@@ -1,7 +1,7 @@
 """Export joined (query-joined) data from project to CSV / XLSX."""
 
 import os
-from typing import Callable, Awaitable
+from collections.abc import Awaitable, Callable
 
 import pandas as pd
 

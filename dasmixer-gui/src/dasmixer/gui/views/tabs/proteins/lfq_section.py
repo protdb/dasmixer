@@ -1,14 +1,15 @@
 """LFQ section - label-free quantification calculation."""
 
+
 import flet as ft
-import asyncio
+from dasmixer.gui.views.tabs.proteins.dialogs.lfq_abs_references_dialog import (
+    LFQAbsReferencesDialog,
+)
+
+from dasmixer.api.calculations.proteins.sempai import SUPPORTED_ENZYMES
+from dasmixer.utils import logger
 
 from .base_section import BaseSection
-from dasmixer.utils import logger
-from dasmixer.gui.views.tabs.peptides.dialogs.progress_dialog import ProgressDialog
-from dasmixer.gui.views.tabs.proteins.dialogs.lfq_abs_references_dialog import LFQAbsReferencesDialog
-from dasmixer.api.calculations.proteins.sempai import SUPPORTED_ENZYMES, ProteomicSample
-from dasmixer.api.calculations.proteins.lfq import calculate_lfq
 
 
 class LFQSection(BaseSection):

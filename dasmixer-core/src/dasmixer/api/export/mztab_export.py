@@ -1,10 +1,9 @@
 """Export proteomics data to mzTab 1.0 format using mztabwriter."""
 
-from typing import Awaitable, Callable
+from collections.abc import Awaitable, Callable
 
 import pandas as pd
 from mztabwriter import CvParam, MzTabDocument
-
 
 UNLABELED_REAGENT = CvParam("MS", "MS:1002038", "unlabeled sample")
 DASMIXER_SOFTWARE = CvParam("MS", "MS:1001207", "DASMixer")

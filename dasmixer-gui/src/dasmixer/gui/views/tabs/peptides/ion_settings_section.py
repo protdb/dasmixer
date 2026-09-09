@@ -1,10 +1,11 @@
 """Ion matching settings section."""
 
 import flet as ft
-
 from dasmixer.api.calculations.spectra.ion_match import IonMatchParameters
-from .base_section import BaseSection
+
 from dasmixer.utils import logger
+
+from .base_section import BaseSection
 
 
 class IonSettingsSection(BaseSection):
@@ -137,7 +138,7 @@ class IonSettingsSection(BaseSection):
 
         except Exception as ex:
             logger.exception(f"Error loading ion settings: {ex}")
-            self.show_error(f"Error loading ion settings: {str(ex)}")
+            self.show_error(f"Error loading ion settings: {ex!s}")
 
     async def save_settings(self):
         """Save ion settings to project."""

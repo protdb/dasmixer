@@ -3,22 +3,23 @@
 Delegates to IonCoverageAction for the heavy lifting.
 """
 
-import math
-import os
-import flet as ft
 import asyncio
+import os
 from concurrent.futures import ProcessPoolExecutor
-from typing import Literal, cast
 
+import flet as ft
+from dasmixer.api.calculations.spectra.coverage_worker import (
+    process_peptide_match_batch,
+)
 from dasmixer.api.calculations.spectra.ion_match import IonMatchParameters
-from dasmixer.api.calculations.spectra.coverage_worker import process_peptide_match_batch
-from dasmixer.api.calculations.spectra.identification_processor import process_identificatons_batch
-from dasmixer.api.project.project import Project
 from dasmixer.api.config import config as _config
-from .shared_state import PeptidesTabState
-from .dialogs.progress_dialog import ProgressDialog
+from dasmixer.api.project.project import Project
 from dasmixer.gui.utils import show_snack
+
 from dasmixer.utils import logger
+
+from .dialogs.progress_dialog import ProgressDialog
+from .shared_state import PeptidesTabState
 
 
 class IonCalculations:

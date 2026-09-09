@@ -1,6 +1,7 @@
 """Dialog for configuring project merge/import options."""
 
 import asyncio
+
 import flet as ft
 
 

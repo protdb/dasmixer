@@ -1,7 +1,6 @@
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
 
 import pandas as pd
-
 from dasmixer.utils.logger import logger
 
 

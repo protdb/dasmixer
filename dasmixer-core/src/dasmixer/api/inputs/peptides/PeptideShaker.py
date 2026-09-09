@@ -1,14 +1,13 @@
 import logging
-from typing import AsyncIterator
-from copy import deepcopy
 import re
+from collections.abc import AsyncIterator
+from copy import deepcopy
 
 import pandas as pd
-from pyteomics.proforma import parse, GenericModification, to_proforma
 from pyteomics.mass import calculate_mass
+from pyteomics.proforma import GenericModification, to_proforma
 
-from .table_importer import SimpleTableImporter, TableImporter, ColumnRenames
-
+from .table_importer import ColumnRenames, TableImporter
 
 terminal_ptm = {
     'NH2': 'Amidated',
@@ -44,7 +43,7 @@ class PeptideShakerImporter(TableImporter):
         if len(parts) == 3:
             start, seq, end = parts
         elif len(parts) == 2:
-            if parts[0] in terminal_ptm.keys():
+            if parts[0] in terminal_ptm:
                 start, seq = parts
                 end = None
             else:
@@ -122,7 +121,7 @@ class PeptideShakerImporter(TableImporter):
 
         for _, row in df.iterrows():
             pf = deepcopy(seqs.get(row['Sequence'], []))
-            print('pf', pf)
+            logging.debug("pf=%s", pf)
             if len(pf) == 0:
                 proformas.append(None)
             elif len(pf) == 1:
@@ -134,7 +133,7 @@ class PeptideShakerImporter(TableImporter):
         bad_pfs = df.query("proforma != proforma")
         if len(bad_pfs) > 0:
             logging.warning(f"reqorlds with bat proforma: {len(bad_pfs)}")
-            print(bad_pfs.to_markdown(index=False))
+            logging.debug("bad_pfs:\n%s", bad_pfs.to_markdown(index=False))
         return df.query("proforma == proforma").copy()
 
     async def parse_batch(
@@ -143,18 +142,18 @@ class PeptideShakerImporter(TableImporter):
     ) -> AsyncIterator[pd.DataFrame]:
         result = await self.get_merged_data()
         rename_cols = renames.mapping
-        print(rename_cols)
-        print(result.columns)
-        print(result.head(10).to_markdown(index=False))
+        logging.debug("rename_cols=%s", rename_cols)
+        logging.debug("result.columns=%s", result.columns)
+        logging.debug("result head:\n%s", result.head(10).to_markdown(index=False))
         for col in rename_cols.keys():
             if col not in result.columns:
                 result[col] = None
         result.rename(columns=rename_cols, inplace=True)
-        print(result.columns)
-        print([col for col in rename_cols.keys() if col in result.columns])
+        logging.debug("result.columns after rename=%s", result.columns)
+        logging.debug("rename_cols present=%s", [col for col in rename_cols.keys() if col in result.columns])
         sheet_df = result[[col for col in rename_cols.values() if col in result.columns]]
         cursor = 0
-        print(sheet_df.head(10).to_markdown(index=False))
+        logging.debug("sheet_df head:\n%s", sheet_df.head(10).to_markdown(index=False))
         while cursor < len(sheet_df):
             batch = sheet_df[cursor:cursor + batch_size]
             yield batch

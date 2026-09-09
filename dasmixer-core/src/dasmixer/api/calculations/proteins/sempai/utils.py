@@ -2,15 +2,16 @@
 Utility functions for semPAI library.
 """
 
+import logging
 import pickle
 import re
 from dataclasses import dataclass
-from typing import List, Dict, Any, Optional
-import logging
+from typing import Any
 
-from pyteomics import parser, mass
+from pyteomics import mass, parser
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
+
 from .exceptions import ValidationError
 
 logger = logging.getLogger(__name__)
@@ -59,14 +60,14 @@ class DigestionParams:
     enzyme: str = 'trypsin'
     min_peptide_length: int = 6
     max_peptide_length: int = 30
-    min_peptide_mass: Optional[float] = None
-    max_peptide_mass: Optional[float] = None
-    min_intensity_threshold: Optional[float] = None
+    min_peptide_mass: float | None = None
+    max_peptide_mass: float | None = None
+    min_intensity_threshold: float | None = None
     max_cleavage_sites: int = 0
-    detection_model: Optional[LogisticRegression] = None
-    feature_scaler: Optional[StandardScaler] = None
-    calibration_protein: Optional[str] = None
-    calibration_stats: Optional[Dict[str, float]] = None
+    detection_model: LogisticRegression | None = None
+    feature_scaler: StandardScaler | None = None
+    calibration_protein: str | None = None
+    calibration_stats: dict[str, float] | None = None
     
     def __post_init__(self):
         """Validate enzyme after initialization."""
@@ -87,7 +88,7 @@ class DigestionParams:
         return SUPPORTED_ENZYMES.get(enzyme_lower, 'trypsin')
 
 
-def get_supported_enzymes() -> Dict[str, str]:
+def get_supported_enzymes() -> dict[str, str]:
     """
     Get dictionary of supported enzymes.
     
@@ -118,7 +119,7 @@ def digest_protein(
     sequence: str, 
     enzyme: str = "trypsin", 
     max_cleavage_sites: int = 0
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """
     Perform theoretical protein digestion using pyteomics.
     
@@ -178,7 +179,7 @@ def digest_protein(
     return list(peptides_map.values())
 
 
-def calculate_peptide_features(sequence: str) -> Dict[str, float]:
+def calculate_peptide_features(sequence: str) -> dict[str, float]:
     """
     Calculate features for a peptide sequence using pyteomics.
     
@@ -232,10 +233,10 @@ def calculate_peptide_features(sequence: str) -> Dict[str, float]:
 
 
 def match_observed_peptides(
-    observed_peptides: List[str],
-    intensities: List[float],
-    theoretical_peptides: List[Dict[str, Any]]
-) -> List[Dict[str, Any]]:
+    observed_peptides: list[str],
+    intensities: list[float],
+    theoretical_peptides: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
     """
     Match observed peptides with theoretical peptides.
     
@@ -326,9 +327,9 @@ def validate_peptide_sequence(sequence: str) -> bool:
 
 
 def calculate_detection_coverage(
-    observed_peptides: List[str],
-    theoretical_peptides: List[Dict[str, Any]]
-) -> Dict[str, float]:
+    observed_peptides: list[str],
+    theoretical_peptides: list[dict[str, Any]]
+) -> dict[str, float]:
     """
     Calculate sequence coverage metrics.
     

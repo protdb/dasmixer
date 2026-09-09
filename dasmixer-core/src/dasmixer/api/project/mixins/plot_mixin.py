@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-import json
 import gzip
+import json
 import pickle
 from datetime import datetime
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     import plotly.graph_objects as go
@@ -93,7 +93,7 @@ class PlotMixin:
         self,
         spectrum_id: int,
         get_matched: bool = False,
-        header_fields: Optional[list[str]] = None,
+        header_fields: list[str] | None = None,
     ) -> dict:
         """
         Get all data needed to plot spectrum with all identifications.
@@ -259,7 +259,7 @@ class PlotMixin:
         self,
         plot_type: str,
         figure: go.Figure,
-        settings: Optional[dict] = None
+        settings: dict | None = None
     ) -> int:
         """
         Save a plot to the database.

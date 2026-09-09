@@ -7,9 +7,9 @@ from functools import partial
 
 import flet as ft
 import plotly.graph_objects as go
+from dasmixer.gui.utils import show_snack
 
 from dasmixer.utils import logger
-from dasmixer.gui.utils import show_snack
 
 
 def show_webview(fig: go.Figure, title: str, max_width: int = 1280, max_height: int = 720):

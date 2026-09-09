@@ -1,18 +1,19 @@
 """Main Peptides Tab - composition of sections."""
 
 import flet as ft
-
 from dasmixer.api.project.project import Project
 from dasmixer.gui.components.base_table_and_plot_view import BaseTableAndPlotView
-from .shared_state import PeptidesTabState
-from .fasta_section import FastaSection
-from .tool_settings_section import ToolSettingsSection
-from .ion_settings_section import IonSettingsSection
-from .actions_section import ActionsSection
-from .peptide_ion_table_view import PeptideIonTableView
-from .peptide_ion_plot_view import PeptideIonPlotView
-from .ion_calculations import IonCalculations
+
 from dasmixer.utils import logger
+
+from .actions_section import ActionsSection
+from .fasta_section import FastaSection
+from .ion_calculations import IonCalculations
+from .ion_settings_section import IonSettingsSection
+from .peptide_ion_plot_view import PeptideIonPlotView
+from .peptide_ion_table_view import PeptideIonTableView
+from .shared_state import PeptidesTabState
+from .tool_settings_section import ToolSettingsSection
 
 
 class PeptidesTab(ft.Container):

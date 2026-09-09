@@ -52,7 +52,6 @@ class BaseImporter(ABC):
         Returns:
             True if file is valid for this importer, False otherwise
         """
-        pass
     
     async def get_metadata(self) -> dict:
         """

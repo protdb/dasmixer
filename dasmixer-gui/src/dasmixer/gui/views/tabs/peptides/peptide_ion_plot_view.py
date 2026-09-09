@@ -2,12 +2,14 @@
 
 import flet as ft
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-
-from dasmixer.gui.components.base_plot_view import BasePlotView
-from dasmixer.api.project.project import Project
-from dasmixer.api.project.mixins.plot_mixin import HEADER_FIELD_OPTIONS, DEFAULT_HEADER_FIELDS
 from dasmixer.api.calculations.spectra.plot_flow import make_full_spectrum_plot
+from dasmixer.api.project.mixins.plot_mixin import (
+    DEFAULT_HEADER_FIELDS,
+    HEADER_FIELD_OPTIONS,
+)
+from dasmixer.api.project.project import Project
+from dasmixer.gui.components.base_plot_view import BasePlotView
+
 from dasmixer.utils import logger
 
 

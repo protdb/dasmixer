@@ -1,12 +1,11 @@
 """FASTA format parser for protein sequences."""
 
 import re
+from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import AsyncIterator
-import pandas as pd
-import aiofiles
-from uniprot_meta_tool import UniprotData
 
+import aiofiles
+import pandas as pd
 from dasmixer.utils.logger import logger
 
 
@@ -173,7 +172,7 @@ class FastaParser:
                 return protein_id, gene
         
         # Fallback: use first word after '>' as ID
-        header = header_line[1:] if header_line.startswith('>') else header_line
+        header = header_line.removeprefix('>')
         protein_id = header.split()[0] if header else 'UNKNOWN'
         return protein_id, None
     
