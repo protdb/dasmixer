@@ -30,8 +30,10 @@ from dasmixer.gui.components.report_form import (
 
 class PCAReportForm(ReportForm):
     subsets = MultiSubsetSelector(label="Subsets to include")
+    group_by = EnumSelector(values=["Sample", "Protein"], default="Sample", label="Group data points by")
     lfq = LFQSelector(label="LFQ", default_method="emPAI", default_value_type="rel")
-    show_labels = BoolSelector(default=True, label="Show sample labels")
+    show_labels = BoolSelector(default=True, label="Show point labels")
+    top_n_proteins = IntSelector(default=100, label="Top-N proteins by variance (Protein mode only)")
     include_outliers = BoolSelector(default=False, label="Include outlier samples")
 
 

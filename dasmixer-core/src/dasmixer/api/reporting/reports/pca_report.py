@@ -42,30 +42,30 @@ def _assign_colors(subsets: list[str], color_map: dict[str, str | None]) -> dict
 
 def _build_pca_figure(
     matrix: pd.DataFrame,
-    sample_labels: pd.Series,
+    point_labels: pd.Series,
     subset_labels: pd.Series,
     colors: dict[str, str],
     explained: np.ndarray,
     show_labels: bool = True,
+    entity_name: str = "Samples",
 ) -> go.Figure:
     """
     Build 2-D PCA scatter plot.
 
     Args:
-        matrix: shape (n_samples, 2) — PC1, PC2 scores.
-        sample_labels: sample names (index-aligned with matrix).
+        matrix: shape (n_points, 2) — PC1, PC2 scores.
+        point_labels: labels for each point (index-aligned with matrix).
         subset_labels: subset names (index-aligned with matrix).
         colors: {subset_name: hex_color}.
         explained: explained variance ratio array (at least 2 elements).
+        entity_name: label for the plot title (e.g. "Samples" or "Proteins").
     """
-    import plotly.graph_objects as go
-
     fig = go.Figure()
     for subset in subset_labels.unique():
         mask = (subset_labels == subset).values
         x_vals = [float(v) for v in matrix.loc[mask, "PC1"]]
         y_vals = [float(v) for v in matrix.loc[mask, "PC2"]]
-        text_vals = [str(v) for v in sample_labels.values[mask]]
+        text_vals = [str(v) for v in point_labels.values[mask]]
         fig.add_trace(go.Scatter(
             x=x_vals,
             y=y_vals,
@@ -80,7 +80,7 @@ def _build_pca_figure(
     pct1 = explained[0] * 100
     pct2 = explained[1] * 100
     fig.update_layout(
-        title="PCA — Samples",
+        title=f"PCA — {entity_name}",
         xaxis_title=f"PC1 ({pct1:.1f}% variance)",
         yaxis_title=f"PC2 ({pct2:.1f}% variance)",
         legend_title="Subset",
@@ -92,6 +92,7 @@ def _build_pca_figure(
 def _build_roc_figure(
     roc_data: list[dict],
     colors: dict[str, str],
+    entity_name: str = "Samples",
 ) -> go.Figure:
     """
     Build ROC curves figure.
@@ -99,9 +100,8 @@ def _build_roc_figure(
     Args:
         roc_data: list of {subset, fpr, tpr, auc}.
         colors: {subset_name: hex_color}.
+        entity_name: label for the legend/title context.
     """
-    import plotly.graph_objects as go
-
     fig = go.Figure()
     # Diagonal reference line
     fig.add_trace(go.Scatter(
@@ -122,7 +122,7 @@ def _build_roc_figure(
             line={"color": colors.get(subset, "#888888"), "width": 2},
         ))
     fig.update_layout(
-        title="ROC / AUC — per subset (one-vs-rest)",
+        title=f"ROC / AUC — per subset (one-vs-rest, {entity_name.lower()})",
         xaxis_title="False Positive Rate",
         yaxis_title="True Positive Rate",
         xaxis={"range": [0, 1]},
@@ -236,6 +236,105 @@ def _compute_roc(
     return results
 
 
+def _protein_label(row: pd.Series) -> str:
+    """Pick the best available display label for a protein row."""
+    for col in ("gene", "name", "fasta_name", "protein_id"):
+        val = row.get(col)
+        if val is not None and str(val).strip():
+            return str(val)
+    return str(row.get("protein_id", "?"))
+
+
+def _build_protein_group_matrix(
+    df: pd.DataFrame,
+    measure: str,
+    top_n_proteins: int = 0,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Build a (protein × group) matrix for PCA.
+
+    Each row is a (protein_id, subset) pair. Columns are ``rep_1..rep_N``
+    where the values are the LFQ ``measure`` of that protein inside the
+    given subset, **sorted in descending order** (rep_1 = maximum).
+
+    Rows with fewer replicates than ``N`` are padded with the mean of their
+    own measured values.
+
+    Args:
+        df: long-format DataFrame from ``get_protein_quantification_data``
+            (must contain at least: protein_id, subset, gene, name,
+            fasta_name, and the ``measure`` column).
+        measure: column name in ``df`` holding the LFQ value.
+        top_n_proteins: if > 0, keep only the N proteins with the highest
+            variance of ``measure`` across all rows in ``df``.
+
+    Returns:
+        (wide, meta) where:
+        - ``wide``: index = ``"protein_id||subset"`` strings,
+          columns = ``rep_1 .. rep_N``, values = float.
+        - ``meta``: same row order, columns = ``protein_id, subset, label``.
+
+    Raises:
+        ValueError: if no usable data remains after filtering.
+    """
+    if df.empty:
+        raise ValueError("No quantification data available for Protein mode.")
+
+    # Keep only rows with an actual measurement.
+    df = df.dropna(subset=[measure]).copy()
+    if df.empty:
+        raise ValueError(
+            f"No rows with a non-null '{measure}' value remain. "
+            "Cannot build protein × group matrix."
+        )
+
+    # --- Top-N proteins by variance across all selected samples ---
+    if top_n_proteins and top_n_proteins > 0:
+        variances = df.groupby("protein_id")[measure].var(ddof=0)
+        variances = variances.fillna(0.0)
+        if len(variances) > top_n_proteins:
+            top_ids = variances.nlargest(top_n_proteins).index
+            df = df[df["protein_id"].isin(top_ids)]
+            if df.empty:
+                raise ValueError(
+                    f"No proteins left after applying top_n_proteins={top_n_proteins}."
+                )
+
+    # --- Protein label map (gene → name → fasta_name → protein_id) ---
+    label_map: dict[str, str] = {}
+    for pid, row in df.groupby("protein_id", sort=False).first().iterrows():
+        label_map[str(pid)] = _protein_label(row)
+
+    # --- Group by (protein_id, subset), sort values descending ---
+    grouped = (
+        df.groupby(["protein_id", "subset"], sort=False)[measure]
+        .apply(lambda s: sorted(s.dropna().tolist(), reverse=True))
+    )
+    if grouped.empty:
+        raise ValueError("No (protein, subset) groups with data could be built.")
+
+    max_reps = grouped.apply(len).max()
+    if max_reps == 0:
+        raise ValueError("All (protein, subset) groups are empty after filtering.")
+
+    rows: list[list[float]] = []
+    meta_rows: list[tuple[str, str, str]] = []
+    for (pid, subset), vals in grouped.items():
+        if not vals:
+            continue
+        row_mean = float(np.mean(vals))
+        padded = list(vals) + [row_mean] * (max_reps - len(vals))
+        rows.append(padded)
+        meta_rows.append((str(pid), str(subset), label_map.get(str(pid), str(pid))))
+
+    rep_cols = [f"rep_{i + 1}" for i in range(max_reps)]
+    index_keys = [f"{pid}||{subset}" for pid, subset, _ in meta_rows]
+    wide = pd.DataFrame(rows, columns=rep_cols, index=index_keys, dtype=float)
+    meta = pd.DataFrame(meta_rows, columns=["protein_id", "subset", "label"], index=index_keys)
+
+    return wide, meta
+
+
 # ---------------------------------------------------------------------------
 # Report class
 # ---------------------------------------------------------------------------
@@ -246,15 +345,15 @@ class PCAReport(BaseReport):
     icon = Icons.SCATTER_PLOT
     parameters = None
 
-    async def _get_quant_matrix(
-        self, lfq_type: str, lfq_measure: str, selected_subsets: list[str],
+    async def _fetch_quant_df(
+        self, lfq_type: str, selected_subsets: list[str],
         exclude_outliers: bool = True,
-    ) -> tuple[pd.DataFrame, pd.DataFrame]:
+    ) -> pd.DataFrame:
         """
-        Build wide sample × protein matrix and return (wide_df, meta_df).
+        Fetch raw long-format quantification DataFrame.
 
-        meta_df has columns [sample, subset] indexed by sample name.
-        wide_df rows = sample names, columns = protein_id, values = lfq_measure.
+        Returns the DataFrame from ``project.get_protein_quantification_data``
+        filtered by LFQ method, subsets and outlier flag — with no pivoting.
         """
         df = await self.project.get_protein_quantification_data(
             method=lfq_type,
@@ -266,6 +365,21 @@ class PCAReport(BaseReport):
                 f"No quantification data found for method '{lfq_type}'. "
                 "Run protein identification and LFQ calculation first."
             )
+        return df
+
+    async def _get_quant_matrix(
+        self, lfq_type: str, lfq_measure: str, selected_subsets: list[str],
+        exclude_outliers: bool = True,
+    ) -> tuple[pd.DataFrame, pd.DataFrame]:
+        """
+        Build wide sample × protein matrix and return (wide_df, meta_df).
+
+        meta_df has columns [sample, subset] indexed by sample name.
+        wide_df rows = sample names, columns = protein_id, values = lfq_measure.
+        """
+        df = await self._fetch_quant_df(
+            lfq_type, selected_subsets, exclude_outliers=exclude_outliers
+        )
 
         # Pivot to wide format
         wide = df.pivot_table(
@@ -297,34 +411,61 @@ class PCAReport(BaseReport):
         show_labels = params.get("show_labels", False)
         include_outliers = bool(params.get("include_outliers", False))
         exclude_outliers = not include_outliers
+        group_by = params.get("group_by", "Sample")
+        top_n_proteins = int(params.get("top_n_proteins", 100))
 
-        wide, meta = await self._get_quant_matrix(
-            lfq_type, lfq_measure, selected_subsets, exclude_outliers=exclude_outliers
-        )
-
-        # Align meta to wide rows (some samples might have no quant data)
-        meta = meta.reindex(wide.index)
-
-        # Drop samples with unknown subset
-        valid_mask = meta["subset"].notna()
-        wide = wide.loc[valid_mask]
-        meta = meta.loc[valid_mask]
-
-        # Drop samples with no quantification value across any protein — they
-        # cannot be positioned in PCA space.
-        row_mask = ~wide.isna().all(axis=1)
-        wide = wide.loc[row_mask]
-        meta = meta.reindex(wide.index)
-
-        if len(wide) < 2:
-            raise ValueError(
-                "At least 2 samples with quantification data are required for PCA."
+        if group_by == "Protein":
+            # --- Protein × Group mode ---
+            df = await self._fetch_quant_df(
+                lfq_type, selected_subsets, exclude_outliers=exclude_outliers
             )
+            wide, meta = _build_protein_group_matrix(
+                df, lfq_measure, top_n_proteins=top_n_proteins
+            )
+            point_labels = meta["label"]
+            group_labels = meta["subset"]
+            entity_name = "Proteins"
+            scores_table_id_col = "Protein ID"
+            scores_table_label_col = "Gene"
+            scores_table_ids = meta["protein_id"].values
+            scores_table_name = "Protein PC Scores"
+        else:
+            # --- Sample mode (original behaviour) ---
+            wide, meta = await self._get_quant_matrix(
+                lfq_type, lfq_measure, selected_subsets, exclude_outliers=exclude_outliers
+            )
+
+            # Align meta to wide rows (some samples might have no quant data)
+            meta = meta.reindex(wide.index)
+
+            # Drop samples with unknown subset
+            valid_mask = meta["subset"].notna()
+            wide = wide.loc[valid_mask]
+            meta = meta.loc[valid_mask]
+
+            # Drop samples with no quantification value across any protein — they
+            # cannot be positioned in PCA space.
+            row_mask = ~wide.isna().all(axis=1)
+            wide = wide.loc[row_mask]
+            meta = meta.reindex(wide.index)
+
+            if len(wide) < 2:
+                raise ValueError(
+                    "At least 2 samples with quantification data are required for PCA."
+                )
+
+            point_labels = pd.Series(wide.index, index=wide.index)
+            group_labels = meta["subset"]
+            entity_name = "Samples"
+            scores_table_id_col = "Sample"
+            scores_table_label_col = "Subset"
+            scores_table_ids = wide.index
+            scores_table_name = "Sample PC Scores"
 
         # Build color map from DB
         subsets_obj = await self.project.get_subsets()
         color_map: dict[str, str | None] = {s.name: s.display_color for s in subsets_obj}
-        unique_subsets = list(meta["subset"].unique())
+        unique_subsets = list(group_labels.unique())
         colors = _assign_colors(unique_subsets, color_map)
 
         # PCA
@@ -332,14 +473,14 @@ class PCAReport(BaseReport):
         scores_df, pca_obj = _compute_pca(wide, n_components=n_components)
         explained = pca_obj.explained_variance_ratio_
 
-        sample_labels = pd.Series(wide.index, index=wide.index)
-        subset_labels = meta["subset"]
-
-        pca_fig = _build_pca_figure(scores_df, sample_labels, subset_labels, colors, explained, show_labels=show_labels)
+        pca_fig = _build_pca_figure(
+            scores_df, point_labels, group_labels, colors, explained,
+            show_labels=show_labels, entity_name=entity_name,
+        )
 
         # ROC/AUC
-        roc_data = _compute_roc(scores_df, subset_labels)
-        roc_fig = _build_roc_figure(roc_data, colors)
+        roc_data = _compute_roc(scores_df, group_labels)
+        roc_fig = _build_roc_figure(roc_data, colors, entity_name=entity_name)
 
         # --- Tables ---
 
@@ -360,17 +501,17 @@ class PCAReport(BaseReport):
         else:
             auc_df = pd.DataFrame(columns=["Subset", "AUC (PC1, one-vs-rest)"])
 
-        # Sample scores table
+        # Scores table
         scores_export = scores_df.copy()
-        scores_export.insert(0, "Sample", wide.index)
-        scores_export.insert(1, "Subset", subset_labels.values)
+        scores_export.insert(0, scores_table_id_col, list(scores_table_ids))
+        scores_export.insert(1, scores_table_label_col, list(group_labels.values))
 
         return (
             [("PCA", pca_fig), ("ROC / AUC", roc_fig)],
             [
                 ("PCA Components", components_df, True),
                 ("AUC by Subset", auc_df, True),
-                ("Sample PC Scores", scores_export, False),
+                (scores_table_name, scores_export, False),
             ],
         )
 
