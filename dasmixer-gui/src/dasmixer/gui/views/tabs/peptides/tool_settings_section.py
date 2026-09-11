@@ -10,6 +10,23 @@ from .base_section import BaseSection
 _ALL_PTM_CODES: list[str] = [ptm.code for ptm in PTMS]
 _DEFAULT_PTM_CODES: list[str] = sorted(DEFAULT_PTM_CODES)
 
+
+def _format_ptm_label(ptm) -> str:
+    """Format PTM label: 'Code (sites, mass)'."""
+    parts: list[str] = []
+    if ptm.attach_to:
+        parts.append(",".join(ptm.attach_to) if isinstance(ptm.attach_to, list) else str(ptm.attach_to))
+    if ptm.n_term:
+        parts.append("N-term")
+    if ptm.c_term:
+        parts.append("C-term")
+    if ptm.mono_mass is not None:
+        parts.append(f"{ptm.mono_mass:g}")
+    return f"{ptm.code} ({', '.join(parts)})" if parts else ptm.code
+
+
+_PTM_LABELS: dict[str, str] = {ptm.code: _format_ptm_label(ptm) for ptm in PTMS}
+
 class ToolSettingsSection(BaseSection):
     """Tool-specific settings configuration."""
 
@@ -439,10 +456,10 @@ class ToolSettingsSection(BaseSection):
 
         current_selected: list[str] = list(controls['ptm_selected'])
 
-        # Build checkboxes — one per PTM
+        # Build checkboxes — one per PTM, with sites and mass in label
         checkboxes: dict[str, ft.Checkbox] = {
             code: ft.Checkbox(
-                label=code,
+                label=_PTM_LABELS.get(code, code),
                 value=(code in current_selected),
             )
             for code in _ALL_PTM_CODES
