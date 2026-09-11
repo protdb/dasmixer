@@ -460,7 +460,7 @@ class ImportPatternDialog:
                         options=sf_options,
                         value=str(paired_sf_id) if paired_sf_id else None,
                         width=200,
-                        on_change=lambda e, en=entry: setattr(en, "spectra_file_id",
+                        on_select=lambda e, en=entry: setattr(en, "spectra_file_id",
                             int(e.control.value) if e.control.value else None),
                     )
                     entry.spectra_dropdown = sf_dropdown
