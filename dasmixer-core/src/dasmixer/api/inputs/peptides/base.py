@@ -4,8 +4,9 @@ from abc import abstractmethod
 from collections.abc import AsyncIterator
 
 import pandas as pd
-from dasmixer.api import Project
 from dasmixer.api.project.dataclasses import Protein
+
+from dasmixer.api import Project
 
 from ..base import BaseImporter
 

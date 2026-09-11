@@ -1,9 +1,10 @@
 import re
 
 import pandas as pd
-from dasmixer.api.project import Protein
 from dasmixer.utils.logger import logger
 from pyteomics.proforma import GenericModification, parse, to_proforma
+
+from dasmixer.api.project import Protein
 
 from .table_importer import ColumnRenames, SimpleTableImporter
 

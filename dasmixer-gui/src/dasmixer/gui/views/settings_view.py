@@ -7,6 +7,7 @@ import typer
 from dasmixer.api.config import config
 from dasmixer.gui.components.color_picker import ColorPickerField
 from dasmixer.gui.utils import open_folder, show_snack
+
 from dasmixer.utils import logger
 
 
