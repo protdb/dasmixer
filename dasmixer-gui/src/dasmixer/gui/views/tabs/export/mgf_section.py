@@ -8,7 +8,6 @@ from dasmixer.api.export.shared_state import ExportTabState
 from dasmixer.gui.components.progress_dialog import ProgressDialog
 from dasmixer.gui.components.sample_select_dialog import SampleSelectDialog
 from dasmixer.gui.utils import show_snack
-
 from dasmixer.utils import logger
 
 
@@ -125,6 +124,19 @@ class MgfExportSection(ft.Card):
             value=self.state.mgf_add_timestamp,
         )
 
+        self._sequence_contains_field = ft.TextField(
+            label="Sequence contains",
+            value=self.state.mgf_sequence_contains,
+            width=250,
+            hint_text="Filter by substring in identification sequence",
+        )
+        self._file_suffix_field = ft.TextField(
+            label="File Suffix",
+            value=self.state.mgf_file_suffix,
+            width=200,
+            hint_text="Appended to file name (before timestamp)",
+        )
+
         self._export_btn = ft.ElevatedButton(
             content=ft.Text("Export"),
             icon=ft.Icons.DOWNLOAD,
@@ -152,6 +164,7 @@ class MgfExportSection(ft.Card):
             ft.Text("Merge MGF:", weight=ft.FontWeight.W_600),
             self._merge_mode_group,
             self._cb_add_timestamp,
+            ft.Row([self._sequence_contains_field, self._file_suffix_field], spacing=10),
             ft.Row([self._export_btn], alignment=ft.MainAxisAlignment.END),
         ]
 
@@ -200,6 +213,8 @@ class MgfExportSection(ft.Card):
         self.state.mgf_replace_scans = self._cb_replace_scans.value
         self.state.mgf_merge_mode = self._merge_mode_group.value
         self.state.mgf_add_timestamp = self._cb_add_timestamp.value
+        self.state.mgf_sequence_contains = self._sequence_contains_field.value or ""
+        self.state.mgf_file_suffix = self._file_suffix_field.value or ""
 
         folder = await ft.FilePicker().get_directory_path(
             dialog_title="Select Export Directory",
@@ -232,6 +247,8 @@ class MgfExportSection(ft.Card):
                 replace_scans=self.state.mgf_replace_scans,
                 merge_mode=self.state.mgf_merge_mode,
                 add_timestamp=self.state.mgf_add_timestamp,
+                sequence_contains=self.state.mgf_sequence_contains or None,
+                file_suffix=self.state.mgf_file_suffix or None,
             )
             progress_dlg.open = False
             self._page().update()

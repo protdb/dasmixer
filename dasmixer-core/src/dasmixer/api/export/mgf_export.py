@@ -106,89 +106,60 @@ async def _get_sample(project, sample_id: int):
     return None
 
 
-async def _get_preferred_identification(
-    project, spectrum_id: int, tool_id: int | None
-) -> dict | None:
-    """Возвращает preferred-идентификацию для спектра (по tool_id если задан)."""
-    if tool_id is not None:
-        rows = await project.execute_query(
-            "SELECT * FROM identification "
-            "WHERE spectre_id = ? AND tool_id = ? AND is_preferred = 1 LIMIT 1",
-            [spectrum_id, tool_id],
-        )
-    else:
-        rows = await project.execute_query(
-            "SELECT * FROM identification "
-            "WHERE spectre_id = ? AND is_preferred = 1 LIMIT 1",
-            [spectrum_id],
-        )
-    return rows[0] if rows else None
-
-
-async def _iter_spectra_batched(project, query: str, params: list, batch_size: int):
-    """
-    Асинхронный генератор, возвращающий строки батчами.
-    Каждый элемент — dict с полями spectre (без BLOB).
-    """
-    cursor = await project._execute(query, params)
-    col_names = [desc[0] for desc in cursor.description]
-    while True:
-        rows = await cursor.fetchmany(batch_size)
-        if not rows:
-            break
-        for row in rows:
-            yield dict(zip(col_names, row))
-    await cursor.close()
-
-
 async def _write_mgf_to_file(
     project,
-    output_file,          # text-mode file-like object (открытый снаружи)
-    spectrum_ids: list[int],
-    need_ident: bool,
+    output_file,          # text-mode file-like object (opened externally)
+    sf_ids: list[int],
+    by: str,
     tool_id: int | None,
+    need_ident: bool,
     write_offset: bool,
     write_spectra_charge: bool,
     write_seq: bool,
     seq_type: str,
+    sequence_contains: str | None,
     replace_scans: bool = False,
     batch_size: int = _BATCH_SIZE,
-) -> None:
+) -> int:
     """
-    Читает спектры батчами по spectrum_ids, формирует MGF и пишет в output_file.
+    Read spectra in batches via get_full_spectrum_for_export, build MGF and write to output_file.
+    Returns the number of exported spectra.
     """
     output_file.write("# Exported from DASMixer\n")
-    for i in range(0, len(spectrum_ids), batch_size):
-        batch_ids = spectrum_ids[i: i + batch_size]
+    total_written = 0
+    offset = 0
+    while True:
+        batch = await project.get_full_spectrum_for_export(
+            sf_ids=sf_ids, by=by, tool_id=tool_id, need_ident=need_ident,
+            sequence_contains=sequence_contains, limit=batch_size, offset=offset,
+        )
+        if not batch:
+            break
         batch_spectra = []
-
-        for spec_id in batch_ids:
-            full_spec = await project.get_spectrum_full(spec_id)
-
-            ident: dict | None = None
-            if need_ident:
-                ident = await _get_preferred_identification(project, spec_id, tool_id)
-
-            mz_arr = full_spec.get("mz_array")
-            int_arr = full_spec.get("intensity_array")
-
+        for spec_row in batch:
+            # Reconstruct ident dict from flat fields (same shape as old ident dict)
+            ident = None
+            if need_ident and spec_row.get("sequence") is not None:
+                ident = {
+                    "override_charge": spec_row.get("override_charge"),
+                    "canonical_sequence": spec_row.get("canonical_sequence"),
+                    "sequence": spec_row.get("sequence"),
+                    "isotope_offset": spec_row.get("isotope_offset"),
+                }
+            mz_arr = spec_row.get("mz_array")
+            int_arr = spec_row.get("intensity_array")
             params = _build_spectrum_params(
-                full_spec, ident,
+                spec_row, ident,
                 write_offset, write_spectra_charge, write_seq, seq_type,
                 replace_scans=replace_scans,
             )
-
-            # Восстановить charge array для пиков
-            charge_arr = full_spec.get("charge_array")
+            charge_arr = spec_row.get("charge_array")
             if charge_arr is None:
-                common_val = full_spec.get("charge_array_common_value")
+                common_val = spec_row.get("charge_array_common_value")
                 if common_val is not None and mz_arr is not None:
                     charge_arr = np.full(len(mz_arr), int(common_val))
             else:
-                # charge_array хранится как float (из-за astype(float) в MGFParser),
-                # конвертируем обратно в int для вывода (целые числа в колонке заряда)
                 charge_arr = np.where(np.isnan(charge_arr), 0, charge_arr).astype(int)
-
             spectrum_dict = {
                 "params": params,
                 "m/z array": mz_arr,
@@ -196,11 +167,12 @@ async def _write_mgf_to_file(
             }
             if charge_arr is not None:
                 spectrum_dict["charge array"] = charge_arr
-
             batch_spectra.append(spectrum_dict)
-
         if batch_spectra:
             mgf.write(batch_spectra, output=output_file)
+            total_written += len(batch_spectra)
+        offset += batch_size
+    return total_written
 
 
 async def _build_export_units(
@@ -287,47 +259,6 @@ async def _build_export_units(
     return units
 
 
-async def _get_spectrum_ids(
-    project,
-    sf_ids: list[int],
-    by: str,
-    tool_id: int | None,
-) -> list[int]:
-    """
-    Возвращает список spectrum.id для заданных spectre_file_id и режима фильтрации.
-    """
-    placeholders = ",".join("?" for _ in sf_ids)
-
-    if by == "all":
-        query = (
-            f"SELECT id FROM spectre "
-            f"WHERE spectre_file_id IN ({placeholders}) ORDER BY seq_no"
-        )
-        rows = await project.execute_query(query, sf_ids)
-    elif by == "all_preferred":
-        query = (
-            f"SELECT DISTINCT s.id FROM spectre s "
-            f"INNER JOIN identification i ON i.spectre_id = s.id "
-            f"WHERE s.spectre_file_id IN ({placeholders}) AND i.is_preferred = 1 "
-            f"ORDER BY s.seq_no"
-        )
-        rows = await project.execute_query(query, sf_ids)
-    else:
-        # preferred_by_tool
-        if tool_id is None:
-            return []
-        query = (
-            f"SELECT DISTINCT s.id FROM spectre s "
-            f"INNER JOIN identification i ON i.spectre_id = s.id "
-            f"WHERE s.spectre_file_id IN ({placeholders}) "
-            f"AND i.is_preferred = 1 AND i.tool_id = ? "
-            f"ORDER BY s.seq_no"
-        )
-        rows = await project.execute_query(query, sf_ids + [tool_id])
-
-    return [row["id"] for row in rows]
-
-
 async def export_mgf(
     project,
     sample_ids: list[int],
@@ -344,6 +275,8 @@ async def export_mgf(
     replace_scans: bool = False,
     merge_mode: str = "by_sample",
     add_timestamp: bool = True,
+    sequence_contains: str | None = None,
+    file_suffix: str | None = None,
 ) -> list[str]:
     """
     Экспортирует спектры в MGF-файлы (по одному на образец).
@@ -367,9 +300,12 @@ async def export_mgf(
     """
     created_files: list[str] = []
     need_ident = write_offset or write_spectra_charge or write_seq
+    suffix_part = ""
+    if file_suffix:
+        suffix_part = file_suffix if file_suffix.startswith("_") else f"_{file_suffix}"
     ts_suffix = f"_{timestamp}" if add_timestamp else ""
 
-    zip_all_path = os.path.join(output_dir, f"dasmixer_mgf{ts_suffix}.zip")
+    zip_all_path = os.path.join(output_dir, f"dasmixer_mgf{suffix_part}{ts_suffix}.zip")
     zip_all_file: zipfile.ZipFile | None = None
     if compression == "zip_all":
         zip_all_file = zipfile.ZipFile(zip_all_path, "w", compression=zipfile.ZIP_DEFLATED)
@@ -385,32 +321,35 @@ async def export_mgf(
             )
 
             sf_ids = unit["sf_ids"]
-            spectrum_ids = await _get_spectrum_ids(project, sf_ids, by, tool_id)
-            if not spectrum_ids:
+            probe = await project.get_full_spectrum_for_export(
+                sf_ids=sf_ids, by=by, tool_id=tool_id, need_ident=need_ident,
+                sequence_contains=sequence_contains, limit=1, offset=0,
+            )
+            if not probe:
                 await progress_callback(
                     (idx + 1) / total if total else 1.0,
                     f"Skipping {unit['label']} (no matching spectra)",
                 )
                 continue
 
-            base_name = f"{unit['base_name']}{ts_suffix}"
+            base_name = f"{unit['base_name']}{suffix_part}{ts_suffix}"
 
             if compression == "gzip":
                 fpath = os.path.join(output_dir, f"{base_name}.mgf.gz")
                 with gzip.open(fpath, "wt", encoding="utf-8") as gz:
                     await _write_mgf_to_file(
-                        project, gz, spectrum_ids, need_ident, tool_id,
+                        project, gz, sf_ids, by, tool_id, need_ident,
                         write_offset, write_spectra_charge, write_seq, seq_type,
-                        replace_scans=replace_scans,
+                        sequence_contains, replace_scans=replace_scans,
                     )
                 created_files.append(fpath)
 
             elif compression == "zip_all":
                 buf = io.StringIO()
                 await _write_mgf_to_file(
-                    project, buf, spectrum_ids, need_ident, tool_id,
+                    project, buf, sf_ids, by, tool_id, need_ident,
                     write_offset, write_spectra_charge, write_seq, seq_type,
-                    replace_scans=replace_scans,
+                    sequence_contains, replace_scans=replace_scans,
                 )
                 assert zip_all_file is not None
                 zip_all_file.writestr(f"{base_name}.mgf", buf.getvalue().encode("utf-8"))
@@ -421,9 +360,9 @@ async def export_mgf(
                 fpath = os.path.join(output_dir, f"{base_name}.zip")
                 buf = io.StringIO()
                 await _write_mgf_to_file(
-                    project, buf, spectrum_ids, need_ident, tool_id,
+                    project, buf, sf_ids, by, tool_id, need_ident,
                     write_offset, write_spectra_charge, write_seq, seq_type,
-                    replace_scans=replace_scans,
+                    sequence_contains, replace_scans=replace_scans,
                 )
                 with zipfile.ZipFile(fpath, "w", compression=zipfile.ZIP_DEFLATED) as zf:
                     zf.writestr(f"{base_name}.mgf", buf.getvalue().encode("utf-8"))
@@ -433,9 +372,9 @@ async def export_mgf(
                 fpath = os.path.join(output_dir, f"{base_name}.mgf")
                 with open(fpath, "w", encoding="utf-8") as f:  # noqa: ASYNC230 — pyteomics mgf.write() needs sync file object
                     await _write_mgf_to_file(
-                        project, f, spectrum_ids, need_ident, tool_id,
+                        project, f, sf_ids, by, tool_id, need_ident,
                         write_offset, write_spectra_charge, write_seq, seq_type,
-                        replace_scans=replace_scans,
+                        sequence_contains, replace_scans=replace_scans,
                     )
                 created_files.append(fpath)
 

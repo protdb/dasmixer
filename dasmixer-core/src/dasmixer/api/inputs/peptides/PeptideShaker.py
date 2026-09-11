@@ -9,19 +9,6 @@ from pyteomics.proforma import GenericModification, to_proforma
 
 from .table_importer import ColumnRenames, TableImporter
 
-terminal_ptm = {
-    'NH2': 'Amidated',
-    'COOH': 'Carboxy',
-    'pyroE': 'Glu->pyro-Glu',
-    'pyroQ': 'Gln->pyro-Glu'
-}
-internal_ptm = {
-    'pyri': 'Pyridylethyl',
-    'deam': 'Deamidated',
-    'ox': 'Oxidation',
-    'p': 'Phospho'
-}
-
 split_rg = re.compile(r'[A-Z](?:<[^<>]*>)?')
 
 renames = ColumnRenames(
@@ -36,9 +23,12 @@ renames = ColumnRenames(
 
 class PeptideShakerImporter(TableImporter):
     require_project = True
+    PARSER_ID = 'PeptideShaker XLS'
 
     @staticmethod
     def to_proforma(sequence: str) -> str:
+        terminal_ptm = PeptideShakerImporter.get_ptm_renames('PeptideShaker XLS', is_terminal=True)
+        internal_ptm = PeptideShakerImporter.get_ptm_renames('PeptideShaker XLS', is_terminal=False)
         parts = sequence.split('-')
         if len(parts) == 3:
             start, seq, end = parts

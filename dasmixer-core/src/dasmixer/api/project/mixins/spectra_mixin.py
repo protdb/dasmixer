@@ -334,6 +334,96 @@ class SpectraMixin:
             }
         return result
 
+    async def get_full_spectrum_for_export(
+        self,
+        sf_ids: list[int],
+        by: str,
+        tool_id: int | None,
+        need_ident: bool,
+        sequence_contains: str | None,
+        limit: int,
+        offset: int,
+    ) -> list[dict]:
+        """
+        Return a batch of spectra (with decompressed arrays) together with
+        preferred-identification data (if need_ident=True) in a single JOIN query,
+        ordered by s.seq_no, with LIMIT/OFFSET pagination.
+
+        Each returned dict is a union of all spectre table columns (with decompressed
+        mz_array, intensity_array, charge_array and json-loaded all_params) and,
+        when need_ident=True, flat identification fields:
+            sequence, canonical_sequence, override_charge, isotope_offset
+        """
+        if not sf_ids:
+            return []
+
+        if by == "preferred_by_tool" and tool_id is None:
+            return []
+
+        placeholders = ",".join("?" * len(sf_ids))
+        params: list = list(sf_ids)
+
+        # --- Build FROM + JOIN + WHERE clauses ---
+        from_clause = "FROM spectre s"
+        join_clause = ""
+        where_parts = [f"s.spectre_file_id IN ({placeholders})"]
+        select_extra = ""
+
+        # Determine whether we need identification JOIN for data retrieval
+        ident_join_for_data = need_ident
+        # Determine whether we need identification JOIN for filtering by 'by'
+        ident_join_for_filter = by in ("all_preferred", "preferred_by_tool")
+
+        if ident_join_for_data or ident_join_for_filter:
+            if by == "all":
+                # LEFT JOIN — спектры без preferred-identification тоже нужны
+                join_clause = "LEFT JOIN identification i ON i.spectre_id = s.id AND i.is_preferred = 1"
+            else:
+                # INNER JOIN для режимов, ограничивающих выборку
+                join_clause = "INNER JOIN identification i ON i.spectre_id = s.id AND i.is_preferred = 1"
+                if by == "preferred_by_tool":
+                    join_clause += " AND i.tool_id = ?"
+                    params.append(tool_id)
+
+        if ident_join_for_data:
+            select_extra = ", i.sequence AS sequence, i.canonical_sequence AS canonical_sequence, i.override_charge AS override_charge, i.isotope_offset AS isotope_offset"
+
+        # --- sequence_contains filter ---
+        if sequence_contains:
+            like_pattern = f"%{sequence_contains}%"
+            if by == "all":
+                # EXISTS-подзапрос: проверяем хотя бы одну identification
+                where_parts.append(
+                    "EXISTS (SELECT 1 FROM identification ix WHERE ix.spectre_id = s.id AND ix.sequence LIKE ? COLLATE NOCASE)"
+                )
+                params.append(like_pattern)
+            else:
+                # preferred-режимы: фильтр на уже JOIN-нутой i
+                where_parts.append("i.sequence LIKE ? COLLATE NOCASE")
+                params.append(like_pattern)
+
+        # --- Assemble query ---
+        query = f"SELECT s.*{select_extra} {from_clause} {join_clause} WHERE {' AND '.join(where_parts)} ORDER BY s.seq_no LIMIT ? OFFSET ?"
+        params.extend([limit, offset])
+
+        rows = await self._fetchall(query, tuple(params))
+
+        # --- Decompress arrays and parse JSON ---
+        result = []
+        for row in rows:
+            row_dict = dict(row)
+            if row_dict.get("mz_array"):
+                row_dict["mz_array"] = decompress_array(row_dict["mz_array"])
+            if row_dict.get("intensity_array"):
+                row_dict["intensity_array"] = decompress_array(row_dict["intensity_array"])
+            if row_dict.get("charge_array"):
+                row_dict["charge_array"] = decompress_array(row_dict["charge_array"])
+            if row_dict.get("all_params"):
+                row_dict["all_params"] = json.loads(row_dict["all_params"])
+            result.append(row_dict)
+
+        return result
+
     async def get_spectra_file_by_path(self, path: str) -> dict | None:
         """
         Find spectra file by exact file path.

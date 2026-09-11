@@ -3,10 +3,10 @@
 import os
 
 import flet as ft
+import typer
 from dasmixer.api.config import config
 from dasmixer.gui.components.color_picker import ColorPickerField
-from dasmixer.gui.utils import show_snack
-
+from dasmixer.gui.utils import open_folder, show_snack
 from dasmixer.utils import logger
 
 
@@ -287,10 +287,19 @@ class SettingsView(ft.View):
             on_click=lambda _: self.page.run_task(self._save_settings),
         )
 
+        # --- Open configuration folder button ---
+        open_config_folder_btn = ft.ElevatedButton(
+            content=ft.Text("Open configuration folder"),
+            icon=ft.Icons.FOLDER_OPEN,
+            on_click=lambda _: open_folder(typer.get_app_dir("dasmixer")),
+        )
+
         self.controls = [
             ft.Container(
                 content=ft.Column(
                     [
+                        ft.Row([open_config_folder_btn]),
+                        ft.Divider(),
                         theme_section,
                         ft.Divider(),
                         batch_section,

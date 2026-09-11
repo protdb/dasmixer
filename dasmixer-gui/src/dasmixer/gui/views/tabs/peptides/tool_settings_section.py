@@ -1,15 +1,14 @@
 """Tool settings section for peptides tab."""
 
 import flet as ft
-from dasmixer.utils.seqfixer_utils import PTMS
-
 from dasmixer.utils import logger
+from dasmixer.utils.seqfixer_utils import DEFAULT_PTM_CODES, PTMS
 
 from .base_section import BaseSection
 
 # Full list of available PTM codes from PTMS registry
 _ALL_PTM_CODES: list[str] = [ptm.code for ptm in PTMS]
-
+_DEFAULT_PTM_CODES: list[str] = sorted(DEFAULT_PTM_CODES)
 
 class ToolSettingsSection(BaseSection):
     """Tool-specific settings configuration."""
@@ -80,9 +79,9 @@ class ToolSettingsSection(BaseSection):
 
         # Determine initial PTM selection
         saved_ptm_list = settings.get('ptm_list', None)
-        # None means "all PTMs"; empty list means "no PTMs"
+        # None now means "default PTMs" (since v0.7.3a3)
         if saved_ptm_list is None:
-            initial_ptm_selected = list(_ALL_PTM_CODES)
+            initial_ptm_selected = list(_DEFAULT_PTM_CODES)
         else:
             initial_ptm_selected = list(saved_ptm_list)
 
@@ -569,7 +568,7 @@ class ToolSettingsSection(BaseSection):
 
         # PTM list: store None if all PTMs selected (== default), else store list
         ptm_selected: list[str] = controls['ptm_selected']
-        ptm_list_to_save = None if set(ptm_selected) == set(_ALL_PTM_CODES) else ptm_selected
+        ptm_list_to_save = None if set(ptm_selected) == set(_DEFAULT_PTM_CODES) else ptm_selected
 
         # Build match correction criteria list
         criteria_map = {
@@ -627,8 +626,8 @@ class ToolSettingsSection(BaseSection):
         tool_settings = {}
         for tool_id, controls in self.state.tool_settings_controls.items():
             ptm_selected: list[str] = controls['ptm_selected']
-            # Pass None to pipeline if all PTMs selected (use full PTMS list)
-            ptm_list = None if set(ptm_selected) == set(_ALL_PTM_CODES) else ptm_selected
+            # Pass None to pipeline if default PTMs selected (use full PTMS list)
+            ptm_list = None if set(ptm_selected) == set(_DEFAULT_PTM_CODES) else ptm_selected
 
             criteria_map = {
                 'ppm': controls['match_correction_ppm'],

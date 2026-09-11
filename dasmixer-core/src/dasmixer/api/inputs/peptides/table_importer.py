@@ -185,6 +185,9 @@ class SimpleTableImporter(TableImporter):
     """
     renames: ColumnRenames
     peptide_sheet_selector: dict | None = None
+    field_to_proforma: str | None = None   # source column name (before remap_columns),
+                                            # to which substring replacements from
+                                            # IdentificationParser.get_ptm_renames are applied
 
     def remap_columns(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -234,6 +237,33 @@ class SimpleTableImporter(TableImporter):
         Returns:
             Pre-processed DataFrame (still with original column names)
         """
+        return df
+
+    def apply_ptm_renames(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Apply sequential substring replacements (.replace) in the field_to_proforma
+        column according to import_ptm_renames.csv for self.PARSER_ID (all rows,
+        both terminal and non-terminal, in file order).
+
+        Does not modify df if field_to_proforma is None or column is missing.
+        """
+        if self.field_to_proforma is None or self.field_to_proforma not in df.columns:
+            return df
+        if self.PARSER_ID is None:
+            raise ValueError(
+                f"{self.__class__.__name__}: field_to_proforma is set but PARSER_ID is None"
+            )
+        renames = self.get_ptm_renames(self.PARSER_ID, is_terminal=None)
+
+        def _apply(value):
+            if not isinstance(value, str):
+                return value
+            for source, proforma in renames.items():
+                value = value.replace(source, proforma)
+            return value
+
+        df = df.copy()
+        df[self.field_to_proforma] = df[self.field_to_proforma].apply(_apply)
         return df
 
     def transform_df(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -373,6 +403,7 @@ class SimpleTableImporter(TableImporter):
         # Apply prepare_df to the whole sheet before batching so that
         # deduplication (e.g. collapsing per-protein rows) works globally.
         sheet_df = self.prepare_df(sheet_df)
+        sheet_df = self.apply_ptm_renames(sheet_df)
 
         # Yield in batches
         cursor = 0
@@ -401,7 +432,9 @@ class SimpleTableImporter(TableImporter):
             # Try to remap columns to validate configuration
             sheet_df = self.get_sheet() if self.peptide_sheet_selector is None \
                 else self.get_sheet(**self.peptide_sheet_selector)
-            self.remap_columns(self.transform_df(self.prepare_df(sheet_df)))
+            sheet_df = self.prepare_df(sheet_df)
+            sheet_df = self.apply_ptm_renames(sheet_df)
+            self.remap_columns(self.transform_df(sheet_df))
             return True
         except Exception as e:
             logger.exception(e)

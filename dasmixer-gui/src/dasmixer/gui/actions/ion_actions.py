@@ -16,7 +16,6 @@ from dasmixer.api.calculations.spectra.ion_match import IonMatchParameters
 from dasmixer.api.config import config as _config
 from dasmixer.api.project.project import Project
 from dasmixer.gui.views.tabs.peptides.shared_state import PeptidesTabState
-
 from dasmixer.utils import logger
 
 from .base import BaseAction
@@ -91,9 +90,8 @@ class IonCoverageAction(BaseAction):
         tool_settings_map = {}
         for tid, controls in state.tool_settings_controls.items():
             ptm_selected: list[str] = controls.get('ptm_selected', [])
-            from dasmixer.utils.seqfixer_utils import PTMS as _ALL_PTMS
-            all_codes = {p.code for p in _ALL_PTMS}
-            ptm_list = None if set(ptm_selected) == all_codes else ptm_selected
+            from dasmixer.utils.seqfixer_utils import DEFAULT_PTM_CODES
+            ptm_list = None if set(ptm_selected) == DEFAULT_PTM_CODES else ptm_selected
             max_ptm_ctrl = controls.get('max_ptm')
             try:
                 max_ptm = int(max_ptm_ctrl.value) if max_ptm_ctrl else 5

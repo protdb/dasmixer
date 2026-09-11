@@ -7,6 +7,7 @@ from typing import Any
 from dasmixer.utils.exceptions import DasmixerException
 from dasmixer.utils.logger import logger
 from dasmixer.utils.ppm import calculate_ppm, calculate_theor_mass, get_uncharged_mass
+from dasmixer.utils.ptm_config import load_ptm_config
 from pyteomics.proforma import GenericModification, parse, to_proforma
 
 PROTON_MASS = 1.007276
@@ -89,23 +90,25 @@ class PossibleSequenceCreator:
 
 
 
-PTMS = [
-    FixedPTM(
-        'Pyridylethyl',
-        'C',
-    ),
-    FixedPTM(
-        'Deamidated',
-        ['N', 'Q'],
-        mono_mass=0.984016,
-    ),
-    FixedPTM(
-        'Amidated',
-        attach_to=None,
-        c_term=True,
-        # mono_mass=-0.984016,
-    ),
-]
+def _build_ptms_from_config() -> list[FixedPTM]:
+    return [
+        FixedPTM(
+            code=rec["name"],
+            attach_to=rec["attach_to"],
+            mono_mass=rec["mono_mass"],
+            n_term=rec["n_term"],
+            c_term=rec["c_term"],
+        )
+        for rec in load_ptm_config()
+    ]
+
+
+PTMS: list[FixedPTM] = _build_ptms_from_config()
+
+DEFAULT_PTM_CODES: frozenset[str] = frozenset(
+    rec["name"] for rec in load_ptm_config() if rec["default"]
+)
+
 
 def get_possible_ptm(
         ptm_list: list[FixedPTM],

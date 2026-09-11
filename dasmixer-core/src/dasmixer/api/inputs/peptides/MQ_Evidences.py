@@ -14,19 +14,6 @@ renames = ColumnRenames(
 )
 
 
-# PTM notation conversions from MaxQuant to ProForma-like notation
-ptm_replacements = [
-    ('(Deamidation (NQ))', '[Deamidated]'),
-    ('(de)', '[Deamidated]'),
-    ('_', ''),  # Remove underscores
-    ('(Pyridylethyl)', '[Pyridylethyl]'),
-    ('(Oxidation (M))', '[Oxidation]'),
-    ('(Phospho (STY))', '[Phospho]'),
-    ('(ox)', '[Oxidation]'),
-    ('(Acetyl (Protein N-term))', '[-89.029920]-')
-]
-
-
 class MaxQuantEvidenceParser(SimpleTableImporter):
     """
     Parser for MaxQuant evidence.txt files.
@@ -58,40 +45,12 @@ class MaxQuantEvidenceParser(SimpleTableImporter):
     # NEW: stacked support
     can_import_stacked: bool = True
     sample_id_column: str = 'Raw file'
-
-    @staticmethod
-    def _fix_sequence(mod_seq: str) -> str:
-        """
-        Convert MaxQuant PTM notation to ProForma-like notation.
-        
-        Replaces MaxQuant-specific modification annotations with
-        standardized bracket notation.
-        
-        Args:
-            mod_seq: Sequence with MaxQuant PTM notation
-                    (e.g., "_PEPT(Oxidation (M))IDE_")
-            
-        Returns:
-            Sequence with ProForma-like notation
-            (e.g., "PEPT[Oxidation]IDE")
-        """
-        for src, repl in ptm_replacements:
-            mod_seq = mod_seq.replace(src, repl)
-        return mod_seq
+    PARSER_ID = 'MaxQuant'
+    field_to_proforma = 'Modified sequence'
 
     def transform_df(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Transform MaxQuant-specific data.
-        
-        Converts PTM notation in Modified sequence column.
-        
-        Args:
-            df: Raw DataFrame with MaxQuant column names
-            
-        Returns:
-            Transformed DataFrame
-        """
+        """Deduplicate after PTM replacement (field_to_proforma applied in parse_batch
+        before transform_df — Modified sequence already in proforma form at this point)."""
         if 'Modified sequence' in df.columns:
-            df['Modified sequence'] = df['Modified sequence'].apply(self._fix_sequence)
             df = df.drop_duplicates(subset=['Modified sequence', 'MS/MS scan number'])
         return df

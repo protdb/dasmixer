@@ -1,10 +1,9 @@
 import re
 
 import pandas as pd
+from dasmixer.api.project import Protein
 from dasmixer.utils.logger import logger
 from pyteomics.proforma import GenericModification, parse, to_proforma
-
-from dasmixer.api.project import Protein
 
 from .table_importer import ColumnRenames, SimpleTableImporter
 
@@ -17,12 +16,6 @@ renames = ColumnRenames(
     sequence='sequence',
 )
 
-ptm_renames = {
-    'S-pyridylethyl': 'Pyridylethyl',
-    'Deamidation': 'Deamidated',
-
-}
-
 ptm_parser_re = re.compile(r'([^;+]+?)\+([A-Z*])\((\d+|\*)\)')
 
 fasta_name_re = re.compile(r'([A-Z]{2})=(.+?)(?=\s+[A-Z]{2}=|$)')
@@ -33,6 +26,7 @@ class PLGSImporter(SimpleTableImporter):
     renames=renames
     spectra_id_field = 'scans'
     contain_proteins = True
+    PARSER_ID = 'PLGS'
 
 
 
@@ -46,6 +40,7 @@ class PLGSImporter(SimpleTableImporter):
         pf_seq, pf_params = parse(seq)
         ptm_list = ptm_parser_re.findall(ptm_str)
 
+        ptm_renames = PLGSImporter.get_ptm_renames('PLGS', is_terminal=None)
         for name, aa, index in ptm_list:
             ptm_obj = GenericModification(ptm_renames.get(name, name))
             if index != '*':

@@ -98,7 +98,6 @@ def cleanup_temp_html_files(max_age_hours: float = 24.0) -> None:
     import time
 
     from dasmixer.api.config import get_temp_html_dir
-
     from dasmixer.utils import logger
 
     temp_dir = get_temp_html_dir()
@@ -111,3 +110,24 @@ def cleanup_temp_html_files(max_age_hours: float = 24.0) -> None:
                     logger.debug(f"[cleanup] Removed stale temp file: {file_path}")
             except Exception as e:
                 logger.debug(f"[cleanup] Could not remove {file_path}: {e}")
+
+
+def open_folder(path: str | Path) -> None:
+    """
+    Open a folder in the system file manager (cross-platform).
+
+    Creates the folder if it does not exist. Uses os.startfile on Windows,
+    'open' on macOS, 'xdg-open' on Linux.
+    """
+    import os
+    import subprocess
+    import sys
+
+    directory = Path(path)
+    directory.mkdir(parents=True, exist_ok=True)
+    if sys.platform == "win32":
+        os.startfile(str(directory))
+    elif sys.platform == "darwin":
+        subprocess.run(["open", str(directory)], check=False)
+    else:
+        subprocess.run(["xdg-open", str(directory)], check=False)
