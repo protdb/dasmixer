@@ -448,6 +448,32 @@ error-prone and must be avoided.
       (level INFO), so `logger.*` calls work immediately. No `print()` for
       diagnostics — use `logger` from the start.
 
+15. **Schema changes must be synced to `import_project_mixin.py`.** Any
+    change to `CREATE_SCHEMA_SQL` in `schema.py` (adding/removing/renaming
+    columns, adding new tables with autoincrement `id`) requires a manual
+    sync of the SQL statements in
+    `dasmixer.api.project.mixins.import_project_mixin.ImportProjectMixin.import_project()`:
+    - **Per-table column lists** — for every `INSERT INTO <tbl> (cols...)
+      SELECT cols... FROM src.<tbl>`, update both the INSERT-column list and
+      the SELECT-column list so they match the current schema exactly.
+      Affected bulk tables: `protein`, `spectre_file`, `spectre`,
+      `identification_file`, `identification`, `peptide_match`,
+      `protein_identification_result`, `protein_quantification_result`,
+      `generated_reports`, `saved_plots`.
+    - **List-inserted tables** (`subset`, `tool`, `sample`) — update the
+      `INSERT INTO ... VALUES (...)` and the source `SELECT ... FROM` in the
+      mapping loops if their columns change.
+    - **New table** — add it to the `bulk_tables` list (used to compute
+      `base_ids`) and to the "Reset autoincrement sequences" loop (Step 6)
+      if it has an autoincrement `id`.
+    - **Version guard** — import is refused when the source and target
+      projects have different `PROJECT_VERSION` (read from
+      `project_metadata.version`). `ProjectImportError` is raised with a
+      message instructing the user to upgrade the older project to the
+      higher version. This guard exists precisely to prevent the column
+      drift that occurs when `import_project_mixin.py` falls out of sync
+      with `schema.py` — so keep the guard and the column lists in sync.
+
 ---
 
 ## Configuration

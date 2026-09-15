@@ -6,7 +6,13 @@ from typing import Literal
 
 import aiosqlite
 from dasmixer.api.project.core.base import ProjectBase
+from dasmixer.api.project.migrations import _version_gt, _version_lt
+from dasmixer.utils.exceptions import DasmixerException
 from dasmixer.utils.logger import logger
+
+
+class ProjectImportError(DasmixerException):
+    """Ошибка при импорте/слиянии проекта (несовпадение версий и т.п.)."""
 
 
 class ImportProjectMixin(ProjectBase):
@@ -53,6 +59,29 @@ class ImportProjectMixin(ProjectBase):
         old_cache = None
 
         try:
+            # ----------------------------------------------------------------
+            # Step 0. Version check — refuse to merge projects of different
+            # PROJECT_VERSION to avoid schema/column drift during bulk import.
+            # ----------------------------------------------------------------
+            src_row = await src_db.execute_fetchall(
+                "SELECT value FROM project_metadata WHERE key = 'version'"
+            )
+            src_version = src_row[0]['value'] if src_row else "0.1.0"
+            tgt_version = await self.get_project_version()
+
+            if src_version != tgt_version:
+                max_version = (
+                    src_version
+                    if _version_gt(src_version, tgt_version)
+                    else tgt_version
+                )
+                older = "source" if _version_lt(src_version, tgt_version) else "target"
+                raise ProjectImportError(
+                    f"Version conflict! Cannot merge project v{src_version} into "
+                    f"project v{tgt_version}. Upgrade the {older} project to "
+                    f"v{max_version} and retry."
+                )
+
             # Save current PRAGMA values to restore later (must be done BEFORE BEGIN)
             row = await self._fetchone("PRAGMA synchronous")
             old_sync = row['synchronous'] if row else None
@@ -277,8 +306,9 @@ class ImportProjectMixin(ProjectBase):
             # 4.1 protein
             await self._db.execute("""
                 INSERT OR IGNORE INTO protein (id, is_uniprot, fasta_name,
-                    sequence, gene, name, uniprot_data)
-                SELECT id, is_uniprot, fasta_name, sequence, gene, name, uniprot_data
+                    sequence, gene, name, uniprot_data, taxon_id, organism_name)
+                SELECT id, is_uniprot, fasta_name, sequence, gene, name,
+                       uniprot_data, taxon_id, organism_name
                 FROM src.protein
             """)
 
@@ -335,7 +365,8 @@ class ImportProjectMixin(ProjectBase):
                     ppm, theor_mass, score, positional_scores,
                     intensity_coverage, ions_matched, ion_match_type,
                     top_peaks_covered, override_charge, source_sequence,
-                    isotope_offset, src_file_protein_id)
+                    isotope_offset, quality, override_pepmass, has_ptm,
+                    lcrr, unconfirmed_ptms, src_file_protein_id)
                 SELECT i.id + {b_i}, i.spectre_id + {b_s},
                        tm.tgt_id, i.ident_file_id + {b_idf},
                        i.is_preferred,
@@ -343,7 +374,8 @@ class ImportProjectMixin(ProjectBase):
                        i.score, i.positional_scores, i.intensity_coverage,
                        i.ions_matched, i.ion_match_type, i.top_peaks_covered,
                        i.override_charge, i.source_sequence, i.isotope_offset,
-                       i.src_file_protein_id
+                       i.quality, i.override_pepmass, i.has_ptm,
+                       i.lcrr, i.unconfirmed_ptms, i.src_file_protein_id
                 FROM src.identification i
                 JOIN temp._tool_id_map tm ON tm.src_id = i.tool_id
             """)
@@ -393,10 +425,10 @@ class ImportProjectMixin(ProjectBase):
             b_pqr = base_ids['protein_quantification_result']
             await self._db.execute(f"""
                 INSERT INTO protein_quantification_result (id,
-                    protein_identification_id, algorithm, rel_value, abs_value)
+                    protein_identification_id, algorithm, rel_value, abs_value_gl, abs_value_mol)
                 SELECT pqr.id + {b_pqr},
                        pqr.protein_identification_id + {b_pir},
-                       pqr.algorithm, pqr.rel_value, pqr.abs_value
+                       pqr.algorithm, pqr.rel_value, pqr.abs_value_gl, pqr.abs_value_mol
                 FROM src.protein_quantification_result pqr
             """)
 
