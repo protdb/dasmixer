@@ -3,6 +3,7 @@ Algorithms for quantitative proteomics calculations.
 """
 
 import logging
+import math
 
 import numpy as np
 
@@ -219,9 +220,20 @@ def calculate_ibaq_value(intensities: list[float], observable_peptides: int) -> 
     """
     if not intensities or observable_peptides <= 0:
         return 0.0
-    
+
+    # Filter out NaN / None intensities — they come from spectra with NULL
+    # intensity in the DB and would otherwise poison the sum with NaN.
+    clean = [v for v in intensities if v is not None and not (isinstance(v, float) and math.isnan(v))]
+    if len(clean) != len(intensities):
+        logger.debug(
+            "calculate_ibaq_value: filtered %d NaN/None intensities out of %d",
+            len(intensities) - len(clean), len(intensities),
+        )
+    if not clean:
+        return 0.0
+
     # Use ALL intensities - no deduplication for iBAQ
-    total_intensity = sum(intensities)
+    total_intensity = sum(clean)
     return total_intensity / observable_peptides
 
 
@@ -260,11 +272,18 @@ def normalize_values(values: list[float]) -> list[float]:
     Returns:
         List of normalized values
     """
-    total = sum(values)
+    # Replace NaN/None with 0.0 so they don't poison the sum
+    clean = [v if v is not None and not (isinstance(v, float) and math.isnan(v)) else 0.0 for v in values]
+    if len(clean) != len(values):
+        logger.debug(
+            "normalize_values: replaced %d NaN/None values with 0.0",
+            len(values) - len(clean),
+        )
+    total = sum(clean)
     if total <= 0:
-        return [0.0] * len(values)
+        return [0.0] * len(clean)
     
-    return [v / total for v in values]
+    return [v / total for v in clean]
 
 
 def calculate_nsaf_normalized(saf_values: list[float]) -> list[float]:

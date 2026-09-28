@@ -66,38 +66,63 @@ async def calculate_lfq(
         protein_identified=True,
         sample_id=int(sample_id),
     )
-    logger.debug(all_peptides)
+    logger.debug('LFQ sample %s: %d joined peptide rows', sample_id, len(all_peptides))
+
+    # Diagnose NaN intensities — these poison iBAQ/Top3 calculations
+    if 'intensity' in all_peptides.columns:
+        nan_count = int(all_peptides['intensity'].isna().sum())
+        if nan_count > 0:
+            logger.warning(
+                'LFQ sample %s: %d / %d peptide rows have NaN intensity '
+                '(spectra with NULL intensity in DB) — '
+                'these will be filtered out for iBAQ/Top3',
+                sample_id, nan_count, len(all_peptides),
+            )
+
     # Get protein sequences
     fasta = await project.get_protein_db_to_search()
 
     # Build Protein objects for sempai
     proteins = []
     skipped_no_seq = 0
+    skipped_no_peptides = 0
     for _, row in idents.iterrows():
         protein_id = row['protein_id']
         peptides = all_peptides[all_peptides['protein_id'] == protein_id]
 
         if len(peptides) == 0:
+            skipped_no_peptides += 1
             continue
 
         if protein_id not in fasta:
             logger.warning(
-                f'No FASTA sequence for protein {protein_id} — skipping LFQ for this protein'
+                'No FASTA sequence for protein %s — skipping LFQ for this protein',
+                protein_id,
             )
             skipped_no_seq += 1
             continue
 
-        proteins.append(
-            Protein(
-                accession=protein_id,
-                sequence=fasta[protein_id],
-                peptides=list(peptides['matched_sequence']),
-                intensities=list(peptides['intensity']),
-                empai_base=empai_base,
-                observable_parameters=dp
+        try:
+            proteins.append(
+                Protein(
+                    accession=protein_id,
+                    sequence=fasta[protein_id],
+                    peptides=list(peptides['matched_sequence']),
+                    intensities=list(peptides['intensity']),
+                    empai_base=empai_base,
+                    observable_parameters=dp
+                )
             )
-        )
-    logger.debug(proteins)
+        except Exception:
+            logger.exception(
+                'LFQ sample %s: failed to build Protein object for %s',
+                sample_id, protein_id,
+            )
+    logger.debug(
+        'LFQ sample %s: built %d Protein objects '
+        '(skipped: %d no seq, %d no peptides)',
+        sample_id, len(proteins), skipped_no_seq, skipped_no_peptides,
+    )
     if len(proteins) == 0:
         if skipped_no_seq > 0:
             raise ValueError(
@@ -119,22 +144,29 @@ async def calculate_lfq(
             reference_protein_gl=reference_protein_gl,
             reference_protein_accession=reference_protein_id,
         )
-        result_df = sample_data.get_results(
-            all_protein_details=False,
-            quantification_methods=methods,
-            calculate_coverage=False,
-            absolute_concentrations='all',
-        )
+        try:
+            result_df = sample_data.get_results(
+                all_protein_details=False,
+                quantification_methods=methods,
+                calculate_coverage=False,
+                absolute_concentrations='all',
+            )
+        except Exception:
+            logger.exception('LFQ sample %s: get_results() failed (abs_enabled)', sample_id)
+            raise
     else:
         sample_data = ProteomicSample(proteins=proteins)
-        result_df = sample_data.get_results(
-            all_protein_details=False,
-            quantification_methods=methods,
-            calculate_coverage=False,
-            absolute_concentrations='none',
-        )
-    logger.debug('RESULT_DF:')
-    logger.debug(result_df)
+        try:
+            result_df = sample_data.get_results(
+                all_protein_details=False,
+                quantification_methods=methods,
+                calculate_coverage=False,
+                absolute_concentrations='none',
+            )
+        except Exception:
+            logger.exception('LFQ sample %s: get_results() failed', sample_id)
+            raise
+    logger.debug('LFQ sample %s: result_df shape=%s', sample_id, result_df.shape)
 
     # Merge with identification IDs
     all_res = pd.merge(

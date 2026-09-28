@@ -151,8 +151,20 @@ class LFQAction(BaseAction):
                     reference_protein_id=abs_settings.get('ref_id', 'P02768') if abs_enabled else 'P02768',
                 )
                 if len(result_df) > 0:
+                    # Log per-method stats
+                    for method in selected_methods:
+                        method_rows = result_df[result_df['algorithm'] == method]
+                        if len(method_rows) > 0:
+                            nan_count = int(method_rows['rel_value'].isna().sum())
+                            if nan_count > 0:
+                                logger.warning(
+                                    "LFQ sample %s method %s: %d / %d rel_values are NaN",
+                                    s_id, method, nan_count, len(method_rows),
+                                )
                     await self.project.add_protein_quantifications_batch(result_df)
                     total_saved += len(result_df)
+                else:
+                    logger.debug("LFQ sample %s: result_df is empty", s_id)
 
             dialog.complete()
             await asyncio.sleep(1)

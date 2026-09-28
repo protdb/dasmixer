@@ -234,10 +234,19 @@ class ProteomicSample:
                 raise ValidationError(f"Unknown quantification method: {method}")
             
             raw_values[method] = raw_vals
-            
+
             # For methods other than NSAF, normalize normally
             if method != 'NSAF':
                 normalized_values[method] = normalize_values(raw_vals)
+
+            # Log method stats for debugging
+            logger.debug(
+                "get_results: method=%s, proteins=%d, raw_vals sample=%s, "
+                "normalized sample=%s",
+                method, len(raw_vals),
+                raw_vals[:5],
+                normalized_values.get(method, [])[:5] if method in normalized_values else None,
+            )
             
             # Add to results
             if method == 'NSAF':
@@ -249,9 +258,12 @@ class ProteomicSample:
         
         # Calculate absolute concentrations if requested
         if absolute_concentrations != 'none':
-            self._add_absolute_concentrations(
-                results, normalized_values, methods, absolute_concentrations
-            )
+            try:
+                self._add_absolute_concentrations(
+                    results, normalized_values, methods, absolute_concentrations
+                )
+            except Exception:
+                logger.exception("Failed to calculate absolute concentrations")
         
         # Create DataFrame
         df = pd.DataFrame(results)

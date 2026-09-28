@@ -411,12 +411,25 @@ class Protein:
         """
         if self._ibaq is None:
             if not self._intensities:
+                logger.debug(
+                    "Protein %s: iBAQ=0 (no intensities, %d peptides)",
+                    self._accession, len(self._peptides),
+                )
                 self._ibaq = 0.0
             else:
-                self._ibaq = calculate_ibaq_value(
-                    self._intensities,  # All intensities, no deduplication
-                    self.observable_peptides
-                )
+                try:
+                    self._ibaq = calculate_ibaq_value(
+                        self._intensities,  # All intensities, no deduplication
+                        self.observable_peptides
+                    )
+                except Exception:
+                    logger.exception(
+                        "Protein %s: iBAQ calculation failed (intensities=%s, "
+                        "observable_peptides=%s)",
+                        self._accession, len(self._intensities),
+                        self.observable_peptides,
+                    )
+                    self._ibaq = 0.0
         return self._ibaq
     
     @property
