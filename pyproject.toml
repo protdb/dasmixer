@@ -1,6 +1,6 @@
 [project]
 name = "dasmixer-workspace"
-version = "0.7.3a2"
+version = "0.7.3rc1"
 description = "DASMixer development workspace (not for distribution)"
 requires-python = "<4.0, >=3.11"
 
@@ -21,6 +21,7 @@ dev = [
     "pytest >=9.0.2,<10.0.0",
     "ruff (>=0.16.5,<0.17.0)",
     "pyinstaller (==6.21.0)",
+    "twine (>=7.0.0,<8.0.0)",
 ]
 
 [tool.ruff]
