@@ -2,12 +2,12 @@
 
 import flet as ft
 import pandas as pd
-
-from dasmixer.api.calculations.spectra.plot_flow import make_full_spectrum_plot
 from dasmixer.api.calculations.spectra.ion_match import IonMatchParameters
+from dasmixer.api.calculations.spectra.plot_flow import make_full_spectrum_plot
 from dasmixer.gui.components.plotly_viewer import PlotlyViewer
-from .base_section import BaseSection
 from dasmixer.utils import logger
+
+from .base_section import BaseSection
 
 
 class SearchSection(BaseSection):
@@ -123,7 +123,7 @@ class SearchSection(BaseSection):
             
             self.state.needs_filter_refresh = False
             
-        except Exception as ex:
+        except Exception:
             logger.exception("Error refreshing filters")
     
     async def search_identifications(self, e):
@@ -175,7 +175,7 @@ class SearchSection(BaseSection):
             
         except Exception as ex:
             logger.exception("Error in search")
-            self.show_error(f"Error: {str(ex)}")
+            self.show_error(f"Error: {ex!s}")
     
     def _display_results(self, results_df: pd.DataFrame):
         """Display search results in table."""
@@ -194,11 +194,12 @@ class SearchSection(BaseSection):
                 color=ft.Colors.AMBER,
                 size=16
             ) if row.get('is_preferred') else ft.Container(width=16)
-            
+
             seq_display = str(row.get('sequence', ''))[:20]
             if len(str(row.get('sequence', ''))) > 20:
                 seq_display += "..."
-            
+
+            row_data = row.to_dict()
             rows.append(
                 ft.Container(
                     content=ft.Row([
@@ -225,7 +226,7 @@ class SearchSection(BaseSection):
                             icon=ft.Icons.VISIBILITY,
                             tooltip="View spectrum",
                             icon_size=16,
-                            on_click=lambda e, r=row.to_dict(): self.page.run_task(
+                            on_click=lambda e, r=row_data: self.page.run_task(
                                 self.view_identification, e, r
                             )
                         )

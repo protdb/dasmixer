@@ -1,9 +1,8 @@
 """UpdateRow — top-row component with Update button, loader, and threshold fields."""
 
-from typing import Callable, Awaitable
+from collections.abc import Awaitable, Callable
 
 import flet as ft
-
 from dasmixer.api.project.project import Project
 
 

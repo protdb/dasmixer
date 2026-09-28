@@ -1,7 +1,8 @@
 """Mixin for sample operations."""
 
-from ..dataclasses import Sample
 from dasmixer.utils.logger import logger
+
+from ..dataclasses import Sample
 
 
 class SampleMixin:
@@ -336,21 +337,41 @@ class SampleMixin:
         )
         return {int(r['subset_id']): int(r['cnt']) for r in rows}
 
-    # ------------------------------------------------------------------
-    # sample_status_cache methods
-    # ------------------------------------------------------------------
-
-    async def get_cached_sample_stats(self, sample_id: int) -> dict | None:
+    async def get_subset_sample_counts(
+        self, exclude_outliers: bool = True, subsets: list[str] | None = None
+    ) -> dict[str, int]:
         """
-        Return cached stats for a sample, or None if not cached yet.
+        Return sample counts grouped by subset NAME.
 
-        Returns dict with same keys as get_sample_stats() or None.
+        Used by reports (Volcano, Median) to know the true denominator per
+        comparison group, instead of deriving it from quantification data
+        (which is wrong when a sample has no quantified proteins or is an
+        outlier).
+
+        Args:
+            exclude_outliers: If True (default), outlier samples are not counted.
+            subsets: Optional list of subset names to filter; if None, all
+                subsets are returned.
+
+        Returns:
+            dict mapping subset name (str) → sample count (int).
+            Subsets with no (matching) samples are not included.
         """
-        row = await self._fetchone(
-            "SELECT * FROM sample_status_cache WHERE sample_id = ?",
-            (int(sample_id),)
+        query = (
+            "SELECT sb.name AS subset_name, COUNT(*) AS cnt "
+            "FROM sample s JOIN subset sb ON s.subset_id = sb.id "
+            "WHERE s.subset_id IS NOT NULL"
         )
-        return dict(row) if row else None
+        params: list = []
+        if exclude_outliers:
+            query += " AND (s.outlier = 0 OR s.outlier IS NULL)"
+        if subsets:
+            placeholders = ",".join("?" * len(subsets))
+            query += f" AND sb.name IN ({placeholders})"
+            params.extend(subsets)
+        query += " GROUP BY sb.name"
+        rows = await self._fetchall(query, tuple(params) if params else None)
+        return {r['subset_name']: int(r['cnt']) for r in rows}
 
     async def get_all_samples_stats(self) -> dict[int, dict]:
         """
@@ -500,105 +521,3 @@ class SampleMixin:
             result[sid]['empty_ident_files_count'] = cnt
 
         return result
-
-    async def get_all_cached_sample_stats(self) -> dict[int, dict]:
-        """
-        Return cached stats for ALL samples as {sample_id: stats_dict}.
-
-        Used on project open to avoid N×expensive SQL on all samples.
-        """
-        rows = await self._fetchall("SELECT * FROM sample_status_cache")
-        if not rows:
-            return {}
-        return {int(row['sample_id']): dict(row) for row in rows}
-
-    async def upsert_sample_status_cache(self, sample_id: int, stats: dict) -> None:
-        """
-        Insert or replace cached stats for a sample.
-
-        Args:
-            sample_id: Sample ID
-            stats: Dict with keys matching sample_status_cache columns
-                   (spectra_files_count, ident_files_count, identifications_count,
-                    preferred_count, coverage_known_count, protein_ids_count,
-                    empty_ident_files_count)
-        """
-        from datetime import datetime, timezone
-        now = datetime.now(timezone.utc).isoformat()
-
-        await self._execute(
-            """INSERT OR REPLACE INTO sample_status_cache
-               (sample_id, spectra_files_count, ident_files_count,
-                identifications_count, preferred_count, coverage_known_count,
-                protein_ids_count, empty_ident_files_count, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (
-                int(sample_id),
-                int(stats.get('spectra_files_count', 0)),
-                int(stats.get('ident_files_count', 0)),
-                int(stats.get('identifications_count', 0)),
-                int(stats.get('preferred_count', 0)),
-                int(stats.get('coverage_known_count', 0)),
-                int(stats.get('protein_ids_count', 0)),
-                int(stats.get('empty_ident_files_count', 0)),
-                now,
-            )
-        )
-        # No save() here — caller decides when to save (batch or immediate)
-
-    async def upsert_sample_status_cache_batch(self, all_stats: dict[int, dict]) -> None:
-        """
-        Batch insert/replace cached stats for multiple samples in one executemany().
-
-        Args:
-            all_stats: dict mapping sample_id → stats dict (same shape as
-                       get_all_samples_stats() / get_sample_stats() result).
-        """
-        from datetime import datetime, timezone
-        now = datetime.now(timezone.utc).isoformat()
-
-        rows = [
-            (
-                int(sid),
-                int(stats.get('spectra_files_count', 0)),
-                int(stats.get('ident_files_count', 0)),
-                int(stats.get('identifications_count', 0)),
-                int(stats.get('preferred_count', 0)),
-                int(stats.get('coverage_known_count', 0)),
-                int(stats.get('protein_ids_count', 0)),
-                int(stats.get('empty_ident_files_count', 0)),
-                now,
-            )
-            for sid, stats in all_stats.items()
-        ]
-        if not rows:
-            return
-
-        await self._executemany(
-            """INSERT OR REPLACE INTO sample_status_cache
-               (sample_id, spectra_files_count, ident_files_count,
-                identifications_count, preferred_count, coverage_known_count,
-                protein_ids_count, empty_ident_files_count, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            rows
-        )
-        # No save() here — caller decides when to save (consistent with
-        # upsert_sample_status_cache()).
-
-    async def invalidate_sample_status_cache(self, sample_id: int) -> None:
-        """Remove cached stats for a single sample (forces recalc on next refresh)."""
-        await self._execute(
-            "DELETE FROM sample_status_cache WHERE sample_id = ?",
-            (int(sample_id),)
-        )
-
-    async def compute_and_cache_sample_stats(self, sample_id: int) -> dict:
-        """
-        Compute fresh stats for one sample and write to cache.
-
-        Returns the computed stats dict.
-        """
-        stats = await self.get_sample_stats(sample_id)
-        await self.upsert_sample_status_cache(sample_id, stats)
-        await self.save()
-        return stats

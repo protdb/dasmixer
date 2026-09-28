@@ -1,9 +1,8 @@
 """AssignSubsetDialog — dialog for assigning a comparison group to selected samples."""
 
-from typing import Callable, Awaitable
+from collections.abc import Awaitable, Callable
 
 import flet as ft
-
 from dasmixer.api.project.project import Project
 from dasmixer.gui.utils import show_snack
 

@@ -5,26 +5,24 @@ Imported early during GUI startup to patch report classes
 with their flet-based parameter forms.
 """
 
-from dasmixer.api.reporting.reports.pca_report import PCAReport
-from dasmixer.api.reporting.reports.volcano_report import VolcanoReport
-from dasmixer.api.reporting.reports.median_report import MedianReport
-from dasmixer.api.reporting.reports.toolmatch_report import ToolMatchReport
 from dasmixer.api.reporting.reports.coverage_report import ToolCoverageReport
-from dasmixer.api.reporting.reports.upset import UpsetReport
+from dasmixer.api.reporting.reports.median_report import MedianReport
+from dasmixer.api.reporting.reports.pca_report import PCAReport
 from dasmixer.api.reporting.reports.sample_report import SampleReport
-
+from dasmixer.api.reporting.reports.toolmatch_report import ToolMatchReport
+from dasmixer.api.reporting.reports.upset import UpsetReport
+from dasmixer.api.reporting.reports.volcano_report import VolcanoReport
 from dasmixer.gui.components.report_form import (
-    ReportForm,
-    ToolSelector,
     BoolSelector,
-    IntSelector,
-    FloatSelector,
-    SubsetSelector,
-    MultiSubsetSelector,
-    LFQSelector,
     EnumSelector,
+    FloatSelector,
+    IntSelector,
+    LFQSelector,
+    MultiSubsetSelector,
+    ReportForm,
+    SubsetSelector,
+    ToolSelector,
 )
-
 
 # ---------------------------------------------------------------------------
 # PCA Report Form
@@ -32,8 +30,11 @@ from dasmixer.gui.components.report_form import (
 
 class PCAReportForm(ReportForm):
     subsets = MultiSubsetSelector(label="Subsets to include")
+    group_by = EnumSelector(values=["Sample", "Protein"], default="Sample", label="Group data points by")
     lfq = LFQSelector(label="LFQ", default_method="emPAI", default_value_type="rel")
-    show_labels = BoolSelector(default=True, label="Show sample labels")
+    show_labels = BoolSelector(default=True, label="Show point labels")
+    top_n_proteins = IntSelector(default=100, label="Top-N proteins by variance (Protein mode only)")
+    include_outliers = BoolSelector(default=False, label="Include outlier samples")
 
 
 # ---------------------------------------------------------------------------
@@ -49,6 +50,7 @@ class VolcanoReportForm(ReportForm):
     percent_to_calculate = IntSelector(default=20, label="Min % samples with value")
     fc_threshold = FloatSelector(default=1.5, label="FC threshold")
     p_threshold = FloatSelector(default=0.05, label="p-value threshold")
+    include_outliers = BoolSelector(default=False, label="Include outlier samples")
 
 
 # ---------------------------------------------------------------------------
@@ -93,6 +95,7 @@ class SampleReportForm(ReportForm):
 class MedianReportForm(ReportForm):
     subsets = MultiSubsetSelector()
     lfq = LFQSelector(label="LFQ")
+    include_outliers = BoolSelector(default=False, label="Include outlier samples")
 
 # ---------------------------------------------------------------------------
 # Monkey-patch: bind form classes to report classes

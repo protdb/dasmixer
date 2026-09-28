@@ -3,12 +3,11 @@
 import asyncio
 
 import flet as ft
-import pandas as pd
-
-from dasmixer.utils import logger
-from dasmixer.api.project.project import Project
 from dasmixer.api.calculations.proteins.lfq import calculate_lfq
+from dasmixer.api.project.project import Project
 from dasmixer.gui.views.tabs.proteins.shared_state import ProteinsTabState
+from dasmixer.utils import logger
+
 from .base import BaseAction
 
 
@@ -45,7 +44,9 @@ class LFQAction(BaseAction):
             self.show_warning("No LFQ methods selected. Configure in Proteins tab.")
             return 0
 
-        from dasmixer.gui.views.tabs.peptides.dialogs.progress_dialog import ProgressDialog
+        from dasmixer.gui.views.tabs.peptides.dialogs.progress_dialog import (
+            ProgressDialog,
+        )
 
         dialog = ProgressDialog(self.page, "Calculating LFQ")
         dialog.show()
@@ -150,8 +151,20 @@ class LFQAction(BaseAction):
                     reference_protein_id=abs_settings.get('ref_id', 'P02768') if abs_enabled else 'P02768',
                 )
                 if len(result_df) > 0:
+                    # Log per-method stats
+                    for method in selected_methods:
+                        method_rows = result_df[result_df['algorithm'] == method]
+                        if len(method_rows) > 0:
+                            nan_count = int(method_rows['rel_value'].isna().sum())
+                            if nan_count > 0:
+                                logger.warning(
+                                    "LFQ sample %s method %s: %d / %d rel_values are NaN",
+                                    s_id, method, nan_count, len(method_rows),
+                                )
                     await self.project.add_protein_quantifications_batch(result_df)
                     total_saved += len(result_df)
+                else:
+                    logger.debug("LFQ sample %s: result_df is empty", s_id)
 
             dialog.complete()
             await asyncio.sleep(1)
@@ -165,6 +178,6 @@ class LFQAction(BaseAction):
             try:
                 dialog.close()
             except Exception:
-                pass
-            self.show_error(f"Error: {str(ex)}")
+                logger.debug("Failed to close progress dialog", exc_info=True)
+            self.show_error(f"Error: {ex!s}")
             return 0

@@ -1,9 +1,9 @@
 """Mixin for protein operations, identification results, and quantification."""
 
 import pandas as pd
+from dasmixer.utils.logger import logger
 
 from ..dataclasses import Protein
-from dasmixer.utils.logger import logger
 
 
 class ProteinMixin:
@@ -353,9 +353,10 @@ class ProteinMixin:
 
     async def get_protein_quantification_data(
             self,
-            method: str = None,
+            method: str | None = None,
             subsets: list[str] | None = None,
-            protein_id: str | None = None
+            protein_id: str | None = None,
+            exclude_outliers: bool = True,
     ) -> pd.DataFrame:
         """
         Get protein quantification data.
@@ -364,6 +365,8 @@ class ProteinMixin:
             method: LFQ algorithm ('emPAI', 'iBAQ', 'NSAF', 'Top3')
             subsets: Optional list of subset names to filter
             protein_id: Optional protein ID to filter
+            exclude_outliers: If True (default), samples marked as outlier
+                are excluded from the result.
         
         Returns:
             DataFrame with quantification data
@@ -394,20 +397,23 @@ class ProteinMixin:
             WHERE 1=1
         """
         params = []
-        
+
+        if exclude_outliers:
+            query += " AND (s.outlier = 0 OR s.outlier IS NULL)"
+
         if method:
             query += " AND q.algorithm = ?"
             params.append(method)
-        
+
         if protein_id:
             query += " AND i.protein_id = ?"
             params.append(protein_id)
-        
+
         if subsets:
             placeholders = ','.join('?' * len(subsets))
             query += f" AND sb.name IN ({placeholders})"
             params.extend(subsets)
-        
+
         params_tuple = tuple(params) if params else None
         df = await self.execute_query_df(query, params_tuple)
         return df
@@ -636,7 +642,7 @@ class ProteinMixin:
                 try:
                     from pyteomics import mass
                     return mass.calculate_mass(sequence=seq)
-                except:
+                except Exception:
                     return None
             
             df['weight'] = df['sequence'].apply(calc_weight)
@@ -746,8 +752,8 @@ class ProteinMixin:
         # Загружаем uniprot_data для виртуальных полей
         if not df.empty:
             uniprot_list = []
-            for protein_id in df['protein_id']:
-                protein = await self.get_protein(protein_id)
+            for pid in df['protein_id']:
+                protein = await self.get_protein(pid)
                 uniprot_list.append(protein.uniprot_data if protein else None)
             df['uniprot_data'] = uniprot_list
         

@@ -116,7 +116,15 @@ CREATE TABLE IF NOT EXISTS identification (
     override_charge INTEGER,
     source_sequence TEXT,  -- original unmodified sequence; NULL if same as sequence
     isotope_offset INTEGER,  -- precursor isotope offset; NULL if not determined
+    quality REAL,                       -- Identification quality (0..1); NULL if not calculated
+    override_pepmass REAL,              -- Corrected precursor m/z from SEQFixer; NULL when no isotope offset applied
+    has_ptm INTEGER,                    -- BOOLEAN: 1 if final sequence contains PTM (sequence != canonical_sequence), 0 otherwise; NULL if not calculated
+    lcrr REAL,                          -- Longest Consecutive Run Ratio (0..1); NULL if not calculated
+    unconfirmed_ptms INTEGER,           -- Number of unconfirmed PTMs (seq_ptms - max_frag_ptm); NULL if not calculated
     src_file_protein_id TEXT,  -- protein ID from source identification file (nullable)
+    fdr REAL,                       -- False Discovery Rate (imported); NULL if not provided by parser
+    e_value REAL,                   -- e-value (imported); NULL if not provided by parser
+    q_value REAL,                   -- q-value (imported); NULL if not provided by parser
     FOREIGN KEY (spectre_id) REFERENCES spectre(id) ON DELETE CASCADE,
     FOREIGN KEY (tool_id) REFERENCES tool(id) ON DELETE CASCADE,
     FOREIGN KEY (ident_file_id) REFERENCES identification_file(id) ON DELETE CASCADE
@@ -196,9 +204,17 @@ CREATE TABLE IF NOT EXISTS protein_quantification_result (
 CREATE INDEX IF NOT EXISTS idx_prot_quant_ident ON protein_quantification_result(protein_identification_id);
 CREATE INDEX IF NOT EXISTS idx_prot_quant_algo ON protein_quantification_result(algorithm);
 
--- Sample status cache (Stage 11)
+-- DEPRECATED: sample_status_cache (Stage 11).
 -- Stores pre-computed aggregated statistics per sample for fast panel rendering.
 -- Updated whenever stats are recalculated; read on project open.
+--
+-- This table and the cache methods on SampleMixin were deprecated in v0.7.0a4:
+-- get_all_samples_stats() now computes fresh stats fast enough (~0.6s) that
+-- caching is unnecessary. The cache methods (get_cached_sample_stats,
+-- upsert_sample_status_cache[_batch], invalidate_sample_status_cache,
+-- compute_and_cache_sample_stats) have been removed from SampleMixin.
+-- The table itself is kept here for backward compatibility with existing
+-- .dasmix project files; it will be dropped in a future schema migration.
 CREATE TABLE IF NOT EXISTS sample_status_cache (
     sample_id INTEGER PRIMARY KEY,
     spectra_files_count INTEGER NOT NULL DEFAULT 0,

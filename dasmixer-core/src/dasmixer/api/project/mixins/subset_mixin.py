@@ -1,7 +1,8 @@
 """Mixin for subset (comparison group) operations."""
 
-from ..dataclasses import Subset
 from dasmixer.utils.logger import logger
+
+from ..dataclasses import Subset
 
 
 class SubsetMixin:

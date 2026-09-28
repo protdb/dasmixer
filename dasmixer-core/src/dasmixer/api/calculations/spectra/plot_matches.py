@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-import pandas as pd
+
 import numpy as np
+import pandas as pd
 
 if TYPE_CHECKING:
     import plotly.graph_objects as go
-    from plotly.subplots import make_subplots
 
 
 def get_ion_type_color(ion_type: str) -> str:
@@ -43,6 +43,7 @@ def plot_ion_match(
     ppm_threshold: float = 20.0
 ) -> go.Figure:
     """
+    !!!!!!!!OBSOLETE METHOD!!!!!
     Plot ion match visualization for a spectrum and sequence.
     
     This is a simplified function for UI display. For full functionality
@@ -85,6 +86,7 @@ def plot_ion_match(
             "<extra></extra>"
         )
     ))
+
     
     # Update layout
     charge_text = f" (charge: {charge})" if charge else ""
@@ -162,28 +164,34 @@ def generate_spectrum_plot(
     # Plot each spectrum
     for row_no, df, header in zip(range(1, num_plots + 1), data, headers):
         # Add bars for each peak
+        fig.add_trace(go.Scatter(
+            x=df['mz'],
+            y=df['intensity'],
+            customdata=np.stack((df['frag_seq'], df['label']), axis=-1),
+            hovertemplate=(
+                "%{customdata[1]} %{customdata[0]}<br>M/z: %{x}, Int.: %{y}<extra></extra>"
+            ),
+            marker = {'color': "rgba(0,0,0,0)"},
+            mode='markers'
+        ), row=row_no, col=1)
         for _, row in df.iterrows():
             # Determine color based on ion match
             if pd.notna(row.get('ion_type')):
                 color = get_ion_type_color(row['ion_type'])
             else:
                 color = 'lightgray'
-            
             # Add bar trace
             fig.add_trace(
                 go.Bar(
                     x=[row['mz']],
                     y=[row['intensity']],
-                    marker=dict(
-                        color='lightgray',
-                        line=dict(color=color, width=2)
-                    ),
+                    marker={
+                        'color': 'lightgray',
+                        'line': {'color': color, 'width': 2}
+                    },
                     showlegend=False,
-                    hovertemplate=(
-                        f"m/z: {row['mz']:.2f}<br>"
-                        f"Intensity: {row['intensity']:.0f}"
-                        "<extra></extra>"
-                    )
+                    hovertext=None
+
                 ),
                 row=row_no,
                 col=1
@@ -198,10 +206,10 @@ def generate_spectrum_plot(
                 text=row.get('label', ''),
                 showarrow=False,
                 yshift=10,
-                font=dict(
-                    color=get_ion_type_color(row['ion_type']),
-                    size=font_size * 0.6  # Slightly smaller for annotations
-                ),
+                font={
+                    'color': get_ion_type_color(row['ion_type']),
+                    'size': font_size * 0.6  # Slightly smaller for annotations
+                },
                 row=row_no,
                 col=1
             )
@@ -211,8 +219,8 @@ def generate_spectrum_plot(
         title_text='m/z',
         row=num_plots,
         col=1,
-        title_font=dict(size=font_size),
-        tickfont=dict(size=font_size)
+        title_font={'size': font_size},
+        tickfont={'size': font_size}
     )
     
     for i in range(1, num_plots + 1):
@@ -220,15 +228,16 @@ def generate_spectrum_plot(
             title_text='Intensity',
             row=i,
             col=1,
-            title_font=dict(size=font_size),
-            tickfont=dict(size=font_size)
+            title_font={'size': font_size},
+            tickfont={'size': font_size}
         )
     
     # Update layout
     fig.update_layout(
         showlegend=False,
         height=400 * num_plots,  # Scale height with number of plots
-        hovermode='closest'
+        hovermode='closest',
+        hoverdistance=20
     )
     
     return fig

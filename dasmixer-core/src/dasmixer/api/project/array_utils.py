@@ -1,7 +1,8 @@
 """Utilities for numpy array compression and decompression."""
 
-import numpy as np
 import io
+
+import numpy as np
 
 
 def compress_array(arr: np.ndarray) -> bytes:

@@ -1,9 +1,10 @@
 """Base class for spectral data parsers."""
 
-from abc import abstractmethod
-from typing import AsyncIterator
-from datetime import datetime
 import os
+from abc import abstractmethod
+from collections.abc import AsyncIterator
+from datetime import datetime
+
 import pandas as pd
 
 from ..base import BaseImporter
@@ -50,7 +51,6 @@ class SpectralDataParser(BaseImporter):
             - intensity is typically precursor/parent ion intensity
             - intensity_array contains peak intensities in the spectrum
         """
-        pass
     
     async def get_metadata(self) -> dict:
         """

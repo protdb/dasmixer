@@ -1,5 +1,7 @@
 from itertools import product
 
+from dasmixer.utils.logger import logger
+
 
 def get_leucine_combinations(seq: str, max_positions=7) -> list[str]:
     # Находим позиции всех I и L
@@ -14,5 +16,5 @@ def get_leucine_combinations(seq: str, max_positions=7) -> list[str]:
         for pos, char in zip(positions, combo):
             s[pos] = char
         variants.append("".join(s))
-    print(seq, variants)
+    logger.debug("get_leucine_combinations seq=%s variants=%s", seq, variants)
     return variants

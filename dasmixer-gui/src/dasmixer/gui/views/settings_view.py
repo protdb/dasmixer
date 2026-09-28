@@ -1,31 +1,48 @@
 """Settings view — application settings screen."""
 
-import re
 import os
-import flet as ft
-from dasmixer.utils import logger
-from dasmixer.api.config import config
-from dasmixer.gui.utils import show_snack
 
-_HEX_RE = re.compile(r'^#[0-9a-fA-F]{6}$')
+import flet as ft
+import typer
+from dasmixer.api.config import config
+from dasmixer.gui.components.color_picker import ColorPickerField
+from dasmixer.gui.utils import open_folder, show_snack
+from dasmixer.utils import logger
 
 
 def _apply_logging_config(cfg) -> None:
-    """Configure root logger based on AppConfig settings."""
+    """Configure the application logger hierarchy from AppConfig settings.
+
+    DASMixer uses a single named logger ``dasmixer`` (created in
+    ``dasmixer.utils.logger``) with a console handler attached at import
+    time. All module-level loggers are children of ``dasmixer`` (either via
+    ``from dasmixer.utils.logger import logger`` or
+    ``logging.getLogger("dasmixer.<...>")``) and propagate to it.
+
+    This function reconfigures the ``dasmixer`` logger:
+
+    - Sets its level from ``cfg.log_level`` (DEBUG/INFO/WARNING/...).
+    - When ``cfg.log_to_file`` is True, attaches a daily file handler to
+      ``cfg.log_folder`` (or the default ``~/.cache/dasmixer/logs/``).
+
+    The console handler installed by ``setup_logger`` is preserved — only
+    file handlers are removed/replaced to avoid duplicates on re-save.
+    """
     import logging
     from datetime import datetime
     from pathlib import Path
 
-    root = logging.getLogger()
+    dasmixer_log = logging.getLogger("dasmixer")
 
-    # Remove any existing file handlers to avoid duplicates on re-save
-    for h in list(root.handlers):
+    # Remove existing *file* handlers only — keep the console handler
+    # installed by setup_logger() at import time.
+    for h in list(dasmixer_log.handlers):
         if isinstance(h, logging.FileHandler):
             h.close()
-            root.removeHandler(h)
+            dasmixer_log.removeHandler(h)
 
     level = getattr(logging, cfg.log_level, logging.INFO)
-    root.setLevel(level)
+    dasmixer_log.setLevel(level)
 
     if cfg.log_to_file:
         log_dir = (
@@ -40,7 +57,7 @@ def _apply_logging_config(cfg) -> None:
         fh.setFormatter(logging.Formatter(
             "%(asctime)s %(name)s %(levelname)s %(message)s"
         ))
-        root.addHandler(fh)
+        dasmixer_log.addHandler(fh)
 
 _LARGE_BATCH_THRESHOLD = 100_000
 _LARGE_BATCH_WARNING = (
@@ -74,7 +91,8 @@ class SettingsView(ft.View):
             ),
             scroll=ft.ScrollMode.AUTO,
         )
-        self._color_rows: list[dict] = []  # [{container, field}]
+        self._color_rows: list[ColorPickerField] = []
+        self._row_containers: dict[int, ft.Container] = {}
         self._build_controls()
 
     def _go_back(self):
@@ -100,10 +118,41 @@ class SettingsView(ft.View):
             value=config.theme,
         )
 
+        # --- Plot aspect ratio ---
+        self._plot_aspect_dropdown = ft.Dropdown(
+            label="Plot aspect ratio",
+            width=200,
+            options=[
+                ft.DropdownOption(key="1:1", text="1:1 (Square)"),
+                ft.DropdownOption(key="4:3", text="4:3 (Classic)"),
+                ft.DropdownOption(key="2:3", text="2:3 (Portrait)"),
+                ft.DropdownOption(key="16:9", text="16:9 (Widescreen)"),
+            ],
+            value=config.plot_aspect_ratio,
+        )
+
+        # --- Plot view mode ---
+        self._plot_view_mode_dropdown = ft.Dropdown(
+            label="Plot and report view mode",
+            width=200,
+            options=[
+                ft.DropdownOption(key="Window", text="Window (pywebview)"),
+                ft.DropdownOption(key="Browser", text="Browser (default)"),
+            ],
+            value=config.plot_view_mode,
+        )
+
         theme_section = self._section(
             title="Appearance",
             subtitle=None,
-            content=ft.Row([self._theme_dropdown], spacing=10),
+            content=ft.Row(
+                [
+                    self._theme_dropdown,
+                    self._plot_aspect_dropdown,
+                    self._plot_view_mode_dropdown,
+                ],
+                spacing=10,
+            ),
         )
 
         # --- Batch limits ---
@@ -238,10 +287,19 @@ class SettingsView(ft.View):
             on_click=lambda _: self.page.run_task(self._save_settings),
         )
 
+        # --- Open configuration folder button ---
+        open_config_folder_btn = ft.ElevatedButton(
+            content=ft.Text("Open configuration folder"),
+            icon=ft.Icons.FOLDER_OPEN,
+            on_click=lambda _: open_folder(typer.get_app_dir("dasmixer")),
+        )
+
         self.controls = [
             ft.Container(
                 content=ft.Column(
                     [
+                        ft.Row([open_config_folder_btn]),
+                        ft.Divider(),
                         theme_section,
                         ft.Divider(),
                         batch_section,
@@ -289,76 +347,38 @@ class SettingsView(ft.View):
 
     def _add_color_row(self, hex_color: str = "#888888"):
         """Add one editable color row to the palette list."""
-        preview = ft.Container(
-            width=36,
-            height=36,
-            bgcolor=hex_color if _HEX_RE.match(hex_color) else "#888888",
-            border_radius=4,
-            border=ft.border.all(1, ft.Colors.GREY_400),
-        )
-        field = ft.TextField(
+        field = ColorPickerField(
             value=hex_color,
-            width=120,
-            hint_text="#rrggbb",
-            on_change=lambda e, p=preview, f=None: self._on_color_change(e, p),
-            on_blur=lambda e, p=preview: self._on_color_blur(e, p),
+            label=None,
+            compact=True,
+            show_delete=True,
+            preview_size=36,
         )
-        # Fix: bind field reference for on_change
-        field.on_change = lambda e, p=preview, tf=field: self._on_color_change(e, p)
-
-        row_data = {"preview": preview, "field": field}
-        self._color_rows.append(row_data)
-
-        delete_btn = ft.IconButton(
-            icon=ft.Icons.DELETE_OUTLINE,
-            tooltip="Remove color",
-            on_click=lambda _, rd=row_data: self._on_delete_color(rd),
-        )
+        # Bind delete to this instance after creation (avoids closure-on-self issues)
+        self._color_rows.append(field)
+        field._on_delete_cb = lambda: self._on_delete_color(field)
 
         row_container = ft.Container(
-            content=ft.Row(
-                [preview, field, delete_btn],
-                spacing=8,
-                vertical_alignment=ft.CrossAxisAlignment.CENTER,
-            ),
+            content=field,
+            padding=ft.padding.symmetric(vertical=2),
         )
-        row_data["container"] = row_container
+        self._row_containers[id(field)] = row_container
         self._color_rows_column.controls.append(row_container)
 
     # ------------------------------------------------------------------
     # Event handlers
     # ------------------------------------------------------------------
 
-    def _on_color_change(self, e: ft.ControlEvent, preview: ft.Container):
-        """Live-update color preview as user types."""
-        value = e.control.value or ""
-        if _HEX_RE.match(value):
-            preview.bgcolor = value
-            e.control.border_color = None  # reset error highlight
-        else:
-            preview.bgcolor = "#888888"
-        if self.page:
-            preview.update()
-            e.control.update()
-
-    def _on_color_blur(self, e: ft.ControlEvent, preview: ft.Container):
-        """Validate color on focus loss — highlight invalid values."""
-        value = e.control.value or ""
-        if not _HEX_RE.match(value):
-            e.control.border_color = ft.Colors.RED
-        else:
-            e.control.border_color = None
-        if self.page:
-            e.control.update()
-
     def _on_add_color(self):
         self._add_color_row("#888888")
         if self.page:
             self._color_rows_column.update()
 
-    def _on_delete_color(self, row_data: dict):
-        self._color_rows.remove(row_data)
-        self._color_rows_column.controls.remove(row_data["container"])
+    def _on_delete_color(self, field: ColorPickerField):
+        self._color_rows.remove(field)
+        row_container = self._row_containers.pop(id(field), None)
+        if row_container is not None and row_container in self._color_rows_column.controls:
+            self._color_rows_column.controls.remove(row_container)
         if self.page:
             self._color_rows_column.update()
 
@@ -410,22 +430,18 @@ class SettingsView(ft.View):
                 self._cpu_threads_field.border_color = None
                 self._cpu_threads_field.update()
             except ValueError:
-                errors.append(f"'Max CPU Threads': must be a positive integer or empty")
+                errors.append("'Max CPU Threads': must be a positive integer or empty")
                 self._cpu_threads_field.border_color = ft.Colors.RED
                 self._cpu_threads_field.update()
 
         # Colors
         new_colors: list[str] = []
-        for row_data in self._color_rows:
-            val = (row_data["field"].value or "").strip()
-            if not _HEX_RE.match(val):
-                errors.append(f"Invalid color value: '{val}'")
-                row_data["field"].border_color = ft.Colors.RED
-                row_data["field"].update()
+        for field in self._color_rows:
+            if not field.is_valid:
+                errors.append(f"Invalid color value: '{field.value}'")
+                field.set_error("Invalid hex color")
             else:
-                row_data["field"].border_color = None
-                row_data["field"].update()
-                new_colors.append(val)
+                new_colors.append(field.value)
 
         if errors:
             show_snack(self.page, "Fix errors before saving: " + "; ".join(errors), ft.Colors.RED_400)
@@ -447,6 +463,8 @@ class SettingsView(ft.View):
 
         # Apply
         config.theme = new_theme
+        config.plot_aspect_ratio = self._plot_aspect_dropdown.value or "16:9"
+        config.plot_view_mode = self._plot_view_mode_dropdown.value or "Window"
         for field_name, val in batch_values.items():
             setattr(config, field_name, val)
         config.default_colors = new_colors
@@ -481,7 +499,6 @@ class SettingsView(ft.View):
     async def _confirm_large_batch(self, large_fields: list[str]) -> bool:
         """Show warning dialog for very large batch sizes. Returns True if confirmed."""
         result: list[bool] = [False]
-        dialog_closed = ft.Event()
 
         def on_confirm(_):
             result[0] = True

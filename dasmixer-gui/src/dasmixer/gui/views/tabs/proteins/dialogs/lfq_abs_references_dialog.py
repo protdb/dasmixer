@@ -3,9 +3,8 @@ Dialog for configuring LFQ absolute concentration references.
 """
 
 import asyncio
-import flet as ft
 
-from dasmixer.utils import logger
+import flet as ft
 from dasmixer.api.project.project import Project
 from dasmixer.gui.utils import show_snack
 

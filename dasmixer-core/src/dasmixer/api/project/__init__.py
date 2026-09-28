@@ -1,6 +1,6 @@
 """Project management module."""
 
+from .dataclasses import Protein, Sample, Subset, Tool
 from .project import Project
-from .dataclasses import Subset, Tool, Sample, Protein
 
-__all__ = ['Project', 'Subset', 'Tool', 'Sample', 'Protein']
+__all__ = ['Project', 'Protein', 'Sample', 'Subset', 'Tool']

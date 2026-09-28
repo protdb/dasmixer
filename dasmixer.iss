@@ -3,7 +3,7 @@
 ; Non-commercial use only
 
 #define MyAppName "DASMixer"
-#define MyAppVersion "0.7.0"
+#define MyAppVersion "0.7.3rc3"
 #define MyAppPublisher "IBMC, Moscow"
 #define MyAppURL "https://github.com/protdb/dasmixer"
 #define MyAppExeName "dasmixer.exe"
@@ -41,7 +41,7 @@ DisableDirPage=auto
 ; Remove the following line to run in administrative install mode (install for all users).
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
-SetupIconFile={#SourcePath}\assets\icons\icon_64.ico
+SetupIconFile={#SourcePath}\assets\icons\icon_64_bg.ico
 SolidCompression=yes
 WizardStyle=modern
 

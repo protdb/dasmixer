@@ -8,14 +8,14 @@ Each action class wraps a calculation pipeline and provides:
 """
 
 from .ion_actions import IonCoverageAction, SelectPreferredAction
-from .protein_map_action import MatchProteinsAction
-from .protein_ident_action import ProteinIdentificationsAction
 from .lfq_action import LFQAction
+from .protein_ident_action import ProteinIdentificationsAction
+from .protein_map_action import MatchProteinsAction
 
 __all__ = [
     'IonCoverageAction',
-    'SelectPreferredAction',
+    'LFQAction',
     'MatchProteinsAction',
     'ProteinIdentificationsAction',
-    'LFQAction',
+    'SelectPreferredAction',
 ]

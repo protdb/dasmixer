@@ -2,21 +2,26 @@
 Algorithms for quantitative proteomics calculations.
 """
 
-from typing import List, Optional
 import logging
+import math
 
 import numpy as np
 
-from .utils import digest_protein, calculate_peptide_features, remove_modifications, DigestionParams
+from .utils import (
+    DigestionParams,
+    calculate_peptide_features,
+    digest_protein,
+    remove_modifications,
+)
 
 logger = logging.getLogger(__name__)
 
 
 def calculate_empai_value(
-    peptides: List[str],
-    intensities: List[float],
+    peptides: list[str],
+    intensities: list[float],
     protein_sequence: str,
-    observable_parameters: Optional[DigestionParams] = None,
+    observable_parameters: DigestionParams | None = None,
     empai_base: float = 10.0,
 ) -> float:
     """
@@ -199,7 +204,7 @@ def calculate_nsaf_value(spectral_counts: int, molecular_mass_kda: float) -> flo
     return spectral_counts / molecular_mass_kda
 
 
-def calculate_ibaq_value(intensities: List[float], observable_peptides: int) -> float:
+def calculate_ibaq_value(intensities: list[float], observable_peptides: int) -> float:
     """
     Calculate iBAQ (intensity-Based Absolute Quantification) for a protein.
     
@@ -215,13 +220,24 @@ def calculate_ibaq_value(intensities: List[float], observable_peptides: int) -> 
     """
     if not intensities or observable_peptides <= 0:
         return 0.0
-    
+
+    # Filter out NaN / None intensities — they come from spectra with NULL
+    # intensity in the DB and would otherwise poison the sum with NaN.
+    clean = [v for v in intensities if v is not None and not (isinstance(v, float) and math.isnan(v))]
+    if len(clean) != len(intensities):
+        logger.debug(
+            "calculate_ibaq_value: filtered %d NaN/None intensities out of %d",
+            len(intensities) - len(clean), len(intensities),
+        )
+    if not clean:
+        return 0.0
+
     # Use ALL intensities - no deduplication for iBAQ
-    total_intensity = sum(intensities)
+    total_intensity = sum(clean)
     return total_intensity / observable_peptides
 
 
-def calculate_top3_value(intensities: List[float]) -> Optional[float]:
+def calculate_top3_value(intensities: list[float]) -> float | None:
     """
     Calculate Top3 value (average of top 3 peptide intensities).
     
@@ -246,7 +262,7 @@ def calculate_top3_value(intensities: List[float]) -> Optional[float]:
     return sum(top_intensities) / len(top_intensities)
 
 
-def normalize_values(values: List[float]) -> List[float]:
+def normalize_values(values: list[float]) -> list[float]:
     """
     Normalize values to sum to 1.0.
     
@@ -256,14 +272,21 @@ def normalize_values(values: List[float]) -> List[float]:
     Returns:
         List of normalized values
     """
-    total = sum(values)
+    # Replace NaN/None with 0.0 so they don't poison the sum
+    clean = [v if v is not None and not (isinstance(v, float) and math.isnan(v)) else 0.0 for v in values]
+    if len(clean) != len(values):
+        logger.debug(
+            "normalize_values: replaced %d NaN/None values with 0.0",
+            len(values) - len(clean),
+        )
+    total = sum(clean)
     if total <= 0:
-        return [0.0] * len(values)
+        return [0.0] * len(clean)
     
-    return [v / total for v in values]
+    return [v / total for v in clean]
 
 
-def calculate_nsaf_normalized(saf_values: List[float]) -> List[float]:
+def calculate_nsaf_normalized(saf_values: list[float]) -> list[float]:
     """
     Calculate NSAF from SAF values according to formula:
     NSAF_i = SAF_i / Σ(SAF_j)
@@ -278,9 +301,9 @@ def calculate_nsaf_normalized(saf_values: List[float]) -> List[float]:
 
 
 def calculate_absolute_concentrations_total_protein(
-    relative_values: List[float],
+    relative_values: list[float],
     total_protein_gl: float
-) -> List[float]:
+) -> list[float]:
     """
     Calculate absolute concentrations using total protein concentration.
     
@@ -297,10 +320,10 @@ def calculate_absolute_concentrations_total_protein(
 
 
 def calculate_absolute_concentrations_albumin_standard(
-    relative_values: List[float],
+    relative_values: list[float],
     albumin_relative: float,
     albumin_gl: float
-) -> List[float]:
+) -> list[float]:
     """
     DEPRECATED: Use calculate_absolute_concentrations_reference_standard instead.
     Kept for backward compatibility.
@@ -311,10 +334,10 @@ def calculate_absolute_concentrations_albumin_standard(
 
 
 def calculate_absolute_concentrations_reference_standard(
-    relative_values: List[float],
+    relative_values: list[float],
     reference_relative: float,
     reference_gl: float
-) -> List[float]:
+) -> list[float]:
     """
     Calculate absolute concentrations using a reference protein as internal standard.
     
@@ -336,12 +359,12 @@ def calculate_absolute_concentrations_reference_standard(
 
 
 def calculate_combined_absolute_concentrations(
-    relative_values: List[float],
+    relative_values: list[float],
     albumin_relative: float,
     albumin_gl: float,
     total_protein_gl: float,
     alpha: float = 0.5
-) -> List[float]:
+) -> list[float]:
     """
     Calculate absolute concentrations using combined approach.
     
@@ -374,9 +397,9 @@ def calculate_combined_absolute_concentrations(
 
 
 def convert_concentrations_to_molar(
-    concentrations_gl: List[float],
-    molecular_masses_kda: List[float]
-) -> List[float]:
+    concentrations_gl: list[float],
+    molecular_masses_kda: list[float]
+) -> list[float]:
     """
     Convert mass concentrations (g/L) to molar concentrations (mol/L).
     
@@ -403,9 +426,9 @@ def convert_concentrations_to_molar(
 
 
 def convert_concentrations_to_mass(
-    concentrations_mol: List[float],
-    molecular_masses_kda: List[float]
-) -> List[float]:
+    concentrations_mol: list[float],
+    molecular_masses_kda: list[float]
+) -> list[float]:
     """
     Convert molar concentrations (mol/L) to mass concentrations (g/L).
     
@@ -426,7 +449,7 @@ def convert_concentrations_to_mass(
 
 
 def validate_mass_balance(
-    absolute_concentrations: List[float],
+    absolute_concentrations: list[float],
     total_protein_gl: float,
     tolerance: float = 0.1
 ) -> bool:

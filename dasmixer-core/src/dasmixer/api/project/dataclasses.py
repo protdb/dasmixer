@@ -1,14 +1,11 @@
 """Dataclasses for external interface to project entities."""
 
-from dataclasses import dataclass, field
 import json
-import pickle
-import gzip
+from dataclasses import dataclass, field
 from typing import Any, Literal
-import numpy as np
-from numpy import ndarray
 
 from dasmixer.api.project.array_utils import decompress_array
+from numpy import ndarray
 
 # Import for type hints only
 try:

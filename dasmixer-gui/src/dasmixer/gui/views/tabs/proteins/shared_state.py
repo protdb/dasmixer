@@ -1,6 +1,7 @@
 """Shared state for Proteins tab."""
 
 from dataclasses import dataclass, field
+
 import pandas as pd
 
 

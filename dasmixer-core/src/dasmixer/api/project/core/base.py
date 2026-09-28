@@ -1,12 +1,12 @@
 """Base class for Project with low-level database operations."""
 
-import aiosqlite
+import gzip
 import json
 import pickle
-import gzip
 from pathlib import Path
 from typing import Any
 
+import aiosqlite
 from dasmixer.utils.logger import logger
 
 

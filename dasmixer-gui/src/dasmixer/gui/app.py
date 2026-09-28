@@ -2,14 +2,15 @@
 
 import asyncio
 import os
-import flet as ft
+import traceback
 from pathlib import Path
+
+import flet as ft
 from dasmixer.api.config import config
 from dasmixer.api.project.project import Project
-import traceback
-from dasmixer.gui.utils import show_snack, get_asset_path
-from dasmixer.gui.components.progress_dialog import ProgressDialog
 from dasmixer.gui.components.merge_options_dialog import MergeOptionsDialog
+from dasmixer.gui.components.progress_dialog import ProgressDialog
+from dasmixer.gui.utils import cleanup_temp_html_files, get_asset_path, show_snack
 from dasmixer.utils import logger
 
 
@@ -22,7 +23,7 @@ def run_gui(project_path: str | None = None):
     """
     def main(page: ft.Page):
         logger.debug("[app] main() called, creating DASMixerApp...")
-        app = DASMixerApp(page, project_path)
+        DASMixerApp(page, project_path)
 
     ft.app(target=main)
 
@@ -71,6 +72,10 @@ class DASMixerApp:
         self.page.window.on_event = self._on_window_event
 
         logger.debug("[app] Route handlers registered.")
+
+        # Remove stale interactive-mode HTML files left by previous runs
+        # (older than 24h, so concurrently running instances are not affected).
+        cleanup_temp_html_files()
 
         if initial_project_path:
             logger.debug(f"[app] Opening initial project: {initial_project_path}")
@@ -164,7 +169,7 @@ class DASMixerApp:
 
     def _view_pop(self, e=None):
         """Handle back navigation (system back button)."""
-        logger.debug(f"[route] view_pop triggered")
+        logger.debug("[route] view_pop triggered")
         if len(self.page.views) > 1:
             self.page.views.pop()
         top_view = self.page.views[-1]
@@ -213,8 +218,16 @@ class DASMixerApp:
     def _build_appbar(self) -> ft.AppBar:
         """Build application AppBar with menu."""
         close_disabled = self.current_project is None
+
+        # Determine AppBar title based on current project
+        if self.current_project:
+            project_name = Path(self.current_project.path).stem
+            title_text = f"DASMixer — {project_name}"
+        else:
+            title_text = "DASMixer"
+
         return ft.AppBar(
-            title=ft.Text("DASMixer", size=20, weight=ft.FontWeight.BOLD),
+            title=ft.Text(title_text, size=20, weight=ft.FontWeight.BOLD),
             actions=[
                 # File menu
                 ft.PopupMenuButton(
@@ -230,6 +243,12 @@ class DASMixerApp:
                             content=ft.Text("Open Project"),
                             icon=ft.Icons.FOLDER_OPEN,
                             on_click=lambda _: self.page.run_task(self.open_project_dialog)
+                        ),
+                        ft.PopupMenuItem(
+                            content=ft.Text("Open Recent"),
+                            icon=ft.Icons.HISTORY,
+                            on_click=lambda _: self.page.run_task(self._show_open_recent_dialog),
+                            disabled=(len(config.recent_projects) == 0)
                         ),
                         ft.PopupMenuItem(),  # Divider
                         ft.PopupMenuItem(
@@ -294,6 +313,78 @@ class DASMixerApp:
         )
 
     # ------------------------------------------------------------------
+    # Titles
+    # ------------------------------------------------------------------
+
+    def _update_titles(self):
+        """Update window title based on current project."""
+        if self.current_project:
+            project_name = Path(self.current_project.path).stem
+            self.page.title = f"{project_name}: DASMixer - Mass Spectrometry Data Integration"
+        else:
+            self.page.title = "DASMixer - Mass Spectrometry Data Integration"
+        if self.page:
+            self.page.update()
+
+    # ------------------------------------------------------------------
+    # Open Recent
+    # ------------------------------------------------------------------
+
+    async def _show_open_recent_dialog(self):
+        """Show Open Recent modal dialog."""
+        from dasmixer.gui.components.recent_projects_list import RecentProjectsList
+
+        async def on_project_selected(path: str):
+            # 1. Close the Open Recent modal dialog
+            dialog.open = False
+            try:
+                self.page.overlay.remove(dialog)
+            except ValueError:
+                pass
+            self.page.update()
+
+            # 2. Close current project completely (routes to start view)
+            if self.current_project:
+                try:
+                    await self.current_project.save(checkpoint=True)
+                except Exception as ex:
+                    logger.warning(f"[app] Failed to save current project before opening recent: {ex}")
+                await self.close_project()
+
+            # 3. Open the new project (shows migration dialog if needed)
+            await self.open_project(path)
+
+        def on_cancel(_):
+            dialog.open = False
+            try:
+                self.page.overlay.remove(dialog)
+            except ValueError:
+                pass
+            self.page.update()
+
+        recent_list = RecentProjectsList(
+            recent_projects=config.recent_projects,
+            on_click_project=lambda p: self.page.run_task(on_project_selected, p),
+        )
+
+        dialog = ft.AlertDialog(
+            modal=True,
+            title=ft.Text("Open Recent Project"),
+            content=ft.Container(
+                content=recent_list,
+                width=500,
+                height=300,
+            ),
+            actions=[
+                ft.TextButton("Cancel", on_click=on_cancel),
+            ],
+        )
+
+        self.page.overlay.append(dialog)
+        dialog.open = True
+        self.page.update()
+
+    # ------------------------------------------------------------------
     # Navigation helpers
     # ------------------------------------------------------------------
 
@@ -312,8 +403,6 @@ class DASMixerApp:
         Проверяет версию открытого проекта и предлагает миграцию или предупреждает
         о несовместимости.
         """
-        from dasmixer.api.project.migrations import MigrationError
-        from dasmixer.versions import PROJECT_VERSION
 
         needs_migration = await self.current_project.needs_migration()
         is_too_new = await self.current_project.is_version_too_new()
@@ -370,17 +459,15 @@ class DASMixerApp:
 
         result = [False]
 
-        def on_update(e):
+        async def on_update(e):
             result[0] = True
             dialog.open = False
             event.set()
-            self.page.update()
 
-        def on_skip(e):
+        async def on_skip(e):
             result[0] = False
             dialog.open = False
             event.set()
-            self.page.update()
 
         event = asyncio.Event()
 
@@ -434,12 +521,14 @@ class DASMixerApp:
             dialog.update_progress(1.0, "Done")
         except MigrationError as e:
             logger.exception(f"Migration failed: {e}")
-            dialog.open = False
-            self.page.update()
             self._show_error(f"Migration failed: {e}")
             return
         finally:
             dialog.open = False
+            try:
+                self.page.overlay.remove(dialog)
+            except ValueError:
+                pass
             self.page.update()
 
         show_snack(self.page, f"Project updated to {PROJECT_VERSION}", ft.Colors.GREEN_400)
@@ -508,6 +597,7 @@ class DASMixerApp:
             )
 
             config.add_recent_project(str(project_path))
+            self._update_titles()
             self.show_project_view()
             self._show_success(f"Created project: {project_path.name}")
 
@@ -552,7 +642,7 @@ class DASMixerApp:
                 return
 
             if self.current_project:
-                await self.current_project.close()
+                await self.close_project()
 
             self.current_project = Project(path=project_path, create_if_not_exists=False)
             await self.current_project.initialize()
@@ -561,6 +651,7 @@ class DASMixerApp:
             await self._check_project_version()
 
             config.add_recent_project(str(project_path))
+            self._update_titles()
             self.show_project_view()
             self._show_success(f"Opened project: {project_path.name}")
 
@@ -575,6 +666,7 @@ class DASMixerApp:
             try:
                 await self.current_project.close()
                 self.current_project = None
+                self._update_titles()
                 self.show_start_view()
                 self._show_info("Project closed")
             except Exception as ex:

@@ -1,7 +1,6 @@
 """Add Tool dialog with type/parser selection."""
 
 import flet as ft
-
 from dasmixer.api.inputs.registry import registry
 from dasmixer.gui.utils import show_snack
 from dasmixer.utils import logger
@@ -39,7 +38,7 @@ class AddToolDialog:
         parsers = registry.get_identification_parsers()
         parser_options = [
             ft.dropdown.Option(key=name, text=name)
-            for name in parsers.keys()
+            for name in parsers
         ]
         
         if not parser_options:

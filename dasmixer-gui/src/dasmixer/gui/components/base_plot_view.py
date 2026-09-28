@@ -1,17 +1,56 @@
 """Base class for all plot views with save/export functionality."""
 
-import flet as ft
-import plotly.graph_objects as go
 import json
 import multiprocessing
 
+import flet as ft
+import plotly.graph_objects as go
+from dasmixer.api.config import config
 from dasmixer.api.project.project import Project
-from dasmixer.gui.components.plotly_viewer import PlotlyViewer, show_webview, render_png_async
-from dasmixer.utils import logger
+from dasmixer.gui.components.clipboard import copy_png_to_clipboard
+from dasmixer.gui.components.plotly_viewer import (
+    PlotlyViewer,
+    render_png_async,
+    show_webview,
+)
 from dasmixer.gui.utils import show_snack
+from dasmixer.utils import logger
 
-_PLOT_WIDTH = 1100
-_PLOT_HEIGHT = 700
+WINDOW_HEAD_GAP = 200
+
+def _get_plot_dimensions(page: ft.Page | None) -> tuple[int, int]:
+    """
+    Calculate plot width and height based on window size and aspect ratio setting.
+
+    Returns:
+        (width, height) tuple in pixels
+    """
+    # Fallback when page/window unavailable
+    if page is None or getattr(page, "window", None) is None or page.window.height is None:
+        return (1100, 700)
+
+    window_height = page.window.height
+
+    # Height: 150px less than window, clamped to [300, 1000]
+    if window_height <= 300 + WINDOW_HEAD_GAP:
+        height = 300
+    elif window_height >= 1000 + WINDOW_HEAD_GAP:
+        height = 1000
+    else:
+        height = window_height - WINDOW_HEAD_GAP
+
+
+    try:
+        w ,h = [int(x) for x in str(config.plot_aspect_ratio).split(":")]
+    except ValueError:
+        w = 16
+        h = 9
+
+    # Parse aspect ratio
+
+    width = int(height * w / h)
+
+    return width, height
 
 
 class BasePlotView(ft.Container):
@@ -28,6 +67,8 @@ class BasePlotView(ft.Container):
     """
 
     plot_type_name: str = "base_plot"
+
+    height_multiplier: float = 1.0
 
     def __init__(
         self,
@@ -55,6 +96,7 @@ class BasePlotView(ft.Container):
         self.save_button: ft.ElevatedButton | None = None
         self.export_button: ft.ElevatedButton | None = None
         self.webview_button: ft.ElevatedButton | None = None
+        self.copy_button: ft.ElevatedButton | None = None
 
         # suspend/resume support
         self._is_suspended: bool = False
@@ -86,10 +128,17 @@ class BasePlotView(ft.Container):
         self.preview_container = ft.Container(
             content=ft.Text("No plot generated yet", color=ft.Colors.GREY_600),
             alignment=ft.Alignment.CENTER,
-            height=_PLOT_HEIGHT + 20
         )
 
         buttons = []
+
+        self.copy_button = ft.ElevatedButton(
+            content=ft.Text("Copy"),
+            icon=ft.Icons.CONTENT_COPY,
+            on_click=lambda e: self.page.run_task(self._on_copy, e) if self.page else None,
+            disabled=True
+        )
+        buttons.append(self.copy_button)
 
         if self.show_save_button:
             self.save_button = ft.ElevatedButton(
@@ -173,7 +222,7 @@ class BasePlotView(ft.Container):
             await self.project.set_setting(setting_key, value_str)
 
     async def _load_settings_from_project(self):
-        for key in self.plot_settings.keys():
+        for key in self.plot_settings:
             setting_key = f"plot_view_{self.plot_type_name}_{key}"
             value = await self.project.get_setting(setting_key)
             if value is not None:
@@ -215,7 +264,7 @@ class BasePlotView(ft.Container):
             await self._display_plot(fig)
 
             # Enable action buttons
-            for btn in [self.save_button, self.export_button, self.webview_button]:
+            for btn in [self.copy_button, self.save_button, self.export_button, self.webview_button]:
                 if btn is not None:
                     btn.disabled = False
 
@@ -223,6 +272,7 @@ class BasePlotView(ft.Container):
                 self.page.update()
 
         except Exception as ex:
+            logger.exception(ex)
             if self.preview_container is not None:
                 self.preview_container.content = ft.Text(
                     f"Error generating plot: {ex}", color=ft.Colors.RED_400
@@ -233,7 +283,7 @@ class BasePlotView(ft.Container):
     async def _apply_global_settings(self, fig: go.Figure) -> go.Figure:
         font_size = await self.project.get_setting("global_plot_font_size")
         if font_size:
-            fig.update_layout(font=dict(size=int(font_size)))
+            fig.update_layout(font={"size": int(font_size)})
         return fig
 
     async def _display_plot(self, fig: go.Figure):
@@ -241,14 +291,19 @@ class BasePlotView(ft.Container):
         Render the figure to PNG asynchronously (no event-loop blocking),
         cache the bytes, then update the preview container.
         """
+        # Calculate dimensions based on current window size and aspect ratio
+        width, height = _get_plot_dimensions(self.page)
+        height = int(height * self.height_multiplier)
+        fig.update_layout(width=width, height=height)
+
         # Render PNG in a thread pool — Kaleido subprocess won't block the loop
-        img_bytes = await render_png_async(fig, _PLOT_WIDTH, _PLOT_HEIGHT)
+        img_bytes = await render_png_async(fig, width, height)
         self._last_img_bytes = img_bytes
 
         viewer = PlotlyViewer(
             figure=fig,
-            width=_PLOT_WIDTH,
-            height=_PLOT_HEIGHT,
+            width=width,
+            height=height,
             title=self.title,
             show_interactive_button=False,  # we have our own button in the button row
             img_bytes=img_bytes,            # pass pre-rendered bytes — no second render
@@ -262,10 +317,16 @@ class BasePlotView(ft.Container):
         """Launch interactive WebView in a separate process."""
         if not self.current_figure:
             return
+        if self.page:
+            max_height = self.page.height
+            max_width = self.page.width
+        else:
+            max_height = 1280
+            max_width = 720
         try:
             p = multiprocessing.Process(
                 target=show_webview,
-                args=(self.current_figure, self.title)
+                args=(self.current_figure, self.title, max_width, max_height)
             )
             p.start()
         except Exception as ex:
@@ -296,6 +357,38 @@ class BasePlotView(ft.Container):
             logger.exception(ex)
             if self.page:
                 show_snack(self.page, f"Error saving plot: {ex}", ft.Colors.RED_400)
+                self.page.update()
+
+    async def _on_copy(self, e):
+        """Copy the plot image to the clipboard."""
+        if not self.current_figure:
+            return
+
+        # Use the cached preview PNG if available — what the user sees.
+        img_bytes = self._last_img_bytes
+        if img_bytes is None:
+            # Defensive re-render (button only enabled after first display,
+            # so this path should not normally be reached).
+            try:
+                width, height = _get_plot_dimensions(self.page)
+                height = int(height * self.height_multiplier)
+                img_bytes = await render_png_async(self.current_figure, width, height)
+            except Exception as ex:
+                logger.exception(ex)
+                if self.page:
+                    show_snack(self.page, f"Error copying plot: {ex}", ft.Colors.RED_400)
+                    self.page.update()
+                return
+
+        try:
+            await copy_png_to_clipboard(self.page, img_bytes)
+            if self.page:
+                show_snack(self.page, "Plot copied!", ft.Colors.GREEN_400)
+                self.page.update()
+        except Exception as ex:
+            logger.exception(ex)
+            if self.page:
+                show_snack(self.page, f"Error copying plot: {ex}", ft.Colors.RED_400)
                 self.page.update()
 
     async def _on_export(self, e):
@@ -383,7 +476,6 @@ class BasePlotView(ft.Container):
                     italic=True,
                 ),
                 alignment=ft.Alignment.CENTER,
-                height=80,
             )
         # Caller handles page.update()
 
@@ -398,11 +490,14 @@ class BasePlotView(ft.Container):
             return
         self._is_suspended = False
 
+        # Calculate dimensions based on current window size and aspect ratio
+        width, height = _get_plot_dimensions(self.page)
+
         if self._last_img_bytes is not None and self.preview_container is not None:
             viewer = PlotlyViewer(
                 figure=self.current_figure,
-                width=_PLOT_WIDTH,
-                height=_PLOT_HEIGHT,
+                width=width,
+                height=height,
                 title=self.title,
                 show_interactive_button=False,
                 img_bytes=self._last_img_bytes,

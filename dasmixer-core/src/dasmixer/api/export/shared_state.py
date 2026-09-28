@@ -37,6 +37,12 @@ class ExportTabState:
     mgf_seq_type: str = "canonical"
     mgf_compression: str = "none"
 
+    mgf_replace_scans: bool = False
+    mgf_merge_mode: str = "by_sample"   # "one_file" | "by_sample" | "by_spectre_file"
+    mgf_add_timestamp: bool = True
+    mgf_sequence_contains: str = ""
+    mgf_file_suffix: str = ""
+
     mztab_sample_ids: list[int] = field(default_factory=list)
     mztab_lfq_method: str = "emPAI"
     mztab_title: str = ""

@@ -1,10 +1,9 @@
 """Base class for all GUI action handlers."""
 
 import flet as ft
-
 from dasmixer.api.project.project import Project
-from dasmixer.gui.views.tabs.peptides.dialogs.progress_dialog import ProgressDialog
 from dasmixer.gui.utils import show_snack
+from dasmixer.gui.views.tabs.peptides.dialogs.progress_dialog import ProgressDialog
 
 
 class BaseAction:

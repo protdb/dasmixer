@@ -82,13 +82,72 @@ pip install "dasmixer-core[all]"       # Core + all optional extras
 
 ### Development
 
+The repo is a **Poetry workspace** of four PEP 420 namespace packages (`dasmixer-core`, `dasmixer-gui`, `dasmixer-cli`, `metapackage`). For local development you run directly from source in editable mode — no build step.
+
+**Requirements:** Python ≥ 3.11, Poetry 2.x.
+
+**Prerequisites — SQLite dev headers.** The project database runs on `aiosqlite`, which requires CPython to be built with the `_sqlite3` module. If your Python was compiled without it, install the headers and rebuild Python:
+
+```bash
+sudo apt install libsqlite3-dev        # Debian/Ubuntu
+# brew install sqlite                   # macOS (usually already present)
+# Windows: SQLite is bundled with official CPython builds
+python -c "import sqlite3"             # verify; if it fails, rebuild Python
+# pyenv users: pyenv uninstall 3.14.7 && pyenv install 3.14.7
+```
+
+**Setup — editable install in the poetry venv.**
+
+Install `dasmixer-core`, `dasmixer-gui`, `dasmixer-cli` as editable. Do **not** install the `metapackage` editable: its `dasmixer/__init__.py` turns `dasmixer` into a regular package and breaks PEP 420 namespace merging of the three `src/dasmixer/` source trees, so `dasmixer.api` / `dasmixer.gui` / `dasmixer.cli` would stop resolving.
+
 ```bash
 git clone git@github.com:protdb/dasmixer.git
 cd dasmixer
-make dev-install
+poetry run pip install -e "dasmixer-core[all]" -e "dasmixer-gui" -e "dasmixer-cli"
 ```
 
-**Requirements:** Python ≥ 3.11
+**Run from source.** Always launch via `poetry run` so the poetry-venv entry points are used rather than any system-installed `dasmixer`:
+
+```bash
+poetry run dasmixer                     # GUI
+poetry run dasmixer-cli --help          # CLI
+```
+
+Code edits are picked up immediately — no rebuild needed.
+
+**Notes**
+- Version: read `from dasmixer.versions import APP_VERSION`. `dasmixer.__version__` is unavailable when the metapackage is not installed (this is expected).
+- `make dev-install` installs into the *currently active* environment, not necessarily the poetry venv. Prefer the `poetry run pip install -e ...` form above for poetry-based workflows.
+
+#### Dependency updates
+
+Each subpackage owns its dependencies in its own `pyproject.toml` (`[project] dependencies`). The root `poetry.lock` tracks only shared dev tools (pytest) — it does **not** lock subpackage dependencies. Subpackages are editable-installed via `pip`, so dependency changes require a reinstall to take effect in the venv.
+
+**1. Update the constraint in the subpackage.** Edit `dasmixer-<pkg>/pyproject.toml`, following the existing `>=X.Y.Z,<MAJOR.0.0` range convention.
+
+**2. Reinstall in the root poetry venv.**
+
+```bash
+poetry run pip install -e ./dasmixer-core          # reinstall + upgrade changed deps
+poetry run pip install -e ./dasmixer-cli -e ./dasmixer-gui   # sync versions
+poetry run pip check                               # verify no conflicts
+```
+
+**3. Update the GUI standalone env** (has its own `poetry.lock` and venv, with `dasmixer-core` as a path dependency):
+
+```bash
+cd dasmixer-gui
+poetry lock            # re-resolve lock with the new constraint from ../dasmixer-core
+poetry install         # upgrade in the GUI venv
+```
+
+For a targeted upgrade of a single package without touching the rest: `poetry update <package>`.
+
+**4. Verify.**
+
+```bash
+poetry run python -c "import importlib.metadata as m; print(m.version('<package>'))"
+```
 
 ---
 

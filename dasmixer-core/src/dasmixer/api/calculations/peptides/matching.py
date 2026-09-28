@@ -1,8 +1,8 @@
 """Peptide identification matching and selection."""
+import warnings
 from typing import Literal
 
 import pandas as pd
-
 from dasmixer.api.project.project import Project
 from dasmixer.utils.logger import logger
 
@@ -14,6 +14,12 @@ async def select_preferred_identifications(
 ) -> int:
     """
     Select preferred identifications for all spectra based on criterion.
+
+    .. deprecated::
+        This legacy function uses an N+1-query pattern and a simpler
+        filtering model. Prefer :func:`calculate_preferred_identifications_for_file`
+        (called per spectra file) which mirrors the GUI pipeline and supports
+        trusted/normal pools, de-novo correction and richer quality filters.
 
     Args:
         project: Project instance
@@ -31,6 +37,12 @@ async def select_preferred_identifications(
     Returns:
         Number of spectra processed
     """
+    warnings.warn(
+        "select_preferred_identifications is deprecated; use "
+        "calculate_preferred_identifications_for_file per spectra file instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     logger.info(f"Starting preferred identification selection (criterion: {criterion})")
     logger.debug(f"Tool settings: {tool_settings}")
     counter = 0
@@ -46,11 +58,11 @@ async def select_preferred_identifications(
             if tool_params.get("ignore_criteria", False):
                 idents_not_merged.append(idents.copy())
                 continue
-            max_ppm = tool_params.get("max_ppm", 50000)
-            min_score = tool_params.get("min_score", 0)
-            min_ion_intensity_coverage = tool_params["min_ion_intensity_coverage"]
-            min_len = tool_params.get("min_peptide_length", 7)
-            max_len = tool_params.get("max_peptide_length", 30)
+            max_ppm = tool_params.get("max_ppm", 50000)  # noqa: F841 (pandas @query ref)
+            min_score = tool_params.get("min_score", 0)  # noqa: F841 (pandas @query ref)
+            min_ion_intensity_coverage = tool_params["min_ion_intensity_coverage"]  # noqa: F841 (pandas @query ref)
+            min_len = tool_params.get("min_peptide_length", 7)  # noqa: F841 (pandas @query ref)
+            max_len = tool_params.get("max_peptide_length", 30)  # noqa: F841 (pandas @query ref)
 
 
 
@@ -121,7 +133,15 @@ async def calculate_preferred_identifications_for_file(
         project: Project instance
         spectra_file_id: ID of spectra file to process
         criterion: "ppm" or "intensity"
-        tool_settings: Tool-specific settings dict
+        tool_settings: Tool-specific settings dict. Supported keys per tool:
+            ``ignore_criteria`` (bool, default False), ``max_ppm`` (default 50),
+            ``min_score`` (default 0), ``min_ion_intensity_coverage``,
+            ``min_peptide_length`` (default 7), ``max_peptide_length`` (default 30),
+            ``min_spectre_peaks`` (default 1), ``min_top_peaks`` (default 1),
+            ``min_ions_covered`` (default 1), ``min_quality`` (default 0.25),
+            ``min_lcrr`` (default 0.2), ``max_unconfirmed_ptms`` (default 0),
+            ``max_fdr`` (default 0.01), ``denovo_correction`` (default False),
+            ``denovo_correction_ppm`` (default 50000).
 
     Returns:
         List of identification IDs that should be marked as preferred
@@ -158,6 +178,10 @@ async def calculate_preferred_identifications_for_file(
             min_peaks = tool_params.get("min_spectre_peaks", 1)
             top_peaks_count = tool_params.get("min_top_peaks", 1)
             min_ions = tool_params.get("min_ions_covered", 1)
+            min_quality = tool_params.get("min_quality", 0.25)
+            min_lcrr = tool_params.get("min_lcrr", 0.2)
+            max_unconfirmed_ptms = tool_params.get("max_unconfirmed_ptms", 0)
+            max_fdr = tool_params.get("max_fdr", 0.01)
             denovo_correction = tool_params.get("denovo_correction", False)
             denovo_correction_ppm = tool_params.get("denovo_correction_ppm", 50000)
 
@@ -171,6 +195,10 @@ async def calculate_preferred_identifications_for_file(
                 spectre_peaks_count=min_peaks,
                 ions_matched=min_ions,
                 top_peaks_covered=top_peaks_count,
+                min_quality=min_quality,
+                min_lcrr=min_lcrr,
+                max_unconfirmed_ptms=max_unconfirmed_ptms,
+                max_fdr=max_fdr,
             )
             logger.debug(f"tool_id={tool_id} spectra_file_id={spectra_file_id} rows={len(idents)}")
             if not idents.empty:

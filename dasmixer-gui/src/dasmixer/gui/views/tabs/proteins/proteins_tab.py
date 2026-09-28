@@ -1,16 +1,16 @@
 """Main Proteins Tab - composition of sections."""
 
 import flet as ft
-
 from dasmixer.api.project.project import Project
 from dasmixer.utils import logger
-from .shared_state import ProteinsTabState
+
 from .detection_section import DetectionSection
-from .lfq_section import LFQSection
 from .enrichment_section import EnrichmentSection
+from .lfq_section import LFQSection
+from .protein_concentration_plot_view import ProteinConcentrationPlotView
 from .protein_identifications_table_view import ProteinIdentificationsTableView
 from .protein_statistics_table_view import ProteinStatisticsTableView
-from .protein_concentration_plot_view import ProteinConcentrationPlotView
+from .shared_state import ProteinsTabState
 
 
 class ProteinsTab(ft.Container):
@@ -129,7 +129,7 @@ class ProteinsTab(ft.Container):
     
     def _on_table_mode_change(self, e):
         """Handle table mode switching."""
-        selected_mode = list(e.control.selected)[0]
+        selected_mode = next(iter(e.control.selected))
         
         if selected_mode == "identifications":
             self.active_table_container.content = self.identifications_table

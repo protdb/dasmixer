@@ -1,6 +1,6 @@
 """Registry for data parsers."""
 
-from typing import Type
+
 from .peptides import IdentificationParser
 from .spectra import SpectralDataParser
 
@@ -27,13 +27,13 @@ class InputTypesRegistry:
     
     def __init__(self):
         """Initialize empty registry."""
-        self._spectra_parsers: dict[str, Type[SpectralDataParser]] = {}
-        self._identification_parsers: dict[str, Type[IdentificationParser]] = {}
+        self._spectra_parsers: dict[str, type[SpectralDataParser]] = {}
+        self._identification_parsers: dict[str, type[IdentificationParser]] = {}
     
     def add_spectra_parser(
         self,
         name: str,
-        parser_class: Type[SpectralDataParser]
+        parser_class: type[SpectralDataParser]
     ) -> None:
         """
         Register a spectral data parser.
@@ -56,7 +56,7 @@ class InputTypesRegistry:
     def add_identification_parser(
         self,
         name: str,
-        parser_class: Type[IdentificationParser]
+        parser_class: type[IdentificationParser]
     ) -> None:
         """
         Register an identification parser.
@@ -76,7 +76,7 @@ class InputTypesRegistry:
             raise KeyError(f'Identification parser "{name}" already registered')
         self._identification_parsers[name] = parser_class
     
-    def get_spectra_parsers(self) -> dict[str, Type[SpectralDataParser]]:
+    def get_spectra_parsers(self) -> dict[str, type[SpectralDataParser]]:
         """
         Get all registered spectral parsers.
         
@@ -90,7 +90,7 @@ class InputTypesRegistry:
         """
         return self._spectra_parsers.copy()
     
-    def get_identification_parsers(self) -> dict[str, Type[IdentificationParser]]:
+    def get_identification_parsers(self) -> dict[str, type[IdentificationParser]]:
         """
         Get all registered identification parsers.
         
@@ -108,7 +108,7 @@ class InputTypesRegistry:
         self,
         name: str,
         parser_type: str
-    ) -> Type[SpectralDataParser] | Type[IdentificationParser]:
+    ) -> type[SpectralDataParser] | type[IdentificationParser]:
         """
         Get parser class by name and type.
         

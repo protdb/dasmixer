@@ -1,14 +1,31 @@
 """Tool settings section for peptides tab."""
 
 import flet as ft
-
-from dasmixer.utils.seqfixer_utils import PTMS
-from .base_section import BaseSection
 from dasmixer.utils import logger
+from dasmixer.utils.seqfixer_utils import DEFAULT_PTM_CODES, PTMS
+
+from .base_section import BaseSection
 
 # Full list of available PTM codes from PTMS registry
 _ALL_PTM_CODES: list[str] = [ptm.code for ptm in PTMS]
+_DEFAULT_PTM_CODES: list[str] = sorted(DEFAULT_PTM_CODES)
 
+
+def _format_ptm_label(ptm) -> str:
+    """Format PTM label: 'Code (sites, mass)'."""
+    parts: list[str] = []
+    if ptm.attach_to:
+        parts.append(",".join(ptm.attach_to) if isinstance(ptm.attach_to, list) else str(ptm.attach_to))
+    if ptm.n_term:
+        parts.append("N-term")
+    if ptm.c_term:
+        parts.append("C-term")
+    if ptm.mono_mass is not None:
+        parts.append(f"{ptm.mono_mass:g}")
+    return f"{ptm.code} ({', '.join(parts)})" if parts else ptm.code
+
+
+_PTM_LABELS: dict[str, str] = {ptm.code: _format_ptm_label(ptm) for ptm in PTMS}
 
 class ToolSettingsSection(BaseSection):
     """Tool-specific settings configuration."""
@@ -59,7 +76,7 @@ class ToolSettingsSection(BaseSection):
 
         except Exception as ex:
             logger.exception(f"Error refreshing tools: {ex}")
-            self.show_error(f"Error loading tools: {str(ex)}")
+            self.show_error(f"Error loading tools: {ex!s}")
 
     def _create_tool_controls(self, tool) -> dict:
         """
@@ -79,9 +96,9 @@ class ToolSettingsSection(BaseSection):
 
         # Determine initial PTM selection
         saved_ptm_list = settings.get('ptm_list', None)
-        # None means "all PTMs"; empty list means "no PTMs"
+        # None now means "default PTMs" (since v0.7.3a3)
         if saved_ptm_list is None:
-            initial_ptm_selected = list(_ALL_PTM_CODES)
+            initial_ptm_selected = list(_DEFAULT_PTM_CODES)
         else:
             initial_ptm_selected = list(saved_ptm_list)
 
@@ -151,6 +168,30 @@ class ToolSettingsSection(BaseSection):
             'min_spectre_peaks': ft.TextField(
                 label="Min Spectrum Peaks",
                 value=str(settings.get('min_spectre_peaks', 10)),
+                width=150,
+                keyboard_type=ft.KeyboardType.NUMBER,
+            ),
+            'min_quality': ft.TextField(
+                label="Quality Threshold",
+                value=str(settings.get('min_quality', 0.25)),
+                width=150,
+                keyboard_type=ft.KeyboardType.NUMBER,
+            ),
+            'min_lcrr': ft.TextField(
+                label="Min LCRR",
+                value=str(settings.get('min_lcrr', 0.2)),
+                width=150,
+                keyboard_type=ft.KeyboardType.NUMBER,
+            ),
+            'max_unconfirmed_ptms': ft.TextField(
+                label="Max Unconfirmed PTMs",
+                value=str(settings.get('max_unconfirmed_ptms', 0)),
+                width=170,
+                keyboard_type=ft.KeyboardType.NUMBER,
+            ),
+            'max_fdr': ft.TextField(
+                label="Max FDR",
+                value=str(settings.get('max_fdr', 0.01)),
                 width=150,
                 keyboard_type=ft.KeyboardType.NUMBER,
             ),
@@ -258,7 +299,14 @@ class ToolSettingsSection(BaseSection):
                 controls['min_top_peaks'],
                 controls['min_ions_covered'],
                 controls['min_spectre_peaks'],
+
             ], spacing=10),
+            ft.Row([
+                controls['min_quality'],
+                controls['min_lcrr'],
+                controls['max_unconfirmed_ptms'],
+                controls['max_fdr'],
+            ]),
             controls['denovo_correction'],
         ], spacing=8)
 
@@ -415,10 +463,10 @@ class ToolSettingsSection(BaseSection):
 
         current_selected: list[str] = list(controls['ptm_selected'])
 
-        # Build checkboxes — one per PTM
+        # Build checkboxes — one per PTM, with sites and mass in label
         checkboxes: dict[str, ft.Checkbox] = {
             code: ft.Checkbox(
-                label=code,
+                label=_PTM_LABELS.get(code, code),
                 value=(code in current_selected),
             )
             for code in _ALL_PTM_CODES
@@ -506,6 +554,18 @@ class ToolSettingsSection(BaseSection):
             if int(controls['min_spectre_peaks'].value) < 0:
                 return False, "Min Spectrum Peaks must be ≥ 0"
 
+            if not (0 <= float(controls['min_quality'].value) <= 1):
+                return False, "Quality Threshold must be in [0, 1]"
+
+            if not (0 <= float(controls['min_lcrr'].value) <= 1):
+                return False, "Min LCRR must be in [0, 1]"
+
+            if int(controls['max_unconfirmed_ptms'].value) < 0:
+                return False, "Max Unconfirmed PTMs must be ≥ 0"
+
+            if not (0 <= float(controls['max_fdr'].value) <= 1):
+                return False, "Max FDR must be in [0, 1]"
+
             max_ptm_val = int(controls['max_ptm'].value)
             if max_ptm_val < 0:
                 return False, "Max PTM combinations must be ≥ 0"
@@ -535,7 +595,7 @@ class ToolSettingsSection(BaseSection):
 
         # PTM list: store None if all PTMs selected (== default), else store list
         ptm_selected: list[str] = controls['ptm_selected']
-        ptm_list_to_save = None if set(ptm_selected) == set(_ALL_PTM_CODES) else ptm_selected
+        ptm_list_to_save = None if set(ptm_selected) == set(_DEFAULT_PTM_CODES) else ptm_selected
 
         # Build match correction criteria list
         criteria_map = {
@@ -561,6 +621,10 @@ class ToolSettingsSection(BaseSection):
             'min_top_peaks': int(controls['min_top_peaks'].value),
             'min_ions_covered': int(controls['min_ions_covered'].value),
             'min_spectre_peaks': int(controls['min_spectre_peaks'].value),
+            'min_quality': float(controls['min_quality'].value),
+            'min_lcrr': float(controls['min_lcrr'].value),
+            'max_unconfirmed_ptms': int(controls['max_unconfirmed_ptms'].value),
+            'max_fdr': float(controls['max_fdr'].value),
             'leucine_combinatorics': controls['leucine_combinatorics'].value,
             'ptm_list': ptm_list_to_save,
             'max_ptm': int(controls['max_ptm'].value),
@@ -572,7 +636,7 @@ class ToolSettingsSection(BaseSection):
 
     async def save_all_tool_settings(self):
         """Save settings for all configured tools."""
-        for tool_id in self.state.tool_settings_controls.keys():
+        for tool_id in self.state.tool_settings_controls:
             await self.save_tool_settings(tool_id)
 
     # ------------------------------------------------------------------
@@ -590,8 +654,8 @@ class ToolSettingsSection(BaseSection):
         tool_settings = {}
         for tool_id, controls in self.state.tool_settings_controls.items():
             ptm_selected: list[str] = controls['ptm_selected']
-            # Pass None to pipeline if all PTMs selected (use full PTMS list)
-            ptm_list = None if set(ptm_selected) == set(_ALL_PTM_CODES) else ptm_selected
+            # Pass None to pipeline if default PTMs selected (use full PTMS list)
+            ptm_list = None if set(ptm_selected) == set(_DEFAULT_PTM_CODES) else ptm_selected
 
             criteria_map = {
                 'ppm': controls['match_correction_ppm'],
@@ -616,6 +680,10 @@ class ToolSettingsSection(BaseSection):
                 'min_top_peaks': int(controls['min_top_peaks'].value),
                 'min_ions_covered': int(controls['min_ions_covered'].value),
                 'min_spectre_peaks': int(controls['min_spectre_peaks'].value),
+                'min_quality': float(controls['min_quality'].value),
+                'min_lcrr': float(controls['min_lcrr'].value),
+                'max_unconfirmed_ptms': int(controls['max_unconfirmed_ptms'].value),
+                'max_fdr': float(controls['max_fdr'].value),
                 'leucine_combinatorics': controls['leucine_combinatorics'].value,
                 'ptm_list': ptm_list,
                 'max_ptm': int(controls['max_ptm'].value),

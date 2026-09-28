@@ -1,16 +1,16 @@
 """Table-based identification parsers for CSV, XLS, XLSX formats."""
 
-import csv
-from dataclasses import dataclass, asdict
 from abc import ABC, abstractmethod
-from typing import AsyncIterator
-import pandas as pd
-import aiofiles
-import aiocsv
+from collections.abc import AsyncIterator
+from dataclasses import asdict, dataclass
 
-from .base import IdentificationParser
+import aiocsv
+import aiofiles
+import pandas as pd
 from dasmixer.api.project.dataclasses import Protein
 from dasmixer.utils.logger import logger
+
+from .base import IdentificationParser
 
 
 class TableSheet:
@@ -51,6 +51,10 @@ class ColumnRenames:
         positional_scores: Source column name for per-position confidence scores
         ppm: Source column name for mass error in ppm
         theor_mass: Source column name for theoretical mass
+        src_file_protein_id: Source column name for protein ID
+        fdr: Source column name for False Discovery Rate
+        e_value: Source column name for e-value
+        q_value: Source column name for q-value
     """
     scans: str | None = None
     seq_no: str | None = None
@@ -61,6 +65,15 @@ class ColumnRenames:
     ppm: str | None = None
     theor_mass: str | None = None
     src_file_protein_id: str | None = None  # NEW: source column for protein ID
+    fdr: str | None = None
+    e_value: str | None = None
+    q_value: str | None = None
+
+    @property
+    def mapping(self) -> dict[str, str]:
+        r = asdict(self)
+        return {v: k for k, v in r.items() if v is not None and v != ''}
+
 
 
 class TableImporter(IdentificationParser, ABC):
@@ -107,8 +120,8 @@ class TableImporter(IdentificationParser, ABC):
         
         if name is not None:
             try:
-                return [x for x in self.sheets if x.name == name][0].data
-            except IndexError:
+                return next(x for x in self.sheets if x.name == name).data
+            except StopIteration:
                 available = [s.name for s in self.sheets]
                 raise ValueError(
                     f"No sheet with name '{name}'. Available sheets: {available}"
@@ -116,8 +129,8 @@ class TableImporter(IdentificationParser, ABC):
         
         if no is not None:
             try:
-                return [x for x in self.sheets if x.no == no][0].data
-            except IndexError:
+                return next(x for x in self.sheets if x.no == no).data
+            except StopIteration:
                 raise ValueError(
                     f"No sheet with number {no}. Available: 0-{len(self.sheets)-1}"
                 )
@@ -179,6 +192,9 @@ class SimpleTableImporter(TableImporter):
     """
     renames: ColumnRenames
     peptide_sheet_selector: dict | None = None
+    field_to_proforma: str | None = None   # source column name (before remap_columns),
+                                            # to which substring replacements from
+                                            # IdentificationParser.get_ptm_renames are applied
 
     def remap_columns(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -193,8 +209,8 @@ class SimpleTableImporter(TableImporter):
         Raises:
             ValueError: If neither scans nor seq_no can be mapped
         """
-        r = asdict(self.renames)
-        rename_cols = {v: k for k, v in r.items() if v is not None and v != ''}
+
+        rename_cols = self.renames.mapping
         logger.debug(f'rename cols: {rename_cols}')
         result = df.rename(columns=rename_cols)
         logger.debug(result)
@@ -207,7 +223,7 @@ class SimpleTableImporter(TableImporter):
             )
         
         # Return only standard columns that exist
-        available_cols = [col for col in r.keys() if col in result.columns]
+        available_cols = [col for col in rename_cols.values() if col in result.columns]
         return result[available_cols]
 
     def prepare_df(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -228,6 +244,33 @@ class SimpleTableImporter(TableImporter):
         Returns:
             Pre-processed DataFrame (still with original column names)
         """
+        return df
+
+    def apply_ptm_renames(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Apply sequential substring replacements (.replace) in the field_to_proforma
+        column according to import_ptm_renames.csv for self.PARSER_ID (all rows,
+        both terminal and non-terminal, in file order).
+
+        Does not modify df if field_to_proforma is None or column is missing.
+        """
+        if self.field_to_proforma is None or self.field_to_proforma not in df.columns:
+            return df
+        if self.PARSER_ID is None:
+            raise ValueError(
+                f"{self.__class__.__name__}: field_to_proforma is set but PARSER_ID is None"
+            )
+        renames = self.get_ptm_renames(self.PARSER_ID, is_terminal=None)
+
+        def _apply(value):
+            if not isinstance(value, str):
+                return value
+            for source, proforma in renames.items():
+                value = value.replace(source, proforma)
+            return value
+
+        df = df.copy()
+        df[self.field_to_proforma] = df[self.field_to_proforma].apply(_apply)
         return df
 
     def transform_df(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -367,6 +410,7 @@ class SimpleTableImporter(TableImporter):
         # Apply prepare_df to the whole sheet before batching so that
         # deduplication (e.g. collapsing per-protein rows) works globally.
         sheet_df = self.prepare_df(sheet_df)
+        sheet_df = self.apply_ptm_renames(sheet_df)
 
         # Yield in batches
         cursor = 0
@@ -395,7 +439,9 @@ class SimpleTableImporter(TableImporter):
             # Try to remap columns to validate configuration
             sheet_df = self.get_sheet() if self.peptide_sheet_selector is None \
                 else self.get_sheet(**self.peptide_sheet_selector)
-            self.remap_columns(self.transform_df(self.prepare_df(sheet_df)))
+            sheet_df = self.prepare_df(sheet_df)
+            sheet_df = self.apply_ptm_renames(sheet_df)
+            self.remap_columns(self.transform_df(sheet_df))
             return True
         except Exception as e:
             logger.exception(e)
@@ -447,7 +493,6 @@ class LargeCSVImporter(IdentificationParser, ABC):
         Returns:
             Processed row dict with standard column names
         """
-        pass
 
     async def parse_batch(
         self,

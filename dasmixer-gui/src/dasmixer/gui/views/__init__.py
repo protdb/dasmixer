@@ -1,3 +1,3 @@
 """GUI views."""
 
-__all__ = ['start_view', 'project_view']
+__all__ = ['project_view', 'start_view']

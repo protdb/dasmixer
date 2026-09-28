@@ -121,7 +121,7 @@ def calculate_ppm(sequence: str, pepmass: float, charge: int) -> float:
 
 def calculate_ppm_and_charge(
         sequence: str,
-        pepmass: int | float,
+        pepmass: float,
         neutral_mass: float | None = None,
         min_charge: int=1,
         max_charge: int=4

@@ -1,12 +1,13 @@
 """Application configuration stored in system folder."""
 
-from pathlib import Path
-from pydantic_settings import BaseSettings, SettingsConfigDict
-import typer
 import json
-from typing import Any
+import sys
+import tempfile
+from pathlib import Path
 
+import typer
 from dasmixer.utils.logger import logger
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class AppConfig(BaseSettings):
@@ -39,6 +40,8 @@ class AppConfig(BaseSettings):
     theme: str = "light"
     window_width: int = 1200
     window_height: int = 800
+    plot_aspect_ratio: str = "16:9"  # Plot aspect ratio: "1:1" | "4:3" | "2:3" | "16:9"
+    plot_view_mode: str = "Window"    # Interactive viewer mode: "Window" | "Browser"
 
     # Batch operation limits
     spectra_batch_size: int = 5000
@@ -76,7 +79,8 @@ class AppConfig(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="DASMIXER_",
         env_file=".env",
-        env_file_encoding="utf-8"
+        env_file_encoding="utf-8",
+        extra="ignore",
     )
 
     @classmethod
@@ -224,3 +228,50 @@ class AppConfig(BaseSettings):
 # Global config instance
 # Loaded once on module import
 config = AppConfig.load()
+
+
+def get_temp_html_dir() -> Path:
+    """
+    Get directory for temporary HTML files produced in Browser display mode.
+
+    On Windows the system temp directory (``tempfile.gettempdir()``) is used.
+    On Linux/macOS we use ``~/.cache/dasmixer/tmp/plots/`` instead, because
+    browsers such as Firefox refuse to open ``file://`` URLs pointing at
+    ``/tmp`` due to security restrictions.
+
+    The directory is created (with parents) if it does not exist.
+
+    Returns:
+        Path to an existing directory for temporary HTML files.
+    """
+    if sys.platform == "win32":
+        return Path(tempfile.gettempdir())
+
+    temp_dir = Path.home() / ".cache" / "dasmixer" / "tmp" / "plots"
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    return temp_dir
+
+
+def get_maxquant_import_temp_dir() -> Path:
+    """
+    Directory for temporary MGF/CSV files created during MaxQuant import.
+
+    On Linux/macOS: ``~/.cache/dasmixer/tmp/maxquant_import/<YYYYMMDD_HHMMSS_ffffff>/``
+    On Windows: ``<tempfile.gettempdir()>/dasmixer/maxquant_import/<YYYYMMDD_HHMMSS_ffffff>/``
+
+    The directory is created (with parents) if it does not exist.
+    The caller is responsible for cleanup.
+
+    Returns:
+        Path to an existing directory for MaxQuant temporary files.
+    """
+    from datetime import datetime
+
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    if sys.platform == "win32":
+        base = Path(tempfile.gettempdir()) / "dasmixer" / "maxquant_import"
+    else:
+        base = Path.home() / ".cache" / "dasmixer" / "tmp" / "maxquant_import"
+    temp_dir = base / ts
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    return temp_dir

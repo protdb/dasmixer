@@ -1,12 +1,14 @@
 """Project lifecycle management - initialization, save, close."""
 
-import aiosqlite
 from datetime import datetime
 from pathlib import Path
+from typing import Self
 
-from .base import ProjectBase
-from ..schema import CREATE_SCHEMA_SQL, DEFAULT_METADATA
+import aiosqlite
 from dasmixer.utils.logger import logger
+
+from ..schema import CREATE_SCHEMA_SQL, DEFAULT_METADATA
+from .base import ProjectBase
 
 
 class ProjectLifecycle(ProjectBase):
@@ -73,7 +75,7 @@ class ProjectLifecycle(ProjectBase):
             self._initialized = False
             logger.info("Project closed")
     
-    async def __aenter__(self) -> 'ProjectLifecycle':
+    async def __aenter__(self) -> Self:
         """Context manager entry."""
         await self.initialize()
         return self

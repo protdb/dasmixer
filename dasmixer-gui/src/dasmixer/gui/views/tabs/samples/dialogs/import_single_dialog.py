@@ -1,9 +1,10 @@
 """Dialog for importing individual files."""
 
-import flet as ft
 from pathlib import Path
-from dasmixer.api.project.project import Project
+
+import flet as ft
 from dasmixer.api.inputs.registry import registry
+from dasmixer.api.project.project import Project
 from dasmixer.gui.utils import show_snack
 from dasmixer.utils import logger
 
@@ -22,7 +23,7 @@ class ImportSingleDialog:
         project: Project,
         page: ft.Page,
         import_type: str,
-        tool_id: int = None,
+        tool_id: int | None = None,
         on_import_callback=None,
         fixed_sample_name: str | None = None,
         fixed_spectra_file_id: int | None = None,
@@ -122,7 +123,7 @@ class ImportSingleDialog:
 
             parser_options = [
                 ft.DropdownOption(key=name, text=name)
-                for name in parsers.keys()
+                for name in parsers
             ]
 
             if not parser_options:

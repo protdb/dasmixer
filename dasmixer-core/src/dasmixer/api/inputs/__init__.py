@@ -1,8 +1,8 @@
 """Input parsers package with automatic registration."""
 
-from .registry import registry
-from .base import BaseImporter
 from ...utils import logger
+from .base import BaseImporter
+from .registry import registry
 
 # Import base classes for external use
 try:
@@ -32,13 +32,11 @@ def register_parsers():
         registry.add_spectra_parser("MGF", MGFParser)
     except ImportError as e:
         logger.exception(e)
-        pass  # Parser not available or dependencies missing
     try:
         from .spectra.plgs_mgf_with_leid import MGFParserPLGS
         registry.add_spectra_parser("MGF (PLGS Pseudo-DIA)", MGFParserPLGS)
     except ImportError as e:
         logger.exception(e)
-        pass
     # Additional spectra parsers can be added here
     # try:
     #     from .spectra.mzml import MZMLParser
@@ -52,29 +50,32 @@ def register_parsers():
         registry.add_identification_parser("PowerNovo2", PowerNovo2Importer)
     except ImportError as e:
         logger.exception(e)
-    pass
     
     try:
         from .peptides.MQ_Evidences import MaxQuantEvidenceParser
         registry.add_identification_parser("MaxQuant", MaxQuantEvidenceParser)
     except ImportError as e:
         logger.exception(e)
-        pass
 
     try:
         from .peptides.PLGS import PLGSImporter
         registry.add_identification_parser("PLGS", PLGSImporter)
     except ImportError as e:
         logger.exception(e)
-        pass
+
+    try:
+        from .peptides.PeptideShaker import PeptideShakerImporter
+        registry.add_identification_parser("PeptideShaker XLS", PeptideShakerImporter)
+    except ImportError as e:
+        logger.exception(e)
 
 
 # Auto-register on import
 register_parsers()
 
 __all__ = [
-    'registry',
     'BaseImporter',
+    'IdentificationParser',
     'SpectralDataParser',
-    'IdentificationParser'
+    'registry'
 ]

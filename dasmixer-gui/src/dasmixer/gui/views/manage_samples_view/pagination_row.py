@@ -1,6 +1,6 @@
 """SamplesPaginationRow — pagination controls for Manage Samples View."""
 
-from typing import Callable, Awaitable
+from collections.abc import Awaitable, Callable
 
 import flet as ft
 

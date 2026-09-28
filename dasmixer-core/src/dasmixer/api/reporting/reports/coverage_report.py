@@ -12,11 +12,16 @@ Output:
 
 from __future__ import annotations
 
-import numpy as np
+from typing import TYPE_CHECKING
+
 import pandas as pd
 from dasmixer.api.reporting._icons import Icons
 
 from ..base import BaseReport
+
+if TYPE_CHECKING:
+    import plotly.graph_objects as go
+
 # No extra form parameters needed — the report uses all identified proteins
 # and the project LFQ settings (enzyme, min/max length, missed cleavages).
 
@@ -169,7 +174,7 @@ def _build_coverage_histogram(
         series_to_plot.append(("Theoretical", coverage_df["theoretical"].dropna()))
 
     fig = go.Figure()
-    bin_settings = dict(start=0, end=100, size=5)
+    bin_settings = {"start": 0, "end": 100, "size": 5}
 
     for label, series in series_to_plot:
         fig.add_trace(go.Histogram(
@@ -185,7 +190,7 @@ def _build_coverage_histogram(
         title="Protein Sequence Coverage Distribution by Tool",
         xaxis_title="Coverage (%)",
         yaxis_title="Proteins (%)",
-        xaxis=dict(range=[0, 100]),
+        xaxis={"range": [0, 100]},
         legend_title="Tool / Coverage type",
         template="plotly_white",
     )
@@ -271,7 +276,7 @@ class ToolCoverageReport(BaseReport):
                 "Std (%)": round(float(s.std()), 2) if len(s) else None,
                 "Min (%)": round(float(s.min()), 2) if len(s) else None,
                 "Max (%)": round(float(s.max()), 2) if len(s) else None,
-                "N proteins": int(len(s)),
+                "N proteins": len(s),
             })
         stats_df = pd.DataFrame(stat_rows)
 
@@ -292,4 +297,5 @@ class ToolCoverageReport(BaseReport):
 
 
 from ..registry import registry
+
 registry.register(ToolCoverageReport)

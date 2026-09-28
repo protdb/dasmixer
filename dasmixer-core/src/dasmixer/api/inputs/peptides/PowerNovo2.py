@@ -1,8 +1,8 @@
 """PowerNovo2 identification parser."""
 
 import pandas as pd
-from .table_importer import SimpleTableImporter, ColumnRenames
 
+from .table_importer import ColumnRenames, SimpleTableImporter
 
 # Column mapping for PowerNovo2 output
 # Note: Column names in PowerNovo2 CSV files use these exact names

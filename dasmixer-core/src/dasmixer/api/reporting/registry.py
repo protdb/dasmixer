@@ -1,6 +1,6 @@
 """Registry for report modules."""
 
-from typing import Type
+
 from .base import BaseReport
 
 
@@ -14,9 +14,9 @@ class ReportRegistry:
     
     def __init__(self):
         """Initialize empty registry."""
-        self._reports: dict[str, Type[BaseReport]] = {}
+        self._reports: dict[str, type[BaseReport]] = {}
     
-    def register(self, report_class: Type[BaseReport]) -> None:
+    def register(self, report_class: type[BaseReport]) -> None:
         """
         Register a report.
         
@@ -31,7 +31,7 @@ class ReportRegistry:
             raise KeyError(f'Report "{name}" already registered')
         self._reports[name] = report_class
     
-    def get_all(self) -> dict[str, Type[BaseReport]]:
+    def get_all(self) -> dict[str, type[BaseReport]]:
         """
         Get all registered reports.
         
@@ -40,7 +40,7 @@ class ReportRegistry:
         """
         return self._reports.copy()
     
-    def get(self, name: str) -> Type[BaseReport]:
+    def get(self, name: str) -> type[BaseReport]:
         """
         Get report class by name.
         

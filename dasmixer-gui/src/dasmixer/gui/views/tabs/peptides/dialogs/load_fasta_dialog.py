@@ -1,8 +1,8 @@
 """Modal dialog for loading FASTA protein sequence files."""
 
 import asyncio
-import flet as ft
 
+import flet as ft
 from dasmixer.api.inputs.proteins.fasta import FastaParser
 from dasmixer.api.project.project import Project
 from dasmixer.gui.utils import show_snack

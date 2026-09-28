@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Non-interactive DASMixer pipeline.
 
@@ -10,19 +9,18 @@ import asyncio
 from pathlib import Path
 
 import pandas as pd
-
-from dasmixer.api.project.project import Project
-from dasmixer.api.inputs.spectra.mgf import MGFParser
-from dasmixer.api.inputs.peptides.PowerNovo2 import PowerNovo2Importer
-from dasmixer.api.inputs.proteins.fasta import FastaParser
-from dasmixer.api.calculations.spectra.identification_processor import (
-    process_identificatons_batch,
-)
 from dasmixer.api.calculations.peptides.protein_map import map_proteins
+from dasmixer.api.calculations.proteins.lfq import calculate_lfq
 from dasmixer.api.calculations.proteins.map_identifications import (
     find_protein_identifications,
 )
-from dasmixer.api.calculations.proteins.lfq import calculate_lfq
+from dasmixer.api.calculations.spectra.identification_processor import (
+    process_identifications_batch,
+)
+from dasmixer.api.inputs.peptides.PowerNovo2 import PowerNovo2Importer
+from dasmixer.api.inputs.proteins.fasta import FastaParser
+from dasmixer.api.inputs.spectra.mgf import MGFParser
+from dasmixer.api.project.project import Project
 
 # ---------------------------------------------------------------------------
 # Константы настроек (как в GUI по умолчанию)
@@ -182,7 +180,7 @@ async def run_pipeline(
             if not batch:
                 break
             worker_dicts = [item.to_worker_dict() for item in batch]
-            results = process_identificatons_batch(
+            results = process_identifications_batch(
                 batch=worker_dicts,
                 params_dict=ION_PARAMS,
                 fragment_charges=FRAGMENT_CHARGES,
@@ -209,7 +207,7 @@ async def run_pipeline(
             await project.set_preferred_identifications_for_file(
                 spectra_file_id, preferred_ids
             )
-        print(f"[OK] Preferred identifications set")
+        print("[OK] Preferred identifications set")
 
         # -------------------------------------------------------------------
         # 10. Protein mapping (BLAST)
@@ -225,7 +223,7 @@ async def run_pipeline(
             if not matches_df.empty:
                 await project.add_peptide_matches_batch(matches_df)
         await project.save()
-        print(f"[OK] Protein mapping completed")
+        print("[OK] Protein mapping completed")
 
         # -------------------------------------------------------------------
         # 11. Определение белков (protein identifications)
@@ -244,7 +242,7 @@ async def run_pipeline(
             ):
                 if not result_df.empty:
                     await project.add_protein_identifications_batch(result_df)
-        print(f"[OK] Protein identifications determined")
+        print("[OK] Protein identifications determined")
 
         # -------------------------------------------------------------------
         # 12. Расчёт LFQ (emPAI / iBAQ)
@@ -256,7 +254,7 @@ async def run_pipeline(
         )
         if not lfq_df.empty:
             await project.add_protein_quantifications_batch(lfq_df)
-        print(f"[OK] LFQ calculated")
+        print("[OK] LFQ calculated")
 
         # -------------------------------------------------------------------
         # 13. Export joined data to CSV

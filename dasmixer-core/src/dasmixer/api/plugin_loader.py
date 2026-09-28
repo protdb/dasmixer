@@ -1,13 +1,13 @@
 """Dynamic plugin loading for identification parsers and report modules."""
 
 import importlib.util
+import shutil
 import sys
 import traceback
-import shutil
 import zipfile
 from pathlib import Path
-import typer
 
+import typer
 from dasmixer.api.config import config
 
 
@@ -93,9 +93,7 @@ def _collect_py_entries(directory: Path) -> list[Path]:
     """Return all .py files and package directories in a directory (non-recursive)."""
     entries = []
     for item in sorted(directory.iterdir()):
-        if item.is_file() and item.suffix == ".py" and item.name != "__init__.py":
-            entries.append(item)
-        elif item.is_dir() and (item / "__init__.py").exists():
+        if item.is_file() and item.suffix == ".py" and item.name != "__init__.py" or item.is_dir() and (item / "__init__.py").exists():
             entries.append(item)
     return entries
 
@@ -143,11 +141,11 @@ def load_identification_plugins() -> list[dict]:
 
         try:
             if entry.is_file():
-                success, error = _load_plugin_file(entry, plugin_id)
+                _, error = _load_plugin_file(entry, plugin_id)
             else:
-                success, error = _load_module_from_dir(entry, plugin_id)
+                _, error = _load_module_from_dir(entry, plugin_id)
         except PluginConflictError as e:
-            success, error = False, str(e)
+            error = str(e)
 
         results.append({
             "id": plugin_id,
@@ -196,11 +194,11 @@ def load_report_plugins() -> list[dict]:
 
         try:
             if entry.is_file():
-                success, error = _load_plugin_file(entry, plugin_id)
+                _, error = _load_plugin_file(entry, plugin_id)
             else:
-                success, error = _load_module_from_dir(entry, plugin_id)
+                _, error = _load_module_from_dir(entry, plugin_id)
         except PluginConflictError as e:
-            success, error = False, str(e)
+            error = str(e)
 
         results.append({
             "id": plugin_id,

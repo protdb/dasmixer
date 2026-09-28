@@ -7,21 +7,49 @@ from functools import partial
 
 import flet as ft
 import plotly.graph_objects as go
-
-from dasmixer.utils import logger
 from dasmixer.gui.utils import show_snack
+from dasmixer.utils import logger
 
 
-def show_webview(fig: go.Figure, title: str):
+def show_webview(fig: go.Figure, title: str, max_width: int = 1280, max_height: int = 720):
     """
-    Show plotly figure in webview window.
+    Show plotly figure in webview window or default browser based on config.
 
     Top-level function required for multiprocessing pickling.
     """
-    import webview
+    from dasmixer.api.config import config
+
     html = fig.to_html(include_plotlyjs='cdn')
-    window = webview.create_window(title, html=html)
-    webview.start()
+
+    if config.plot_view_mode == "Browser":
+        import tempfile
+        import webbrowser
+        from pathlib import Path
+
+        from dasmixer.api.config import get_temp_html_dir
+
+        with tempfile.NamedTemporaryFile(
+            mode='w',
+            suffix='.html',
+            prefix='dasmixer_plot_',
+            delete=False,
+            encoding='utf-8',
+            dir=str(get_temp_html_dir()),
+        ) as f:
+            f.write(html)
+            temp_path = f.name
+
+        webbrowser.open(Path(temp_path).as_uri())
+    else:
+        import webview
+        window_height = min(
+            fig.layout.height, max_height,
+        )
+        window_width = min(
+            fig.layout.width, max_width,
+        )
+        webview.create_window(title, html=html, width=window_width, height=window_height)
+        webview.start()
 
 
 def _render_png_sync(fig: go.Figure, width: int, height: int) -> bytes:
@@ -98,6 +126,7 @@ class PlotlyViewer(ft.Container):
                     fit=ft.BoxFit.CONTAIN,
                 )
             except Exception as e:
+                logger.exception(e)
                 image = ft.Container(
                     content=ft.Text(f"Error rendering chart: {e}", color=ft.Colors.RED),
                     width=self.width,

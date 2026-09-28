@@ -1,11 +1,11 @@
 """Import handlers for spectra and identifications."""
 
+
 import flet as ft
 import pandas as pd
-from pathlib import Path
-from dasmixer.api.project.project import Project
-from dasmixer.api.inputs.registry import registry
 from dasmixer.api.config import config as _config
+from dasmixer.api.inputs.registry import registry
+from dasmixer.api.project.project import Project
 from dasmixer.gui.utils import show_snack
 from dasmixer.utils import logger
 
@@ -67,7 +67,7 @@ class ImportHandlers:
             for i, (file_path, sample_id) in enumerate(file_list):
                 progress_text.value = f"Importing {file_path.name} ({i+1}/{total_files})..."
                 progress_bar.value = i / total_files
-                progress_details.value = f"Processing file..."
+                progress_details.value = "Processing file..."
                 progress_text.update()
                 progress_bar.update()
                 progress_details.update()
@@ -160,14 +160,14 @@ class ImportHandlers:
             progress_dialog.open = False
             self.page.update()
             
-            show_snack(self.page, f"Import error: {str(ex)}", ft.Colors.RED_400)
+            show_snack(self.page, f"Import error: {ex!s}", ft.Colors.RED_400)
             self.page.update()
     
     async def import_identification_files(
         self,
         file_list,
         tool_id: int,
-        fixed_spectra_file_id: int = None,
+        fixed_spectra_file_id: int | None = None,
         collect_proteins: bool = False,
         is_uniprot_proteins: bool = False,
         on_duplicates: str = "skip",
@@ -213,10 +213,12 @@ class ImportHandlers:
             total_identifications = 0
             skipped_count = 0
             
-            for i, (file_path, sample_id) in enumerate(file_list):
+            for i, entry in enumerate(file_list):
+                file_path, sample_id, *rest = entry
+                spectra_file_id_hint = rest[0] if rest else None
                 progress_text.value = f"Importing {file_path.name} ({i+1}/{total_files})..."
                 progress_bar.value = i / total_files
-                progress_details.value = f"Processing file..."
+                progress_details.value = "Processing file..."
                 progress_text.update()
                 progress_bar.update()
                 progress_details.update()
@@ -224,6 +226,8 @@ class ImportHandlers:
                 # Determine spectra_file_id
                 if fixed_spectra_file_id is not None:
                     spectra_file_id = fixed_spectra_file_id
+                elif spectra_file_id_hint is not None:
+                    spectra_file_id = spectra_file_id_hint
                 else:
                     # Get sample by name
                     sample = await self.project.get_sample_by_name(sample_id)
@@ -245,8 +249,10 @@ class ImportHandlers:
                         self.page.update()
                         return
 
-                    # Use first spectra file
-                    spectra_file_id = spectra_files.iloc[0]['id']
+                    # Use first spectra file (sorted by basename)
+                    from pathlib import Path as _Path
+                    sf_sorted = spectra_files.iloc[spectra_files["path"].apply(lambda p: _Path(p).name).argsort()]
+                    spectra_file_id = int(sf_sorted.iloc[0]['id'])
                 
                 # Check for duplicates
                 existing_if = await self.project.get_identification_file_by_path(str(file_path))
@@ -271,6 +277,9 @@ class ImportHandlers:
                     collect_proteins=collect_proteins,
                     is_uniprot_proteins=is_uniprot_proteins,
                 )
+                if parser.require_project:
+                    parser.project = self.project
+                    parser.spectra_file_id = spectra_file_id
                 logger.debug(f'Parser {type(parser)} init for {file_path}')
                 
                 # Validate file
@@ -290,7 +299,7 @@ class ImportHandlers:
                     by=parser.spectra_id_field
                 )
                 logger.info(f'Matching to spectra_file with id: {spectra_file_id} by {parser.spectra_id_field}')
-                logger.debug(spectra_mapping)
+                # logger.debug(spectra_mapping)
                 
                 # Import identifications in batches
                 batch_size = _config.identification_batch_size
@@ -298,7 +307,6 @@ class ImportHandlers:
                 file_ident_count = 0
                 async for batch in parser.parse_batch(batch_size=batch_size):
                     logger.warn(batch)
-                    logger.warn(spectra_mapping)
                     batch = pd.merge(
                         batch,
                         pd.json_normalize(spectra_mapping),
@@ -366,7 +374,7 @@ class ImportHandlers:
             progress_dialog.open = False
             self.page.update()
 
-            show_snack(self.page, f"Import error: {str(ex)}", ft.Colors.RED_400)
+            show_snack(self.page, f"Import error: {ex!s}", ft.Colors.RED_400)
             self.page.update()
 
     async def _save_proteins_batch(self, proteins_df: pd.DataFrame) -> None:
@@ -476,6 +484,9 @@ class ImportHandlers:
                 
                 # Parse file, filter by file_sample_id
                 parser = parser_class(str(file_path))
+                if parser.require_project:
+                    parser.project = self.project
+                    parser.spectra_file_id = spectra_file_id
                 is_valid = await parser.validate()
                 if not is_valid:
                     raise ValueError(f"Invalid file format: {file_path.name}")
@@ -546,5 +557,5 @@ class ImportHandlers:
             logger.exception(ex)
             progress_dialog.open = False
             self.page.update()
-            show_snack(self.page, f"Import error: {str(ex)}", ft.Colors.RED_400)
+            show_snack(self.page, f"Import error: {ex!s}", ft.Colors.RED_400)
             self.page.update()

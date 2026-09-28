@@ -1,7 +1,8 @@
 """Mixin for identification tool operations."""
 
-from ..dataclasses import Tool
 from dasmixer.utils.logger import logger
+
+from ..dataclasses import Tool
 
 
 class ToolMixin:

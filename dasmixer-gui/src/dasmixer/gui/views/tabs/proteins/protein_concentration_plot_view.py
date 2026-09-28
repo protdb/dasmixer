@@ -1,12 +1,11 @@
 """Plot view for protein concentrations (boxplot/violin)."""
 
 import flet as ft
-import plotly.graph_objects as go
 import numpy as np
 import pandas as pd
-
-from dasmixer.gui.components.base_plot_view import BasePlotView
+import plotly.graph_objects as go
 from dasmixer.api.project.project import Project
+from dasmixer.gui.components.base_plot_view import BasePlotView
 from dasmixer.gui.utils import show_snack
 
 
@@ -289,7 +288,7 @@ class ProteinConcentrationPlotView(BasePlotView):
                     y=subset_df[data_column].apply(lambda x: x * mult_factor if x is not None and not (isinstance(x, float) and pd.isna(x)) else None),
                     x=[subset_name] * len(subset_df),
                     mode='markers',
-                    marker=dict(size=4, color=color, opacity=0.5),
+                    marker={"size": 4, "color": color, "opacity": 0.5},
                     showlegend=False,
                     hoverinfo='y'
                 ))

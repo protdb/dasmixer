@@ -1,12 +1,11 @@
 """Report-related methods for Project."""
 
-from typing import Optional
 
 
 class ReportMixin:
     """Methods for working with reports in Project."""
     
-    async def get_generated_reports(self, report_name: Optional[str] = None) -> list[dict]:
+    async def get_generated_reports(self, report_name: str | None = None) -> list[dict]:
         """
         Get list of generated reports.
         
@@ -63,7 +62,7 @@ class ReportMixin:
         )
         await self.save()
     
-    async def get_report_parameters(self, report_name: str) -> Optional[str]:
+    async def get_report_parameters(self, report_name: str) -> str | None:
         """
         Get saved report parameters.
         

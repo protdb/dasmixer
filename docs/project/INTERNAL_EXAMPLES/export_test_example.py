@@ -11,8 +11,8 @@ Usage:
 """
 
 import asyncio
-from pathlib import Path
 import sys
+from pathlib import Path
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
@@ -81,7 +81,7 @@ async def test_export():
         print("✓ Report loaded")
         
         # Check report data
-        print(f"\nReport contains:")
+        print("\nReport contains:")
         print(f"  - Plots: {len(report._plots) if report._plots else 0}")
         print(f"  - Tables: {len(report._tables) if report._tables else 0}")
         
@@ -93,7 +93,7 @@ async def test_export():
         # Test context generation
         print("\nGenerating export context...")
         context = report.get_context()
-        print(f"✓ Context generated:")
+        print("✓ Context generated:")
         print(f"  - Figures: {len(context['figures'])}")
         print(f"  - Tables: {len(context['tables'])}")
         print(f"  - Settings included: {context['show_parameters']}")

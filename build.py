@@ -10,14 +10,13 @@ Commands:
 """
 
 import re
-import sys
 import subprocess
-import zipfile
-import urllib.request
-import urllib.error
+import sys
 import time
+import urllib.error
+import urllib.request
+import zipfile
 from pathlib import Path
-from typing import Optional
 
 import typer
 
@@ -169,7 +168,7 @@ def cmd_set_version(
 
 @app.command("pypi")
 def cmd_pypi(
-    version: Optional[str] = typer.Argument(None, help="Set version before building"),
+    version: str | None = typer.Argument(None, help="Set version before building"),
     prod: bool = typer.Option(False, "--prod", help="Upload to production PyPI"),
 ):
     if version:
@@ -191,7 +190,7 @@ def cmd_pypi(
 
 @app.command("internal")
 def cmd_internal(
-    version: Optional[str] = typer.Argument(None, help="Set version before building"),
+    version: str | None = typer.Argument(None, help="Set version before building"),
 ):
     if sys.platform != "win32":
         typer.echo("Error: 'internal' command is only available on Windows.", err=True)
@@ -215,9 +214,8 @@ def cmd_release(
     validate_version(version)
     current_version = get_current_version()
 
-    if version == current_version:
-        if not typer.confirm(f"Version {version} is already set. Release without bumping?"):
-            raise typer.Exit(0)
+    if version == current_version and not typer.confirm(f"Version {version} is already set. Release without bumping?"):
+        raise typer.Exit(0)
 
     changelog_path = CHANGELOG_DIR / f"v{version}.md"
     if not changelog_path.exists():

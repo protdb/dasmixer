@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+
 @dataclass
 class SeqMatchParams:
     sequence: str
@@ -13,4 +14,5 @@ class SeqMatchParams:
 @dataclass
 class SeqResults:
     original: SeqMatchParams
+    original_ppm: float | None
     override: list[SeqMatchParams] | None

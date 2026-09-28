@@ -1,6 +1,7 @@
-import os
 from pathlib import Path
+
 from parse import parse
+
 
 def seek_files(root: str | Path, accept_template: str, id_template: str) -> list[tuple[Path, str]]:
     """

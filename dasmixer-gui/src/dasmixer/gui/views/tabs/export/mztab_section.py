@@ -3,7 +3,6 @@
 from datetime import datetime
 
 import flet as ft
-
 from dasmixer.api.export.mztab_export import export_mztab
 from dasmixer.api.export.shared_state import ExportTabState
 from dasmixer.gui.components.progress_dialog import ProgressDialog

@@ -6,15 +6,18 @@ import os
 from concurrent.futures import ProcessPoolExecutor
 
 import flet as ft
-
-from dasmixer.utils import logger
-from dasmixer.api.project.project import Project
-from dasmixer.api.config import config as _config
+from dasmixer.api.calculations.peptides.matching import (
+    calculate_preferred_identifications_for_file,
+)
+from dasmixer.api.calculations.spectra.identification_processor import (
+    process_identifications_batch,
+)
 from dasmixer.api.calculations.spectra.ion_match import IonMatchParameters
-from dasmixer.api.calculations.spectra.coverage_worker import process_peptide_match_batch
-from dasmixer.api.calculations.spectra.identification_processor import process_identificatons_batch
-from dasmixer.api.calculations.peptides.matching import calculate_preferred_identifications_for_file
+from dasmixer.api.config import config as _config
+from dasmixer.api.project.project import Project
 from dasmixer.gui.views.tabs.peptides.shared_state import PeptidesTabState
+from dasmixer.utils import logger
+
 from .base import BaseAction
 
 
@@ -87,20 +90,25 @@ class IonCoverageAction(BaseAction):
         tool_settings_map = {}
         for tid, controls in state.tool_settings_controls.items():
             ptm_selected: list[str] = controls.get('ptm_selected', [])
-            from dasmixer.utils.seqfixer_utils import PTMS as _ALL_PTMS
-            all_codes = {p.code for p in _ALL_PTMS}
-            ptm_list = None if set(ptm_selected) == all_codes else ptm_selected
+            from dasmixer.utils.seqfixer_utils import DEFAULT_PTM_CODES
+            ptm_list = None if set(ptm_selected) == DEFAULT_PTM_CODES else ptm_selected
             max_ptm_ctrl = controls.get('max_ptm')
             try:
                 max_ptm = int(max_ptm_ctrl.value) if max_ptm_ctrl else 5
             except (ValueError, AttributeError):
                 max_ptm = 5
+            min_quality_ctrl = controls.get('min_quality')
+            try:
+                quality_threshold = float(min_quality_ctrl.value) if min_quality_ctrl else 0.25
+            except (ValueError, AttributeError):
+                quality_threshold = 0.25
             trust_ppm = bool(controls.get('trust_ppm').value) if controls.get('trust_ppm') else False
             recalculate_ptms = bool(controls.get('recalculate_ptms').value) if controls.get('recalculate_ptms') else True
             unallocated_only = not recalculate_ptms
             tool_settings_map[tid] = {
                 'ptm_list': ptm_list,
                 'max_ptm': max_ptm,
+                'quality_threshold': quality_threshold,
                 'trust_ppm': trust_ppm,
                 'unallocated_only': unallocated_only,
             }
@@ -116,7 +124,9 @@ class IonCoverageAction(BaseAction):
                 return
             spectra_file_ids = list(sf_df['id'].astype(int))
 
-        from dasmixer.gui.views.tabs.peptides.dialogs.progress_dialog import ProgressDialog
+        from dasmixer.gui.views.tabs.peptides.dialogs.progress_dialog import (
+            ProgressDialog,
+        )
         dialog = ProgressDialog(self.page, "Calculating Ion Coverage", stoppable=True)
         dialog.show()
         dialog.update_progress(None, "Preparing...", "Counting identifications...")
@@ -136,7 +146,7 @@ class IonCoverageAction(BaseAction):
 
         async def _compute_batch(
             loop, executor, worker_batch, ptm_list, max_ptm,
-            trust_ppm=False, unallocated_only=False,
+            trust_ppm=False, unallocated_only=False, quality_threshold=0.25,
         ) -> list:
             """Submit worker_batch to the process pool and gather results."""
             sub_batches = [
@@ -146,7 +156,7 @@ class IonCoverageAction(BaseAction):
             futures = [
                 loop.run_in_executor(
                     executor,
-                    process_identificatons_batch,
+                    process_identifications_batch,
                     sub_batch,
                     params_dict,
                     fragment_charges,
@@ -161,6 +171,7 @@ class IonCoverageAction(BaseAction):
                     max_ptm_sites,
                     trust_ppm,
                     unallocated_only,
+                    quality_threshold,
                 )
                 for sub_batch in sub_batches
             ]
@@ -206,6 +217,7 @@ class IonCoverageAction(BaseAction):
                         loop, executor, worker_batch, ptm_list, max_ptm,
                         trust_ppm=t_settings.get('trust_ppm', False),
                         unallocated_only=t_settings.get('unallocated_only', False),
+                        quality_threshold=t_settings.get('quality_threshold', 0.25),
                     )
                     del worker_batch
 
@@ -255,6 +267,7 @@ class IonCoverageAction(BaseAction):
                             loop, executor, next_worker_batch, ptm_list, max_ptm,
                             trust_ppm=t_settings.get('trust_ppm', False),
                             unallocated_only=t_settings.get('unallocated_only', False),
+                            quality_threshold=t_settings.get('quality_threshold', 0.25),
                         )
                         del next_worker_batch
 
@@ -270,11 +283,11 @@ class IonCoverageAction(BaseAction):
             self.show_success(f"Ion coverage calculated for {total_processed} identifications")
 
         except Exception as exc:
-            logger.exception(ex)
+            logger.exception(exc)
             try:
                 dialog.close()
             except Exception:
-                pass
+                logger.debug("Failed to close progress dialog", exc_info=True)
             self.show_error(f"Error: {exc}")
 
 
@@ -307,8 +320,11 @@ class SelectPreferredAction(BaseAction):
             self.show_warning("No tools configured")
             return
 
-        from dasmixer.gui.views.tabs.peptides.dialogs.progress_dialog import ProgressDialog
         from pathlib import Path
+
+        from dasmixer.gui.views.tabs.peptides.dialogs.progress_dialog import (
+            ProgressDialog,
+        )
 
         dialog = ProgressDialog(self.page, "Running Identification Matching")
         dialog.show()
@@ -356,5 +372,5 @@ class SelectPreferredAction(BaseAction):
             try:
                 dialog.close()
             except Exception:
-                pass
-            self.show_error(f"Error: {str(ex)}")
+                logger.debug("Failed to close progress dialog", exc_info=True)
+            self.show_error(f"Error: {ex!s}")

@@ -1,10 +1,9 @@
 """Combined table and plot view."""
 
 import flet as ft
-
 from dasmixer.api.project.project import Project
-from dasmixer.gui.components.base_table_view import BaseTableView
 from dasmixer.gui.components.base_plot_view import BasePlotView
+from dasmixer.gui.components.base_table_view import BaseTableView
 
 
 class BaseTableAndPlotView(ft.Container):

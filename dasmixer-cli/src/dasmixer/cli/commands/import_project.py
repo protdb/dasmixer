@@ -1,9 +1,10 @@
 """CLI command for importing/merging another project."""
 
-import typer
+import asyncio
 from pathlib import Path
 from typing import Annotated
-import asyncio
+
+import typer
 from dasmixer.api.project.project import Project
 
 app = typer.Typer(help="Merge another project into this one")

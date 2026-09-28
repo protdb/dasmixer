@@ -1,7 +1,9 @@
 """Dialog for configuring project merge/import options."""
 
 import asyncio
+
 import flet as ft
+from dasmixer.utils import logger
 
 
 class MergeOptionsDialog(ft.AlertDialog):
@@ -111,7 +113,7 @@ class MergeOptionsDialog(ft.AlertDialog):
         try:
             self.update()
         except Exception:
-            pass
+            logger.debug("MergeOptionsDialog update failed", exc_info=True)
     
     def _on_merge(self, e=None):
         """Handle Merge button click."""
@@ -135,7 +137,7 @@ class MergeOptionsDialog(ft.AlertDialog):
         try:
             self.update()
         except Exception:
-            pass
+            logger.debug("MergeOptionsDialog update failed", exc_info=True)
     
     async def wait_for_result(self) -> dict | None:
         """

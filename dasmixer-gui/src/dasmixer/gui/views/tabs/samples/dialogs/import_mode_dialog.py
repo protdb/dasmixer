@@ -12,7 +12,7 @@ class ImportModeDialog:
         project: Project,
         page: ft.Page,
         import_type: str,
-        tool_id: int = None,
+        tool_id: int | None = None,
         on_single_files_callback=None,
         on_pattern_callback=None,
         on_stacked_callback=None,

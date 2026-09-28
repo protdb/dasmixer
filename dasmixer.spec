@@ -228,7 +228,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon="assets/icons/icon_256.ico",  # add .ico when available
+    icon="assets/icons/icon_256_bg.ico",  # add .ico when available
 )
 
 coll = COLLECT(

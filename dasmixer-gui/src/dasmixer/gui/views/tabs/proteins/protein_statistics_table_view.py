@@ -2,16 +2,14 @@
 
 import flet as ft
 import pandas as pd
-
-from dasmixer.gui.components.base_table_view import BaseTableView
 from dasmixer.api.project.project import Project
+from dasmixer.gui.components.base_table_view import BaseTableView
 from dasmixer.utils.show_pathways import (
-    get_pathways_from_uniprot,
-    get_mol_functions_from_uniprot,
     get_biological_processes_from_uniprot,
     get_locations_from_uniprot,
+    get_mol_functions_from_uniprot,
+    get_pathways_from_uniprot,
 )
-
 
 VIRTUAL_FIELD_FUNCS: dict[str, callable] = {
     'pathways': get_pathways_from_uniprot,
@@ -164,7 +162,7 @@ class ProteinStatisticsTableView(BaseTableView):
         kwargs = self._build_filter_kwargs()
         try:
             return await self.project.count_protein_statistics(**kwargs)
-        except Exception as ex:
+        except Exception:
             import traceback
             traceback.print_exc()
             return 0

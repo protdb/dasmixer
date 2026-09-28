@@ -3,17 +3,18 @@
 from .core import ProjectLifecycle
 from .migrations import MigrationMixin
 from .mixins import (
-    SubsetMixin,
-    ToolMixin,
-    SampleMixin,
-    SpectraMixin,
     IdentificationMixin,
-    PeptideMixin,
-    ProteinMixin,
     ImportProjectMixin,
+    JoinedPeptideDataMixin,
+    PeptideMixin,
     PlotMixin,
+    ProteinMixin,
     QueryMixin,
     ReportMixin,
+    SampleMixin,
+    SpectraMixin,
+    SubsetMixin,
+    ToolMixin,
 )
 
 
@@ -29,6 +30,7 @@ class Project(
     SpectraMixin,
     IdentificationMixin,
     PeptideMixin,
+    JoinedPeptideDataMixin,
     ProteinMixin,
     ImportProjectMixin,
     
@@ -50,7 +52,9 @@ class Project(
     - SampleMixin: Sample management
     - SpectraMixin: Spectra files and spectra management
     - IdentificationMixin: Identification files and identifications management
-    - PeptideMixin: Peptide matches and complex joined queries
+    - PeptideMixin: Peptide matches CRUD and metrics
+    - JoinedPeptideDataMixin: Complex joined queries over
+        spectre/identification/peptide_match
     - ProteinMixin: Protein, identification results, and quantification management
     - ImportProjectMixin: Import another project's data into this one
     - PlotMixin: Data preparation for plotting
@@ -72,4 +76,4 @@ class Project(
         fundamental database operations used by all mixins.
     """
     
-    pass  # All functionality is provided by mixins
+    # All functionality is provided by mixins

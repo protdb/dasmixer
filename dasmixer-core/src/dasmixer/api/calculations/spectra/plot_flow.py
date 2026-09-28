@@ -1,7 +1,9 @@
-from .ion_match import IonMatchParameters, match_predictions, get_matches_dataframe
-from .plot_matches import generate_spectrum_plot
 from typing import Any
+
 from dasmixer.utils.logger import logger
+
+from .ion_match import IonMatchParameters, get_matches_dataframe, match_predictions
+from .plot_matches import generate_spectrum_plot
 
 
 def make_full_spectrum_plot(
@@ -22,13 +24,16 @@ def make_full_spectrum_plot(
         else:
             sequences = [sequences]
     dfs = []
-    for seq in sequences:
-        pred = match_predictions(params, mz, intensity, charges, seq)
-        dfs.append(
-            get_matches_dataframe(
-                pred, mz, intensity
+    if len(sequences) == 0:
+        dfs.append(get_matches_dataframe(None, mz, intensity))
+    else:
+        for seq in sequences:
+            predictions = match_predictions(params, mz, intensity, charges, seq)
+            dfs.append(
+                get_matches_dataframe(
+                    predictions, mz, intensity
+                )
             )
-        )
     return generate_spectrum_plot(
         headers,
         dfs

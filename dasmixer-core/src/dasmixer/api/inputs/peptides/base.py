@@ -1,10 +1,12 @@
 """Base class for identification data parsers."""
 
 from abc import abstractmethod
-from typing import AsyncIterator
-import pandas as pd
+from collections.abc import AsyncIterator
 
+import pandas as pd
+from dasmixer.api import Project
 from dasmixer.api.project.dataclasses import Protein
+
 from ..base import BaseImporter
 
 
@@ -36,7 +38,45 @@ class IdentificationParser(BaseImporter):
     # NEW: Column name used to split stacked file by sample.
     # Set in subclass if can_import_stacked = True.
     sample_id_column: str | None = None
-    
+
+    # Registry name under which this parser is registered.
+    # Must match the string passed to registry.add_identification_parser() 1:1.
+    # Used to filter import_ptm_renames.csv by the "parser" column.
+    PARSER_ID: str | None = None
+
+    # TODO: refine description
+    # if require_project is overriden to True, the Project object should be set externally to project property
+    # it may be required to import files without scans/seq_no to perform mapping
+    project: Project | None = None
+    spectra_file_id: int | None = None
+
+    require_project: bool = False
+
+    @staticmethod
+    def get_ptm_renames(parser_id: str, is_terminal: bool | None = None) -> dict[str, str]:
+        """
+        Return renames dict for the given parser_id from import_ptm_renames.csv.
+
+        Args:
+            parser_id: value of the CSV "parser" column (= registry name = tool.parser).
+            is_terminal: if set, filter only terminal (True) or non-terminal (False)
+                rows; if None, return all rows for this parser_id (in file order).
+
+        Returns:
+            dict[source, proforma], preserving file order. Duplicate sources
+            (unlikely) — last value wins.
+        """
+        from dasmixer.utils.ptm_config import load_ptm_renames
+
+        result: dict[str, str] = {}
+        for rec in load_ptm_renames():
+            if rec["parser"] != parser_id:
+                continue
+            if is_terminal is not None and rec["is_terminal"] != is_terminal:
+                continue
+            result[rec["source"]] = rec["proforma"]
+        return result
+
     def __init__(
         self,
         file_path: str,
@@ -108,7 +148,6 @@ class IdentificationParser(BaseImporter):
         Raises:
             ValueError: If neither scans nor seq_no columns are present.
         """
-        pass
 
     @property
     def proteins(self) -> dict[str, 'Protein']:

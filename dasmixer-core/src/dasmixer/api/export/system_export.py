@@ -2,13 +2,11 @@
 
 import json
 import os
-from typing import Callable, Awaitable
+from collections.abc import Awaitable, Callable
 
 import aiocsv
 import aiofiles
-
 from dasmixer.utils.logger import logger
-
 
 # SQL queries per flag — BLOB columns excluded explicitly
 TABLE_QUERIES: dict[str, str] = {

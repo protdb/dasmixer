@@ -4,9 +4,8 @@ import json
 from typing import Any
 
 import pandas as pd
-
-from dasmixer.utils.logger import logger
 from dasmixer.api.project.dataclasses import IdentificationWithSpectrum
+from dasmixer.utils.logger import logger
 
 
 class IdentificationMixin:
@@ -96,6 +95,9 @@ class IdentificationMixin:
                 - score: float | None
                 - positional_scores: dict | None
                 - intensity_coverage: float | None
+                - fdr: float | None
+                - e_value: float | None
+                - q_value: float | None
         """
         rows_to_insert = []
         
@@ -114,14 +116,18 @@ class IdentificationMixin:
                 positional_scores_json,
                 float(row['intensity_coverage']) if row.get('intensity_coverage') is not None else None,
                 str(row['src_file_protein_id']) if row.get('src_file_protein_id') is not None else None,
+                float(row['fdr']) if row.get('fdr') is not None else None,
+                float(row['e_value']) if row.get('e_value') is not None else None,
+                float(row['q_value']) if row.get('q_value') is not None else None,
             ))
         
         if rows_to_insert:
             await self._executemany(
                 """INSERT INTO identification 
                    (spectre_id, tool_id, ident_file_id, is_preferred, sequence, canonical_sequence,
-                    ppm, theor_mass, score, positional_scores, intensity_coverage, src_file_protein_id)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    ppm, theor_mass, score, positional_scores, intensity_coverage, src_file_protein_id,
+                    fdr, e_value, q_value)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 rows_to_insert
             )
             await self.save()
@@ -217,7 +223,11 @@ class IdentificationMixin:
             spectre_peaks_count: int,
             ions_matched: int,
             top_peaks_covered: int,
-            canonical_length: tuple[int, int]
+            canonical_length: tuple[int, int],
+            min_quality: float | None = None,
+            min_lcrr: float | None = None,
+            max_unconfirmed_ptms: int | None = None,
+            max_fdr: float | None = None,
     ):
         """
         Special method for identification processing — returns candidates for
@@ -233,10 +243,25 @@ class IdentificationMixin:
             ions_matched: minimum matched ions count
             top_peaks_covered: minimum top-10 peaks covered count
             canonical_length: (min_len, max_len) tuple for canonical sequence length
+            min_quality: minimum identification quality (0..1). When provided,
+                         only identifications with quality >= min_quality are
+                         returned; NULL-quality rows are excluded. When None,
+                         no quality filter is applied.
+            min_lcrr: minimum lcrr value (0..1). When provided, only
+                      identifications with lcrr >= min_lcrr are returned;
+                      NULL-lcrr rows are excluded. When None, no lcrr filter
+                      is applied.
+            max_unconfirmed_ptms: maximum allowed unconfirmed PTMs count. When
+                         provided, only identifications with unconfirmed_ptms <=
+                         max_unconfirmed_ptms are returned; NULL-unconfirmed_ptms
+                         rows are excluded. When None, no filter is applied.
+            max_fdr: maximum FDR threshold. When provided, identifications with
+                     fdr <= max_fdr OR fdr IS NULL are returned. When None,
+                     no FDR filter is applied.
         """
         query = """
             SELECT
-                i.id, i.spectre_id, i.tool_id, i.ppm, i.intensity_coverage, i.score,
+                i.id, i.spectre_id, i.tool_id, i.ppm, i.intensity_coverage, i.score, i.lcrr, i.unconfirmed_ptms, i.fdr,
                 s.spectre_file_id,
                 m.matched_ppm, m.matched_coverage_percent
             FROM identification i
@@ -262,7 +287,7 @@ class IdentificationMixin:
                 i.top_peaks_covered >= ?
         """
 
-        params = (
+        params = [
             int(spectra_file_id),
             int(tool_id),
             float(min_score),
@@ -273,9 +298,25 @@ class IdentificationMixin:
             int(spectre_peaks_count),
             int(ions_matched),
             int(top_peaks_covered),
-        )
+        ]
 
-        rows = await self._fetchall(query, params)
+        if min_quality is not None:
+            query += " AND i.quality IS NOT NULL AND i.quality >= ?"
+            params.append(float(min_quality))
+
+        if min_lcrr is not None:
+            query += " AND i.lcrr IS NOT NULL AND i.lcrr >= ?"
+            params.append(float(min_lcrr))
+
+        if max_unconfirmed_ptms is not None:
+            query += " AND i.unconfirmed_ptms IS NOT NULL AND i.unconfirmed_ptms <= ?"
+            params.append(int(max_unconfirmed_ptms))
+
+        if max_fdr is not None:
+            query += " AND (i.fdr IS NULL OR i.fdr <= ?)"
+            params.append(float(max_fdr))
+
+        rows = await self._fetchall(query, tuple(params))
         return pd.DataFrame(rows) if rows else pd.DataFrame()
 
     async def get_all_idents_for_preferred(
@@ -298,7 +339,7 @@ class IdentificationMixin:
         """
         query = """
             SELECT
-                i.id, i.spectre_id, i.tool_id, i.ppm, i.intensity_coverage, i.score,
+                i.id, i.spectre_id, i.tool_id, i.ppm, i.intensity_coverage, i.score, i.lcrr, i.unconfirmed_ptms, i.fdr,
                 s.spectre_file_id,
                 m.matched_ppm, m.matched_coverage_percent
             FROM identification i
@@ -502,7 +543,7 @@ class IdentificationMixin:
         Keys recognised:
             id, ppm, theor_mass, override_charge,
             intensity_coverage, ions_matched, ion_match_type, top_peaks_covered,
-            source_sequence, isotope_offset
+            source_sequence, isotope_offset, quality, lcrr, unconfirmed_ptms, override_pepmass, has_ptm
         """
         query = """
             UPDATE identification
@@ -516,7 +557,12 @@ class IdentificationMixin:
                 ion_match_type = ?,
                 top_peaks_covered = ?,
                 source_sequence = ?,
-                isotope_offset = ?
+                isotope_offset = ?,
+                quality = ?,
+                lcrr = ?,
+                unconfirmed_ptms = ?,
+                override_pepmass = ?,
+                has_ptm = ?
             WHERE id = ?
         """
         params = []
@@ -537,9 +583,49 @@ class IdentificationMixin:
                 data_row.get('top_peaks_covered'),
                 source_sequence_value,
                 data_row.get('isotope_offset'),
+                data_row.get('quality'),
+                data_row.get('longest_consec_run_rate'),
+                data_row.get('unconfirmed_ptms'),
+                data_row.get('override_pepmass'),
+                data_row.get('has_ptm'),
                 data_row['id'],
             ))
         await self._executemany(query, params)
+
+    async def clear_calculations(self) -> None:
+        """
+        Глобальный сброс результатов расчёта покрытия/PPM/quality для всех
+        идентификаций проекта. Действия:
+
+        - где source_sequence не пусто → sequence восстанавливается из source_sequence;
+        - обнуляются (NULL): intensity_coverage, ions_matched, ion_match_type,
+          top_peaks_covered, override_charge, isotope_offset, ppm, theor_mass,
+          quality, lcrr, unconfirmed_ptms, override_pepmass, has_ptm, source_sequence;
+        - is_preferred → 0.
+
+        Таблица peptide_match НЕ затрагивается. Метод не вызывает save() —
+        вызывающая сторона должна сохранить проект.
+        """
+        query = """
+            UPDATE identification SET
+                sequence = COALESCE(source_sequence, sequence),
+                intensity_coverage = NULL,
+                ions_matched = NULL,
+                ion_match_type = NULL,
+                top_peaks_covered = NULL,
+                override_charge = NULL,
+                isotope_offset = NULL,
+                ppm = NULL,
+                theor_mass = NULL,
+                quality = NULL,
+                lcrr = NULL,
+                unconfirmed_ptms = NULL,
+                override_pepmass = NULL,
+                has_ptm = NULL,
+                source_sequence = NULL,
+                is_preferred = 0
+        """
+        await self._execute(query)
 
     async def get_identification_file_by_path(self, file_path: str) -> dict | None:
         """

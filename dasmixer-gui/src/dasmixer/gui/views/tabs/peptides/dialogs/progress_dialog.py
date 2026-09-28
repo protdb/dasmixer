@@ -1,8 +1,9 @@
 """Universal progress dialog."""
 
-import time
-import flet as ft
 import asyncio
+import time
+
+import flet as ft
 
 
 def _fmt_seconds(seconds: float) -> str:
@@ -231,6 +232,6 @@ class ProgressDialog:
             await asyncio.sleep(auto_close_delay)
             self.close()
             return result
-        except Exception as ex:
+        except Exception:
             self.close()
-            raise ex
+            raise

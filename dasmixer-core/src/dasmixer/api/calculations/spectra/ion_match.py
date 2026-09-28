@@ -1,17 +1,18 @@
 """Ion matching functionality for peptide identification validation."""
-from copy import copy
 from dataclasses import dataclass
 from typing import Literal
 
-import numpy as np
 import pandas as pd
-from peptacular.fragmentation import Fragmenter, Fragment
-from peptacular.score import (
-    get_fragment_matches,
-    FragmentMatch,
-    get_match_coverage
+from dasmixer.utils.logger import logger
+from peptacular.fragmentation import Fragment, Fragmenter
+from peptacular.score import FragmentMatch, get_fragment_matches, get_match_coverage
 
+from .quality_calculations import (
+    calculate_longest_consec_run_ratio,
+    calculate_peptide_quality,
+    calculate_unconfirmed_ptms,
 )
+
 
 def _get_matched_intensity_percentage(
     fragment_matches: list[FragmentMatch], intensities: list[float]
@@ -87,7 +88,9 @@ class MatchResult:
     total_peaks: int
     max_ion_matches: int
     top_matched_ion_type: str
-
+    quality: float
+    longest_consec_run_rate: float
+    unconfirmed_ptms: int
 
 def match_predictions(
     params: IonMatchParameters,
@@ -140,9 +143,13 @@ def match_predictions(
             total_peaks=total_peaks,
             max_ion_matches=0,
             top_matched_ion_type='',
+            quality=0.0,
+            longest_consec_run_rate=0.0,
+            unconfirmed_ptms=0
         )
 
     # Generate theoretical fragments
+    logger.debug("match_predictions params=%s sequence=%s", params, sequence)
     frags = Fragmenter(sequence).fragment(
         params.ions,
         params.charges,
@@ -163,8 +170,8 @@ def match_predictions(
     ion_matches = {k: max(v) for k, v in get_match_coverage(matches).items()}
     max_matches = max(ion_matches.values()) if ion_matches else 0
     try:
-        max_matches_type = [k for k, v in ion_matches.items() if v == max_matches][0]
-    except IndexError:
+        max_matches_type = next(k for k, v in ion_matches.items() if v == max_matches)
+    except (StopIteration, IndexError):
         max_matches_type = None
 
     top_ints = list(intensity)
@@ -175,6 +182,11 @@ def match_predictions(
         top10_int = top_ints[-1]
     top10_intensity_matches = len([x for x in matches if x.intensity >= top10_int])
 
+    quality = calculate_peptide_quality(
+        matches,
+        sequence,
+        params.ions
+    )
 
     # Calculate intensity coverage
     coverage = _get_matched_intensity_percentage(
@@ -182,6 +194,15 @@ def match_predictions(
         intensities=intensity
     )
 
+    lcrr = calculate_longest_consec_run_ratio(
+        matches,
+        sequence
+    )
+
+    unconfirmed_ptms = calculate_unconfirmed_ptms(
+        matches,
+        sequence,
+    )
 
     
     return MatchResult(
@@ -193,11 +214,14 @@ def match_predictions(
         total_peaks=total_peaks,
         max_ion_matches=max_matches,
         top_matched_ion_type=max_matches_type,
+        quality=quality,
+        longest_consec_run_rate=lcrr,
+        unconfirmed_ptms=unconfirmed_ptms
     )
 
 
 def get_matches_dataframe(
-    match_result: MatchResult,
+    match_result: MatchResult | None,
     mz: list[float],
     intensity: list[float]
 ) -> pd.DataFrame:
@@ -228,7 +252,7 @@ def get_matches_dataframe(
         >>> result = match_predictions(params, mz_list, int_list, 2, "PEPTIDE")
         >>> df = get_matches_dataframe(result, mz_list, int_list)
         >>> # Use with plotting
-        >>> from api.spectra.plot_matches import generate_spectrum_plot
+        >>> from dasmixer.api.calculations.spectra.plot_matches import generate_spectrum_plot
         >>> fig = generate_spectrum_plot("My Spectrum", df)
     """
     # Create experimental data frame
@@ -237,9 +261,10 @@ def get_matches_dataframe(
         'intensity': intensity
     })
     
-    if not match_result.fragment_matches:
+    if match_result is None or not match_result.fragment_matches:
         # No matches - return experimental data with empty match columns
         exp_df['ion_type'] = None
+        exp_df['ion_pos'] = None
         exp_df['label'] = None
         exp_df['frag_seq'] = None
         exp_df['theor_mz'] = None
@@ -268,6 +293,7 @@ def get_matches_dataframe(
         match_data.append({
             'mz': match.mz,
             'ion_type': match.fragment.ion_type,
+            'ion_pos': ion_pos,
             'label': f'{match.fragment.ion_type}{ion_pos}{loss_label}{charge_str}',
             'frag_seq': match.fragment.sequence,
             'theor_mz': match.fragment.mz,

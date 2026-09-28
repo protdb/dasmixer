@@ -1,10 +1,11 @@
 """CLI commands for managing project tools."""
 
+import asyncio
 import json
-import typer
 from pathlib import Path
 from typing import Annotated
-import asyncio
+
+import typer
 from dasmixer.api.project.project import Project
 
 app = typer.Typer(help="Manage project tools")
@@ -16,7 +17,7 @@ def add(
     name: Annotated[str, typer.Option("--name", "-n", help="Tool name")] = ...,
     parser: Annotated[str, typer.Option("--parser", "-p", help="Parser name (e.g., PowerNovo2, MGF)")] = ...,
     type: Annotated[str, typer.Option("--type", "-t", help="Tool type: Library or De Novo")] = "Library",
-    color: Annotated[str, typer.Option("--color", help="Display color (hex, e.g. #4CAF50)")] = None,
+    color: Annotated[str | None, typer.Option("--color", help="Display color (hex, e.g. #4CAF50)")] = None,
 ):
     """
     Add a new tool to the project.
@@ -88,7 +89,7 @@ def configure(
 @app.command(name="param-list")
 def param_list(
     project_path: Annotated[str, typer.Argument(help="Path to .dasmix project file")],
-    name: Annotated[str, typer.Option("--name", "-n", help="Filter by tool name")] = None,
+    name: Annotated[str | None, typer.Option("--name", "-n", help="Filter by tool name")] = None,
 ):
     """
     List tool parameters/settings.

@@ -1,4 +1,10 @@
-from uniprot_meta_tool import UniprotData, get_pathways, get_molecular_functions, get_biological_processes
+from uniprot_meta_tool import (
+    UniprotData,
+    get_biological_processes,
+    get_molecular_functions,
+    get_pathways,
+)
+
 
 def _get_values_from_list(lines: list[str]) -> tuple[str | None, str | None]:
     if len(lines) == 0:

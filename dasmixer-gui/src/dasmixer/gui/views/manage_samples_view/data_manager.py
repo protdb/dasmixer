@@ -1,7 +1,7 @@
 """SampleDataManager — encapsulates sample stats loading and refresh operations."""
 
-from dasmixer.api.project.project import Project
 from dasmixer.api.project.dataclasses import Sample
+from dasmixer.api.project.project import Project
 
 
 class SampleDataManager:
@@ -23,6 +23,15 @@ class SampleDataManager:
         tools_count = await self.project.get_tools_count()
         all_stats = await self.project.get_all_samples_stats()
         return samples, all_stats, tools_count
+
+    async def get_status_summary(self) -> dict:
+        """Return the aggregated sample status summary counters.
+
+        Single aggregate query (total / ok / warning / error / uncached).
+        Used by both ManageSamplesView and the Samples tab summary section
+        so they share the same data-access path.
+        """
+        return await self.project.get_sample_status_summary()
 
     async def refresh_single(self, sample_id: int) -> tuple:
         """Recalculate stats for one sample.

@@ -1,14 +1,15 @@
 """Project database schema migrations."""
 
 import logging
-from dasmixer.versions import PROJECT_VERSION, MIN_SUPPORTED_PROJECT_VERSION
+
+from dasmixer.utils.exceptions import DasmixerException
+from dasmixer.versions import MIN_SUPPORTED_PROJECT_VERSION, PROJECT_VERSION
 
 logger = logging.getLogger(__name__)
 
 
-class MigrationError(Exception):
+class MigrationError(DasmixerException):
     """Ошибка при применении миграций проекта."""
-    pass
 
 
 def _version_lt(a: str, b: str) -> bool:
@@ -42,6 +43,29 @@ MIGRATIONS: list[dict] = [
         "sql": """
             ALTER TABLE protein_quantification_result RENAME COLUMN abs_value TO abs_value_mol;
             ALTER TABLE protein_quantification_result ADD COLUMN abs_value_gl REAL;
+        """,
+    },
+    {
+        "version": "0.7.1",
+        "sql": """
+            ALTER TABLE identification ADD COLUMN quality REAL;
+            ALTER TABLE identification ADD COLUMN override_pepmass REAL;
+            ALTER TABLE identification ADD COLUMN has_ptm INTEGER;
+        """,
+    },
+    {
+        "version": "0.7.2",
+        "sql": """
+            ALTER TABLE identification ADD COLUMN lcrr REAL;
+            ALTER TABLE identification ADD COLUMN unconfirmed_ptms INTEGER;
+        """,
+    },
+    {
+        "version": "0.7.3",
+        "sql": """
+            ALTER TABLE identification ADD COLUMN fdr REAL;
+            ALTER TABLE identification ADD COLUMN e_value REAL;
+            ALTER TABLE identification ADD COLUMN q_value REAL;
         """,
     },
 ]
@@ -116,9 +140,9 @@ class MigrationMixin:
                 await self._db.commit()
             except Exception as e:
                 await self._db.rollback()
-                logger.exception("Migration to %s failed: %s", migration['version'], e)
+                logger.exception("Migration to %s failed", migration['version'])
                 raise MigrationError(
-                    f"Migration to version {migration['version']} failed: {e}"
+                    f"Migration to version {migration['version']} failed"
                 ) from e
 
         # Все миграции применены — обновляем версию

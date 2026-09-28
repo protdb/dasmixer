@@ -1,3 +1,3 @@
 """CLI command modules."""
 
-__all__ = ['project', 'subset', 'import_data']
+__all__ = ['import_data', 'project', 'subset']

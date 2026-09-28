@@ -1,11 +1,12 @@
 """CLI commands for project management."""
 
-import typer
+import asyncio
 from pathlib import Path
 from typing import Annotated
-import asyncio
-from dasmixer.api.project.project import Project
+
+import typer
 from dasmixer.api.config import config
+from dasmixer.api.project.project import Project
 
 app = typer.Typer(help="Create new project")
 
@@ -52,8 +53,8 @@ def create_project(
 @app.command()
 def configure(
     project_path: Annotated[str, typer.Argument(help="Path to .dasmix project file")],
-    key: Annotated[str, typer.Option("--key", "-k", help="Setting key")] = None,
-    value: Annotated[str, typer.Option("--value", "-v", help="Setting value")] = None,
+    key: Annotated[str | None, typer.Option("--key", "-k", help="Setting key")] = None,
+    value: Annotated[str | None, typer.Option("--value", "-v", help="Setting value")] = None,
     list_settings: Annotated[bool, typer.Option("--list", "-l", help="List all settings")] = False,
 ):
     """

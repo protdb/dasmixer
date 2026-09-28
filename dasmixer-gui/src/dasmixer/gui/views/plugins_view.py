@@ -1,23 +1,21 @@
 """Plugins management view."""
 
-import os
 import sys
-import subprocess
-import flet as ft
 from pathlib import Path
 
+import flet as ft
 from dasmixer.api.config import config
-from dasmixer.api.plugin_loader import (
-    get_identification_plugins_dir,
-    get_reports_plugins_dir,
-    install_plugin_file,
-    delete_plugin,
-)
 
 # Import registries to enumerate built-ins
 from dasmixer.api.inputs.registry import registry as inputs_registry
+from dasmixer.api.plugin_loader import (
+    delete_plugin,
+    get_identification_plugins_dir,
+    get_reports_plugins_dir,
+    install_plugin_file,
+)
 from dasmixer.api.reporting.registry import registry as reports_registry
-from dasmixer.gui.utils import show_snack
+from dasmixer.gui.utils import open_folder, show_snack
 
 
 def _get_plugin_load_results() -> list[dict]:
@@ -86,8 +84,6 @@ class PluginsView(ft.View):
         """Build full view content."""
         self._refresh_lists()
 
-        external_ids = _get_external_plugin_ids()
-
         # Identification Parsers section
         ident_section = self._build_section(
             title="Identification Parsers",
@@ -138,7 +134,7 @@ class PluginsView(ft.View):
         open_dir_btn = ft.OutlinedButton(
             content=ft.Text("Open plugins folder"),
             icon=ft.Icons.FOLDER_OPEN,
-            on_click=lambda _, d=plugins_dir: self._open_directory(d),
+            on_click=lambda _, d=plugins_dir: open_folder(d),
         )
 
         return ft.Column(
@@ -387,14 +383,3 @@ class PluginsView(ft.View):
 
         self.page.overlay.remove(dlg)
         self.page.update()
-
-    @staticmethod
-    def _open_directory(directory: Path):
-        """Open directory in system file manager."""
-        directory.mkdir(parents=True, exist_ok=True)
-        if sys.platform == "win32":
-            os.startfile(str(directory))
-        elif sys.platform == "darwin":
-            subprocess.run(["open", str(directory)], check=False)
-        else:
-            subprocess.run(["xdg-open", str(directory)], check=False)
