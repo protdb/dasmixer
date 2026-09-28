@@ -57,7 +57,13 @@ The project is split into four PyPI packages:
 
 ## Installation
 
-### Full install
+### Windows installer:
+
+[**Download windows installer here**](https://github.com/protdb/dasmixer/releases/download/v0.6.0/DASMixer0.6.0-setup.exe)
+
+See latest 0.6.0 changelog [here](https://github.com/protdb/dasmixer/releases/tag/v0.6.0)
+
+### Full install via pip
 
 ```bash
 pip install dasmixer
