@@ -1,7 +1,6 @@
 """Progress dialog for long-running operations."""
 
 import flet as ft
-
 from dasmixer.utils import logger
 
 

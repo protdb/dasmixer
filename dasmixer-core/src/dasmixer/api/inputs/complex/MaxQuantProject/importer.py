@@ -12,7 +12,6 @@ from dasmixer.api.inputs.peptides.MQ_Evidences import MaxQuantEvidenceParser
 from dasmixer.api.inputs.proteins.fasta import FastaParser
 from dasmixer.api.inputs.spectra.mgf import MGFParser
 from dasmixer.api.project.project import Project
-
 from dasmixer.utils import logger
 
 from .apl_convert import load_and_merge, process_apl

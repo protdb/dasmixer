@@ -1,7 +1,6 @@
 """Preferred identification matching section."""
 
 import flet as ft
-
 from dasmixer.utils import logger
 
 from .base_section import BaseSection

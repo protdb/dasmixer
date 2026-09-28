@@ -1,9 +1,8 @@
 """Tool settings section for peptides tab."""
 
 import flet as ft
-from dasmixer.utils.seqfixer_utils import DEFAULT_PTM_CODES, PTMS
-
 from dasmixer.utils import logger
+from dasmixer.utils.seqfixer_utils import DEFAULT_PTM_CODES, PTMS
 
 from .base_section import BaseSection
 
@@ -190,6 +189,12 @@ class ToolSettingsSection(BaseSection):
                 width=170,
                 keyboard_type=ft.KeyboardType.NUMBER,
             ),
+            'max_fdr': ft.TextField(
+                label="Max FDR",
+                value=str(settings.get('max_fdr', 0.01)),
+                width=150,
+                keyboard_type=ft.KeyboardType.NUMBER,
+            ),
             # ── Protein matching ───────────────────────────────────────────
             'use_protein_from_file': ft.Checkbox(
                 label="Use protein ID from file",
@@ -300,6 +305,7 @@ class ToolSettingsSection(BaseSection):
                 controls['min_quality'],
                 controls['min_lcrr'],
                 controls['max_unconfirmed_ptms'],
+                controls['max_fdr'],
             ]),
             controls['denovo_correction'],
         ], spacing=8)
@@ -557,6 +563,9 @@ class ToolSettingsSection(BaseSection):
             if int(controls['max_unconfirmed_ptms'].value) < 0:
                 return False, "Max Unconfirmed PTMs must be ≥ 0"
 
+            if not (0 <= float(controls['max_fdr'].value) <= 1):
+                return False, "Max FDR must be in [0, 1]"
+
             max_ptm_val = int(controls['max_ptm'].value)
             if max_ptm_val < 0:
                 return False, "Max PTM combinations must be ≥ 0"
@@ -615,6 +624,7 @@ class ToolSettingsSection(BaseSection):
             'min_quality': float(controls['min_quality'].value),
             'min_lcrr': float(controls['min_lcrr'].value),
             'max_unconfirmed_ptms': int(controls['max_unconfirmed_ptms'].value),
+            'max_fdr': float(controls['max_fdr'].value),
             'leucine_combinatorics': controls['leucine_combinatorics'].value,
             'ptm_list': ptm_list_to_save,
             'max_ptm': int(controls['max_ptm'].value),
@@ -673,6 +683,7 @@ class ToolSettingsSection(BaseSection):
                 'min_quality': float(controls['min_quality'].value),
                 'min_lcrr': float(controls['min_lcrr'].value),
                 'max_unconfirmed_ptms': int(controls['max_unconfirmed_ptms'].value),
+                'max_fdr': float(controls['max_fdr'].value),
                 'leucine_combinatorics': controls['leucine_combinatorics'].value,
                 'ptm_list': ptm_list,
                 'max_ptm': int(controls['max_ptm'].value),

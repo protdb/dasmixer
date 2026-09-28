@@ -5,7 +5,6 @@ from collections.abc import Callable
 import flet as ft
 import pandas as pd
 from dasmixer.gui.utils import show_snack
-
 from dasmixer.utils import logger
 
 

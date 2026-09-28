@@ -41,6 +41,7 @@ class JoinedPeptideDataMixin:
         min_quality: float | None = None,
         has_ptm: str | None = None,
         has_substitution: str | None = None,
+        max_fdr: float | None = None,
     ) -> tuple[list[str], list]:
         """
         Build WHERE conditions and bound parameters for joined peptide queries.
@@ -81,6 +82,8 @@ class JoinedPeptideDataMixin:
                 ``has_ptm = 1``; 'No' keeps NULL or 0.
             has_substitution: Tri-state ('Yes'/'No'/other = all). 'Yes' keeps
                 ``peptide_match.substitution = 1``; 'No' keeps 0.
+            max_fdr: Keep rows with ``identification.fdr <= value``
+                     (NULL fdr is excluded). When None, no FDR filter.
 
         Returns:
             Tuple ``(conditions, params)`` — list of SQL fragments (to be
@@ -192,6 +195,12 @@ class JoinedPeptideDataMixin:
         elif has_substitution == 'No':
             conditions.append("mp.substitution = 0")
 
+        # Max FDR (strict: NULL fdr rows are excluded when threshold is set)
+        mf = max_fdr
+        if mf is not None:
+            conditions.append("(id.fdr IS NOT NULL AND id.fdr <= ?)")
+            params.append(float(mf))
+
         return conditions, params
 
     async def count_joined_peptide_data(
@@ -219,6 +228,7 @@ class JoinedPeptideDataMixin:
         min_quality: float | None = None,
         has_ptm: str | None = None,
         has_substitution: str | None = None,
+        max_fdr: float | None = None,
     ) -> int:
         """
         Count joined peptide data rows matching the given filters.
@@ -253,13 +263,16 @@ class JoinedPeptideDataMixin:
                     i.canonical_sequence,
                     i.ppm,
                     i.score,
-                     i.is_preferred,
-                      i.quality,
-                      i.lcrr,
-                      i.unconfirmed_ptms,
-                      i.has_ptm
-                   FROM identification i, tool t
-                  WHERE t.id = i.tool_id) AS id
+                      i.is_preferred,
+                       i.quality,
+                       i.lcrr,
+                       i.unconfirmed_ptms,
+                       i.has_ptm,
+                       i.fdr,
+                       i.e_value,
+                       i.q_value
+                    FROM identification i, tool t
+                   WHERE t.id = i.tool_id) AS id
                  ON id.spectre_id = s.id
             LEFT JOIN
                 (SELECT
@@ -301,6 +314,7 @@ class JoinedPeptideDataMixin:
             min_quality=min_quality,
             has_ptm=has_ptm,
             has_substitution=has_substitution,
+            max_fdr=max_fdr,
         )
 
         if conditions:
@@ -334,6 +348,7 @@ class JoinedPeptideDataMixin:
         min_quality: float | None = None,
         has_ptm: str | None = None,
         has_substitution: str | None = None,
+        max_fdr: float | None = None,
         limit: int | None = None,
         offset: int = 0,
     ) -> pd.DataFrame:
@@ -374,6 +389,8 @@ class JoinedPeptideDataMixin:
                 ``has_ptm = 1``; 'No' keeps NULL or 0.
             has_substitution: Tri-state ('Yes'/'No'/other = all). 'Yes' keeps
                 ``peptide_match.substitution = 1``; 'No' keeps 0.
+            max_fdr: Keep rows with ``identification.fdr <= value``
+                (NULL fdr is excluded). When None, no FDR filter.
             limit: Maximum rows to return. ``None`` or ``-1`` disables
                 pagination (returns all matching rows).
             offset: Number of rows to skip (for pagination).
@@ -388,7 +405,8 @@ class JoinedPeptideDataMixin:
                   ions_matched, ion_match_type, top_peaks_covered,
                   intensity_coverage, override_charge, source_sequence,
                   isotope_offset, theor_mass, quality, lcrr,
-                  unconfirmed_ptms, override_pepmass, has_ptm
+                  unconfirmed_ptms, override_pepmass, has_ptm, fdr, e_value,
+                  q_value
                 - matched_sequence, matched_ppm, protein_id, identity,
                   unique_evidence, gene, matched_peaks, matched_top_peaks,
                   matched_ion_type, matched_sequence_modified, substitution
@@ -402,7 +420,8 @@ class JoinedPeptideDataMixin:
                 id.ions_matched, id.ion_match_type, id.top_peaks_covered,
                 id.intensity_coverage,
                 id.override_charge, id.source_sequence, id.isotope_offset,
-                 id.theor_mass, id.quality, id.lcrr, id.unconfirmed_ptms, id.override_pepmass, id.has_ptm,
+                  id.theor_mass, id.quality, id.lcrr, id.unconfirmed_ptms, id.override_pepmass, id.has_ptm,
+                  id.fdr, id.e_value, id.q_value,
                 mp.matched_sequence, mp.matched_ppm, mp.protein_id, mp.identity,
                 mp.unique_evidence, mp.gene,
                 mp.matched_peaks, mp.matched_top_peaks, mp.matched_ion_type,
@@ -442,7 +461,10 @@ class JoinedPeptideDataMixin:
                       i.lcrr,
                       i.unconfirmed_ptms,
                       i.override_pepmass,
-                      i.has_ptm
+                      i.has_ptm,
+                      i.fdr,
+                      i.e_value,
+                      i.q_value
                    FROM identification i, tool t
                    WHERE t.id = i.tool_id) AS id
                 ON id.spectre_id = s.id
@@ -489,6 +511,7 @@ class JoinedPeptideDataMixin:
             min_quality=min_quality,
             has_ptm=has_ptm,
             has_substitution=has_substitution,
+            max_fdr=max_fdr,
         )
 
         if conditions:

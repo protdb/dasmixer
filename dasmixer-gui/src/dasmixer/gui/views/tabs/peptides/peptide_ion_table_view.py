@@ -4,7 +4,6 @@ import flet as ft
 import pandas as pd
 from dasmixer.api.project.project import Project
 from dasmixer.gui.components.base_table_view import BaseTableView
-
 from dasmixer.utils import logger
 
 _MAX_SEQ_LEN = 31
@@ -47,6 +46,9 @@ class PeptideIonTableView(BaseTableView):
         'quality': 'Quality',
         'lcrr': 'LCRR',
         'unconfirmed_ptms': 'Unconfirmed PTMs',
+        'fdr': 'FDR',
+        'e_value': 'e-value',
+        'q_value': 'q-value',
         'charge': 'Source charge',
         'pepmass': 'Source pepmass',
         'override_charge': 'Override Charge',
@@ -102,6 +104,7 @@ class PeptideIonTableView(BaseTableView):
             'protein_identified': 'None',
             'sequence_identified': 'None',
             'min_quality': 0.0,
+            'max_fdr': "",
             'has_ptm': 'None',
             'has_substitution': 'None',
         }
@@ -184,6 +187,10 @@ class PeptideIonTableView(BaseTableView):
             label="Min Quality", value="0",
             width=150, keyboard_type=ft.KeyboardType.NUMBER,
         )
+        self.max_fdr_field = ft.TextField(
+            label="Max FDR", value="",
+            width=150, keyboard_type=ft.KeyboardType.NUMBER,
+        )
         self.has_ptm_field = ft.Dropdown(
             label="Has PTM", value='None',
             options=[
@@ -236,6 +243,7 @@ class PeptideIonTableView(BaseTableView):
             ]),
             ft.Row([
                 self.min_quality_field,
+                self.max_fdr_field,
                 self.has_ptm_field,
                 self.has_substitution_field,
             ], spacing=10),
@@ -268,6 +276,10 @@ class PeptideIonTableView(BaseTableView):
             self.filter['min_quality'] = float(self.min_quality_field.value)
         except (ValueError, TypeError):
             self.filter['min_quality'] = None
+        try:
+            self.filter['max_fdr'] = float(self.max_fdr_field.value)
+        except (ValueError, TypeError):
+            self.filter['max_fdr'] = None
         self.filter['has_ptm'] = self.has_ptm_field.value
         self.filter['has_substitution'] = self.has_substitution_field.value
 
@@ -363,6 +375,12 @@ class PeptideIonTableView(BaseTableView):
         if self.filter.get('min_quality'):
             try:
                 kwargs['min_quality'] = float(self.filter['min_quality'])
+            except (ValueError, TypeError):
+                pass
+
+        if self.filter.get('max_fdr'):
+            try:
+                kwargs['max_fdr'] = float(self.filter['max_fdr'])
             except (ValueError, TypeError):
                 pass
 

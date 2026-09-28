@@ -20,7 +20,6 @@ import sys
 import tempfile
 
 import flet as ft
-
 from dasmixer.utils import logger
 
 # Регистрируемый Windows-формат PNG для вставки с прозрачностью.

@@ -5,10 +5,9 @@ from collections.abc import AsyncIterator
 
 import numpy as np
 import pandas as pd
+from dasmixer.utils import logger
 from pyteomics.auxiliary.structures import PyteomicsError
 from pyteomics.mgf import MGF
-
-from dasmixer.utils import logger
 
 from .base import SpectralDataParser
 

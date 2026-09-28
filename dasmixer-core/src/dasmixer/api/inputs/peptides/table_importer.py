@@ -51,6 +51,10 @@ class ColumnRenames:
         positional_scores: Source column name for per-position confidence scores
         ppm: Source column name for mass error in ppm
         theor_mass: Source column name for theoretical mass
+        src_file_protein_id: Source column name for protein ID
+        fdr: Source column name for False Discovery Rate
+        e_value: Source column name for e-value
+        q_value: Source column name for q-value
     """
     scans: str | None = None
     seq_no: str | None = None
@@ -61,6 +65,9 @@ class ColumnRenames:
     ppm: str | None = None
     theor_mass: str | None = None
     src_file_protein_id: str | None = None  # NEW: source column for protein ID
+    fdr: str | None = None
+    e_value: str | None = None
+    q_value: str | None = None
 
     @property
     def mapping(self) -> dict[str, str]:

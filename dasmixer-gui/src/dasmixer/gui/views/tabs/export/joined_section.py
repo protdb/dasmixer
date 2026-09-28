@@ -7,7 +7,6 @@ from dasmixer.api.export.joined_export import export_joined_data
 from dasmixer.api.export.shared_state import ExportTabState
 from dasmixer.gui.components.progress_dialog import ProgressDialog
 from dasmixer.gui.utils import show_snack
-
 from dasmixer.utils import logger
 
 _SECTIONS = {

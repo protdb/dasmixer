@@ -8,7 +8,6 @@ from dasmixer.api.calculations.peptides.protein_map import map_proteins
 from dasmixer.api.config import config as _config
 from dasmixer.api.project.project import Project
 from dasmixer.gui.views.tabs.peptides.shared_state import PeptidesTabState
-
 from dasmixer.utils import logger
 
 from .base import BaseAction

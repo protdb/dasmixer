@@ -14,7 +14,6 @@ from dasmixer.api.inputs.complex.MaxQuantProject.mqpar_parser import (
 )
 from dasmixer.api.project.project import Project
 from dasmixer.gui.utils import show_snack
-
 from dasmixer.utils import logger
 
 

@@ -4,7 +4,6 @@ import asyncio
 
 import flet as ft
 from dasmixer.api.project.project import Project
-
 from dasmixer.utils import logger
 
 from .base_section import BaseSection

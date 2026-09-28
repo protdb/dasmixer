@@ -10,7 +10,6 @@ import flet as ft
 from dasmixer.api.project.project import Project
 from dasmixer.gui.components.plotly_viewer import PlotlyViewer, render_png_async
 from dasmixer.gui.utils import show_snack
-
 from dasmixer.utils import logger
 
 

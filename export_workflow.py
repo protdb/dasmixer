@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 export_workflow.py -- Export & Visualization for an existing DASMixer project.
 

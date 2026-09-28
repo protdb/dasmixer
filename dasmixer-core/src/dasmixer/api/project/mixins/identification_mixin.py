@@ -95,6 +95,9 @@ class IdentificationMixin:
                 - score: float | None
                 - positional_scores: dict | None
                 - intensity_coverage: float | None
+                - fdr: float | None
+                - e_value: float | None
+                - q_value: float | None
         """
         rows_to_insert = []
         
@@ -113,14 +116,18 @@ class IdentificationMixin:
                 positional_scores_json,
                 float(row['intensity_coverage']) if row.get('intensity_coverage') is not None else None,
                 str(row['src_file_protein_id']) if row.get('src_file_protein_id') is not None else None,
+                float(row['fdr']) if row.get('fdr') is not None else None,
+                float(row['e_value']) if row.get('e_value') is not None else None,
+                float(row['q_value']) if row.get('q_value') is not None else None,
             ))
         
         if rows_to_insert:
             await self._executemany(
                 """INSERT INTO identification 
                    (spectre_id, tool_id, ident_file_id, is_preferred, sequence, canonical_sequence,
-                    ppm, theor_mass, score, positional_scores, intensity_coverage, src_file_protein_id)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    ppm, theor_mass, score, positional_scores, intensity_coverage, src_file_protein_id,
+                    fdr, e_value, q_value)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 rows_to_insert
             )
             await self.save()
@@ -220,6 +227,7 @@ class IdentificationMixin:
             min_quality: float | None = None,
             min_lcrr: float | None = None,
             max_unconfirmed_ptms: int | None = None,
+            max_fdr: float | None = None,
     ):
         """
         Special method for identification processing — returns candidates for
@@ -247,10 +255,13 @@ class IdentificationMixin:
                          provided, only identifications with unconfirmed_ptms <=
                          max_unconfirmed_ptms are returned; NULL-unconfirmed_ptms
                          rows are excluded. When None, no filter is applied.
+            max_fdr: maximum FDR threshold. When provided, identifications with
+                     fdr <= max_fdr OR fdr IS NULL are returned. When None,
+                     no FDR filter is applied.
         """
         query = """
             SELECT
-                i.id, i.spectre_id, i.tool_id, i.ppm, i.intensity_coverage, i.score, i.lcrr, i.unconfirmed_ptms,
+                i.id, i.spectre_id, i.tool_id, i.ppm, i.intensity_coverage, i.score, i.lcrr, i.unconfirmed_ptms, i.fdr,
                 s.spectre_file_id,
                 m.matched_ppm, m.matched_coverage_percent
             FROM identification i
@@ -301,6 +312,10 @@ class IdentificationMixin:
             query += " AND i.unconfirmed_ptms IS NOT NULL AND i.unconfirmed_ptms <= ?"
             params.append(int(max_unconfirmed_ptms))
 
+        if max_fdr is not None:
+            query += " AND (i.fdr IS NULL OR i.fdr <= ?)"
+            params.append(float(max_fdr))
+
         rows = await self._fetchall(query, tuple(params))
         return pd.DataFrame(rows) if rows else pd.DataFrame()
 
@@ -324,7 +339,7 @@ class IdentificationMixin:
         """
         query = """
             SELECT
-                i.id, i.spectre_id, i.tool_id, i.ppm, i.intensity_coverage, i.score, i.lcrr, i.unconfirmed_ptms,
+                i.id, i.spectre_id, i.tool_id, i.ppm, i.intensity_coverage, i.score, i.lcrr, i.unconfirmed_ptms, i.fdr,
                 s.spectre_file_id,
                 m.matched_ppm, m.matched_coverage_percent
             FROM identification i

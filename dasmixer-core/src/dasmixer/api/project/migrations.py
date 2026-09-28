@@ -60,6 +60,14 @@ MIGRATIONS: list[dict] = [
             ALTER TABLE identification ADD COLUMN unconfirmed_ptms INTEGER;
         """,
     },
+    {
+        "version": "0.7.3",
+        "sql": """
+            ALTER TABLE identification ADD COLUMN fdr REAL;
+            ALTER TABLE identification ADD COLUMN e_value REAL;
+            ALTER TABLE identification ADD COLUMN q_value REAL;
+        """,
+    },
 ]
 
 

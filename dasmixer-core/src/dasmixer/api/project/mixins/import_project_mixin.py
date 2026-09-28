@@ -366,7 +366,8 @@ class ImportProjectMixin(ProjectBase):
                     intensity_coverage, ions_matched, ion_match_type,
                     top_peaks_covered, override_charge, source_sequence,
                     isotope_offset, quality, override_pepmass, has_ptm,
-                    lcrr, unconfirmed_ptms, src_file_protein_id)
+                    lcrr, unconfirmed_ptms, src_file_protein_id,
+                    fdr, e_value, q_value)
                 SELECT i.id + {b_i}, i.spectre_id + {b_s},
                        tm.tgt_id, i.ident_file_id + {b_idf},
                        i.is_preferred,
@@ -375,7 +376,8 @@ class ImportProjectMixin(ProjectBase):
                        i.ions_matched, i.ion_match_type, i.top_peaks_covered,
                        i.override_charge, i.source_sequence, i.isotope_offset,
                        i.quality, i.override_pepmass, i.has_ptm,
-                       i.lcrr, i.unconfirmed_ptms, i.src_file_protein_id
+                       i.lcrr, i.unconfirmed_ptms, i.src_file_protein_id,
+                       i.fdr, i.e_value, i.q_value
                 FROM src.identification i
                 JOIN temp._tool_id_map tm ON tm.src_id = i.tool_id
             """)

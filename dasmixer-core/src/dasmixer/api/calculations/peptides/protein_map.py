@@ -18,6 +18,8 @@ except ImportError:  # pragma: no cover
     npy = None  # type: ignore[assignment]
 
 import pandas as pd
+from dasmixer.api import Project
+from dasmixer.api.calculations.ppm import SeqFixer, SeqMatchParams
 from dasmixer.api.calculations.ppm.dataclasses import SeqResults
 from dasmixer.api.calculations.spectra.ion_match import (
     IonMatchParameters,
@@ -28,9 +30,6 @@ from dasmixer.utils.exceptions import DasmixerException
 from dasmixer.utils.lic import get_leucine_combinations
 from dasmixer.utils.logger import logger
 from dasmixer.utils.seqfixer_utils import PTMS, FixedPTM
-
-from dasmixer.api import Project
-from dasmixer.api.calculations.ppm import SeqFixer, SeqMatchParams
 
 # ---------------------------------------------------------------------------
 # Internal helpers

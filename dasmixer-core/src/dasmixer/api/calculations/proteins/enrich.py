@@ -1,9 +1,8 @@
 from collections.abc import AsyncIterator
 
-from uniprot_meta_tool import UniprotData
-
 from dasmixer.api.project import Project
 from dasmixer.utils import logger
+from uniprot_meta_tool import UniprotData
 
 
 async def enrich_protein(project: Project, protein_id: str, force_update: bool = False, overwrite_fasta: bool = True):

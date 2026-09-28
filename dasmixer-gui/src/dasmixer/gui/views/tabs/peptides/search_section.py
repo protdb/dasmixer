@@ -5,7 +5,6 @@ import pandas as pd
 from dasmixer.api.calculations.spectra.ion_match import IonMatchParameters
 from dasmixer.api.calculations.spectra.plot_flow import make_full_spectrum_plot
 from dasmixer.gui.components.plotly_viewer import PlotlyViewer
-
 from dasmixer.utils import logger
 
 from .base_section import BaseSection

@@ -133,7 +133,15 @@ async def calculate_preferred_identifications_for_file(
         project: Project instance
         spectra_file_id: ID of spectra file to process
         criterion: "ppm" or "intensity"
-        tool_settings: Tool-specific settings dict
+        tool_settings: Tool-specific settings dict. Supported keys per tool:
+            ``ignore_criteria`` (bool, default False), ``max_ppm`` (default 50),
+            ``min_score`` (default 0), ``min_ion_intensity_coverage``,
+            ``min_peptide_length`` (default 7), ``max_peptide_length`` (default 30),
+            ``min_spectre_peaks`` (default 1), ``min_top_peaks`` (default 1),
+            ``min_ions_covered`` (default 1), ``min_quality`` (default 0.25),
+            ``min_lcrr`` (default 0.2), ``max_unconfirmed_ptms`` (default 0),
+            ``max_fdr`` (default 0.01), ``denovo_correction`` (default False),
+            ``denovo_correction_ppm`` (default 50000).
 
     Returns:
         List of identification IDs that should be marked as preferred
@@ -173,6 +181,7 @@ async def calculate_preferred_identifications_for_file(
             min_quality = tool_params.get("min_quality", 0.25)
             min_lcrr = tool_params.get("min_lcrr", 0.2)
             max_unconfirmed_ptms = tool_params.get("max_unconfirmed_ptms", 0)
+            max_fdr = tool_params.get("max_fdr", 0.01)
             denovo_correction = tool_params.get("denovo_correction", False)
             denovo_correction_ppm = tool_params.get("denovo_correction_ppm", 50000)
 
@@ -189,6 +198,7 @@ async def calculate_preferred_identifications_for_file(
                 min_quality=min_quality,
                 min_lcrr=min_lcrr,
                 max_unconfirmed_ptms=max_unconfirmed_ptms,
+                max_fdr=max_fdr,
             )
             logger.debug(f"tool_id={tool_id} spectra_file_id={spectra_file_id} rows={len(idents)}")
             if not idents.empty:

@@ -122,6 +122,9 @@ CREATE TABLE IF NOT EXISTS identification (
     lcrr REAL,                          -- Longest Consecutive Run Ratio (0..1); NULL if not calculated
     unconfirmed_ptms INTEGER,           -- Number of unconfirmed PTMs (seq_ptms - max_frag_ptm); NULL if not calculated
     src_file_protein_id TEXT,  -- protein ID from source identification file (nullable)
+    fdr REAL,                       -- False Discovery Rate (imported); NULL if not provided by parser
+    e_value REAL,                   -- e-value (imported); NULL if not provided by parser
+    q_value REAL,                   -- q-value (imported); NULL if not provided by parser
     FOREIGN KEY (spectre_id) REFERENCES spectre(id) ON DELETE CASCADE,
     FOREIGN KEY (tool_id) REFERENCES tool(id) ON DELETE CASCADE,
     FOREIGN KEY (ident_file_id) REFERENCES identification_file(id) ON DELETE CASCADE

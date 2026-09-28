@@ -1,7 +1,6 @@
 """FASTA loading and protein mapping section."""
 
 import flet as ft
-
 from dasmixer.utils import logger
 
 from .base_section import BaseSection

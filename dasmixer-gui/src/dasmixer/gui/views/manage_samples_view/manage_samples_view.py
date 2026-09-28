@@ -16,7 +16,6 @@ import flet as ft
 from dasmixer.api.project.dataclasses import Sample
 from dasmixer.api.project.project import Project
 from dasmixer.gui.utils import show_snack
-
 from dasmixer.utils import logger
 
 from .data_manager import SampleDataManager

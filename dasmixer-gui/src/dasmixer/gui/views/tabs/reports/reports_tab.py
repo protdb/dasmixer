@@ -3,7 +3,6 @@
 import flet as ft
 from dasmixer.api.project.project import Project
 from dasmixer.api.reporting.registry import registry
-
 from dasmixer.utils import logger
 
 from .report_item import ReportItem
