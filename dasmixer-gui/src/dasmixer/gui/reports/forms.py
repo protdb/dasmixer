@@ -60,9 +60,6 @@ class VolcanoReportForm(ReportForm):
 class ToolMatchReportForm(ReportForm):
     tool1 = ToolSelector(label="Tool 1 (Library)")
     tool2 = ToolSelector(label="Tool 2 (De Novo)")
-    min_psm = IntSelector(default=1, label="Min PSM count")
-    min_unique_psm = IntSelector(default=1, label="Min unique PSM count")
-    count_per_sample = BoolSelector(default=False, label="Count unique peptides per sample (matches UpSet/PIR logic)")
 
 
 # ---------------------------------------------------------------------------
