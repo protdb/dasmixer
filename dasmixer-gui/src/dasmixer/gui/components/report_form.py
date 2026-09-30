@@ -125,6 +125,14 @@ class FloatSelector(ReportParamBase):
         )
         return self._control
 
+    def get_value(self) -> float:
+        if self._control is None:
+            return float(self.default)
+        try:
+            return float(self._control.value)
+        except (ValueError, TypeError):
+            return float(self.default)
+
 
 class IntSelector(ReportParamBase):
     """Text field for an integer parameter."""
@@ -140,6 +148,14 @@ class IntSelector(ReportParamBase):
             keyboard_type=ft.KeyboardType.NUMBER,
         )
         return self._control
+
+    def get_value(self) -> int:
+        if self._control is None:
+            return int(self.default)
+        try:
+            return int(self._control.value)
+        except (ValueError, TypeError):
+            return int(self.default)
 
 
 class SubsetSelector(ReportParamBase):
