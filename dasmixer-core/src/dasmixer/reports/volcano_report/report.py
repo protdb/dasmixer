@@ -7,14 +7,23 @@ from dasmixer.api.reporting._icons import Icons
 from scipy.stats import false_discovery_control, mannwhitneyu, ttest_ind
 from smart_round import format_dataframe
 
-from ..base import BaseReport
+from dasmixer.api.reporting.base import BaseReport
+
+from .params import VolcanoReportParams
+
+try:
+    from .form import VolcanoReportForm
+    _parameters = VolcanoReportForm
+except ImportError:
+    _parameters = None
 
 
 class VolcanoReport(BaseReport):
     name = "Volcano Report (independent)"
     description = "Reporting FC/p-value changes and Volcano plots"
     icon = Icons.VOLCANO
-    parameters = None
+    params_class = VolcanoReportParams
+    parameters = _parameters
 
     async def get_data(
         self, lfq_type: str, subsets: list[str], exclude_outliers: bool = True
@@ -135,25 +144,25 @@ class VolcanoReport(BaseReport):
 
     async def _generate_impl(
         self,
-        params: dict
+        params: VolcanoReportParams
     ) -> tuple[list[tuple[str, go.Figure]], list[tuple[str, pd.DataFrame, bool]]]:
-        control_subset = str(params['control_subset'])
+        control_subset = params.control_subset
         # exptl_subsets is now list[str] (from MultiSubsetSelector)
-        exptl_subsets: list[str] = params['exptl_subsets']
+        exptl_subsets: list[str] = params.exptl_subsets
         if isinstance(exptl_subsets, str):
             # Backward compatibility: old text format "subset1,subset2"
             exptl_subsets = [s.strip() for s in exptl_subsets.split(',') if s.strip()]
         all_subsets = exptl_subsets + [control_subset]
 
-        calc_share = int(params['percent_to_calculate']) / 100
-        criteria = str(params['stats_method'])
-        fdc = str(params.get('fdc', 'BH'))
+        calc_share = params.percent_to_calculate / 100
+        criteria = params.stats_method
+        fdc = params.fdc
 
-        fc_threshold = float(params['fc_threshold'])
+        fc_threshold = params.fc_threshold
         fc_threshold_log2 = np.log2(fc_threshold)
-        p_threshold = float(params['p_threshold'])
+        p_threshold = params.p_threshold
 
-        lfq_value = params.get('lfq', ('emPAI', 'rel_value'))
+        lfq_value = params.lfq
         if isinstance(lfq_value, (tuple, list)) and len(lfq_value) == 2:
             lfq_type = lfq_value[0]
             lfq_measure = lfq_value[1]
@@ -161,7 +170,7 @@ class VolcanoReport(BaseReport):
             lfq_type = str(lfq_value)
             lfq_measure = 'rel_value'
 
-        include_outliers = bool(params.get('include_outliers', False))
+        include_outliers = params.include_outliers
         exclude_outliers = not include_outliers
 
         df = await self.get_data(lfq_type, all_subsets, exclude_outliers=exclude_outliers)
@@ -293,6 +302,6 @@ class VolcanoReport(BaseReport):
         ]
 
 
-from ..registry import registry
+from dasmixer.api.reporting.registry import registry
 
 registry.register(VolcanoReport)

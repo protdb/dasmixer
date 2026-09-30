@@ -17,7 +17,15 @@ from typing import TYPE_CHECKING
 import pandas as pd
 from dasmixer.api.reporting._icons import Icons
 
-from ..base import BaseReport
+from dasmixer.api.reporting.base import BaseReport
+
+from .params import ToolCoverageReportParams
+
+try:
+    from .form import ToolCoverageReportForm
+    _parameters = ToolCoverageReportForm
+except ImportError:
+    _parameters = None
 
 if TYPE_CHECKING:
     import plotly.graph_objects as go
@@ -208,11 +216,12 @@ class ToolCoverageReport(BaseReport):
         "including theoretical maximum coverage"
     )
     icon = Icons.AREA_CHART
-    parameters = None
+    params_class = ToolCoverageReportParams
+    parameters = _parameters
 
     async def _generate_impl(
         self,
-        params: dict,
+        params: ToolCoverageReportParams,
     ) -> tuple[list[tuple[str, go.Figure]], list[tuple[str, pd.DataFrame, bool]]]:
         # --- Load project LFQ settings (same as used in LFQ calculation) ---
         enzyme = await self.project.get_setting("lfq_enzyme", "trypsin")
@@ -296,6 +305,6 @@ class ToolCoverageReport(BaseReport):
         )
 
 
-from ..registry import registry
+from dasmixer.api.reporting.registry import registry
 
 registry.register(ToolCoverageReport)

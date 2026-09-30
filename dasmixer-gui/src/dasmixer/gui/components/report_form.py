@@ -17,6 +17,7 @@ from dasmixer.api.reporting.report_form import (
 
 if TYPE_CHECKING:
     from dasmixer.api.project.project import Project
+    from dasmixer.api.reporting.report_params import ReportParams
 
 
 # ---------------------------------------------------------------------------
@@ -317,6 +318,8 @@ class ReportForm(_CoreReportForm):
         container = form.get_container()  # put in UI
         values = form.get_values()        # dict for _generate_impl
     """
+
+    params_class: type["ReportParams"] | None = None
 
     def __init__(self, project: Project):
         super().__init__(project)

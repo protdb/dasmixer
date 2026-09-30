@@ -12,6 +12,7 @@ from dasmixer.utils.logger import logger
 
 if TYPE_CHECKING:
     from dasmixer.api.project.project import Project
+    from dasmixer.api.reporting.report_params import ReportParams
 
 
 class ReportParamBase:
@@ -74,6 +75,8 @@ class ReportForm(metaclass=ReportFormMeta):
 
     _field_defs: dict[str, ReportParamBase]  # Populated by metaclass
 
+    params_class: type["ReportParams"] | None = None
+
     def __init__(self, project: "Project"):
         self.project = project
 
@@ -89,6 +92,13 @@ class ReportForm(metaclass=ReportFormMeta):
     def get_values(self) -> dict:
         """Return dict of current values keyed by field name."""
         return {name: field.get_value() for name, field in self._fields.items()}
+
+    def get_params(self) -> "ReportParams":
+        """Build an instance of the params dataclass from current form values."""
+        if self.params_class is None:
+            raise RuntimeError(f"{type(self).__name__} has no params_class set")
+        values = self.get_values()
+        return self.params_class(**values)
 
     def set_values(self, values: dict) -> None:
         """Restore values from stored dict."""

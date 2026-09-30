@@ -42,8 +42,9 @@ except Exception as _plugin_load_exc:
     _plugin_load_results = []
     logger.error("Failed to initialize plugin loader: %s", _plugin_load_exc)
 
-# Bind GUI-side report forms to report classes (monkey-patch)
-import dasmixer.gui.reports.forms  # noqa: F401
+# Register all built-in reports (triggers registration of report classes and
+# their GUI-side forms via monkey-patch).
+import dasmixer.reports  # noqa: F401  — triggers registration of all built-in reports
 
 app = typer.Typer(
     name="dasmixer",

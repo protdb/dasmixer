@@ -1,13 +1,11 @@
-"""Reporting module."""
+"""Reporting module — base classes and registry.
+
+Built-in report implementations are auto-registered via
+``import dasmixer.reports`` (triggered by GUI and CLI entry points).
+"""
 
 from .base import BaseReport
 from .registry import registry
-
-try:
-    from .reports import *
-except ImportError as e:
-    import logging
-    logging.getLogger(__name__).warning(f"Report modules not loaded: {e}")
 
 __all__ = [
     'BaseReport',

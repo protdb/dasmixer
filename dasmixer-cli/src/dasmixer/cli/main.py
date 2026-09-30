@@ -7,6 +7,7 @@ Provides command-line tools for project management without GUI.
 from typing import Annotated
 
 import typer
+import dasmixer.reports  # noqa: F401  — triggers registration of all built-in reports
 from dasmixer.cli.commands import calculate as calculate_cmd
 from dasmixer.cli.commands import import_data, portable, project, subset
 from dasmixer.cli.commands import import_project as import_project_cmd

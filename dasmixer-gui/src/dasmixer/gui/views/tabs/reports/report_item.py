@@ -52,6 +52,15 @@ class ReportItem(ft.Container):
         # Decide UI mode
         self._has_form = report_class.parameters is not None
 
+        # Name format field (on the card, not in the params dialog)
+        self.name_template_field = ft.TextField(
+            label="Name format",
+            hint_text="{date} {time}",
+            value=report_class.name_template if hasattr(report_class, 'name_template') else "{date} {time}",
+            width=250,
+            tooltip="Template: {date} = YYMMDD, {time} = HH:MM, plus any param field name",
+        )
+
         # Always create params button
         self.params_btn = ft.ElevatedButton(
             content=ft.Text("Parameters"),
@@ -138,6 +147,7 @@ class ReportItem(ft.Container):
 
             # Parameters area - always show the button
             ft.Row([self.params_btn], spacing=10),
+            ft.Row([self.name_template_field], spacing=10),
 
             ft.Container(height=10),
 
@@ -162,12 +172,22 @@ class ReportItem(ft.Container):
             return
         saved = await self.project.get_report_parameters(self.report_class.name)
         if saved:
+            import json
             try:
                 self._form = self.report_class.parameters.from_json_str(saved, self.project)
+                # Also restore name_template from saved JSON
+                data = json.loads(saved)
+                if 'name_template' in data:
+                    self.name_template_field.value = data['name_template']
             except Exception:
                 self._form = self.report_class.parameters(self.project)
         else:
             self._form = self.report_class.parameters(self.project)
+            self.name_template_field.value = (
+                self.report_class.name_template
+                if hasattr(self.report_class, 'name_template')
+                else "{date} {time}"
+            )
 
     async def _ensure_form_built(self) -> None:
         """Make sure form is initialised and built."""
@@ -205,6 +225,24 @@ class ReportItem(ft.Container):
             if self.page:
                 self.page.update()
 
+        async def _save_generate_and_close(_):
+            try:
+                # Save name_template along with form values
+                import json
+                data = json.loads(form_ref.to_json())
+                data['name_template'] = self.name_template_field.value
+                await self.project.save_report_parameters(
+                    self.report_class.name,
+                    json.dumps(data)
+                )
+            except Exception as ex:
+                logger.exception(f"Failed to save report parameters: {ex}")
+            if self._params_dialog is not None:
+                self._params_dialog.open = False
+            if self.page:
+                self.page.update()
+            await self._on_generate(None)
+
         container = form_ref.get_container()
         
         # Calculate adaptive dialog height based on number of form fields
@@ -226,6 +264,7 @@ class ReportItem(ft.Container):
             actions=[
                 ft.TextButton("Cancel", on_click=_close_dialog),
                 ft.ElevatedButton(content=ft.Text("OK"), on_click=_save_and_close),
+                ft.ElevatedButton(content=ft.Text("Save and generate"), on_click=_save_generate_and_close),
             ],
             actions_alignment=ft.MainAxisAlignment.END,
         )
@@ -233,11 +272,19 @@ class ReportItem(ft.Container):
         self._params_dialog.open = True
         self.page.update()
 
-    def _get_params_from_form(self) -> dict:
-        """Get current parameter values from form (if available)."""
+    def _get_params_from_form(self):
+        """Get typed ReportParams dataclass from form values.
+
+        Builds params via form.get_params(), then sets name_template from
+        the card-level Name format field, overriding whatever default the
+        dataclass carries.
+        """
         if self._form is not None:
-            return self._form.get_values()
-        return {}
+            params = self._form.get_params()
+            if hasattr(params, 'name_template'):
+                params.name_template = self.name_template_field.value or params.name_template
+            return params
+        return None
 
     # ------------------------------------------------------------------
     # Data loading
@@ -256,25 +303,29 @@ class ReportItem(ft.Container):
             self.update()
     
     async def _load_saved_reports(self):
-        """Load saved reports list."""
+        """Load saved reports list. Shows 'name' column when available, created_at otherwise."""
         reports = await self.project.get_generated_reports(self.report_class.name)
         
         options = []
         for report in reports:
-            created_at = report['created_at']
-            try:
-                dt = datetime.fromisoformat(created_at)
-                formatted = dt.strftime("%Y-%m-%d %H:%M:%S")
-            except Exception:
-                formatted = created_at
+            display = report.get('name')
+            if not display:
+                # Fallback to formatted created_at
+                created_at = report['created_at']
+                try:
+                    dt = datetime.fromisoformat(created_at)
+                    display = dt.strftime("%Y-%m-%d %H:%M:%S")
+                except Exception:
+                    display = created_at
             
             options.append(
                 ft.DropdownOption(
                     key=str(report['id']),
-                    text=formatted
+                    text=display
                 )
             )
         
+        # Keep the "New report" option at index 0 if it exists
         self.saved_reports_dropdown.options = options
     
     def _on_include_changed(self, e):
@@ -293,11 +344,14 @@ class ReportItem(ft.Container):
             if self._has_form:
                 await self._ensure_form_built()
                 params = self._get_params_from_form()
-                # Also save current form state
+                # Also save current form state (including name_template)
                 if self._form is not None:
+                    import json
+                    data = json.loads(self._form.to_json())
+                    data['name_template'] = self.name_template_field.value
                     await self.project.save_report_parameters(
                         self.report_class.name,
-                        self._form.to_json()
+                        json.dumps(data)
                     )
             else:
                 params = {}  # No configurable parameters
@@ -305,11 +359,17 @@ class ReportItem(ft.Container):
             # Create report instance
             report = self.report_class(self.project)
             
-            # Generate
-            await report.generate(params)
+            # Generate (returns report_id now)
+            report_id = await report.generate(params)
             
             # Reload saved reports list
             await self._load_saved_reports()
+            
+            # Auto-select the newly generated report
+            self.saved_reports_dropdown.value = str(report_id)
+            self.current_report_id = report_id
+            self.view_btn.disabled = False
+            self.export_btn.disabled = False
             
             self._close_loading(loading_dialog)
             self._show_success("Report generated successfully")
@@ -355,53 +415,53 @@ class ReportItem(ft.Container):
             traceback.print_exc()
     
     async def _on_export(self, e):
-        """Export report."""
+        """Export report using the new ExportDialog."""
         if not self.current_report_id:
             return
+        if not self.page:
+            return
 
-        from dasmixer.gui.views.tabs.peptides.dialogs.progress_dialog import (
-            ProgressDialog,
-        )
-        dialog = ProgressDialog(self.page, "Exporting Report")
-        dialog.show()
-        
-        try:
-            folder_path = await ft.FilePicker().get_directory_path(
-                dialog_title="Select Export Folder"
+        from .export_dialog import ExportDialog
+
+        async def do_export(save_path: str, formats: set[str], xlsx_mode: str) -> None:
+            from dasmixer.gui.views.tabs.peptides.dialogs.progress_dialog import (
+                ProgressDialog,
             )
-            
-            if not folder_path:
+            dialog = ProgressDialog(self.page, "Exporting Report")
+            dialog.show()
+            try:
+                dialog.update_progress(None, "Loading report...", "")
+                report = await self.report_class.load_from_db(
+                    self.project,
+                    self.current_report_id
+                )
+                dialog.update_progress(None, "Exporting files...", ", ".join(sorted(formats)))
+                created_files = await report.export(
+                    Path(save_path),
+                    formats=formats,
+                    xlsx_mode=xlsx_mode,
+                )
+                files_list = ", ".join([p.name for p in created_files.values()])
+                dialog.complete(f"Done: {files_list}")
+                import asyncio
+                await asyncio.sleep(1)
                 dialog.close()
-                return
-            
-            dialog.update_progress(None, "Loading report...", "")
-            report = await self.report_class.load_from_db(
-                self.project,
-                self.current_report_id
-            )
-            
-            dialog.update_progress(None, "Exporting files...", "HTML, DOCX, XLSX")
-            created_files = await report.export(Path(folder_path))
-            
-            files_list = ", ".join([p.name for p in created_files.values()])
-            dialog.complete(f"Done: {files_list}")
-            import asyncio
-            await asyncio.sleep(1)
-            dialog.close()
-            
-        except Exception as ex:
-            dialog.close()
-            self._show_error(f"Export failed: {ex}")
-            logger.exception(f"Export failed: {ex}")
-            import traceback
-            traceback.print_exc()
+            except Exception as ex:
+                dialog.close()
+                self._show_error(f"Export failed: {ex}")
+                logger.exception(f"Export failed: {ex}")
+                import traceback
+                traceback.print_exc()
+
+        export_dialog = ExportDialog(self.page, do_export)
+        await export_dialog.show()
 
     async def _export_to_folder(self, folder_path: str):
         """Export this report to a given folder (used by batch export)."""
         if not self.current_report_id:
             return
         report = await self.report_class.load_from_db(self.project, self.current_report_id)
-        await report.export(Path(folder_path))
+        await report.export(Path(folder_path), formats={'html', 'docx', 'xlsx'}, xlsx_mode='all')
 
     # ------------------------------------------------------------------
     # UI helpers

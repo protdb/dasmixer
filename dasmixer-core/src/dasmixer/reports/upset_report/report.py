@@ -9,10 +9,18 @@ import numpy as np
 import pandas as pd
 from dasmixer.api.reporting._icons import Icons
 
-from ..base import BaseReport
+from dasmixer.api.reporting.base import BaseReport
 
 if TYPE_CHECKING:
     import plotly.graph_objects as go
+
+from .params import UpsetReportParams
+
+try:
+    from .form import UpsetReportForm
+    _parameters = UpsetReportForm
+except ImportError:
+    _parameters = None
 
 # ---------------------------------------------------------------------------
 # UpSet plot logic (ported from volcanizer/create_upset.py)
@@ -225,7 +233,8 @@ class UpsetReport(BaseReport):
     name = "Upset Plot"
     description = "Upset plot for protein identifications across comparison groups"
     icon = Icons.INSERT_CHART_ROUNDED
-    parameters = None
+    params_class = UpsetReportParams
+    parameters = _parameters
 
     async def _get_upset_data(self, selected_subsets: list[str]) -> pd.DataFrame:
         """Fetch protein × sample × subset data from the project DB."""
@@ -256,14 +265,14 @@ class UpsetReport(BaseReport):
 
     async def _generate_impl(
         self,
-        params: dict,
+        params: UpsetReportParams,
     ) -> tuple[list[tuple[str, go.Figure]], list[tuple[str, pd.DataFrame, bool]]]:
-        selected_subsets: list[str] = params.get('subsets', [])
+        selected_subsets: list[str] = params.subsets
         if isinstance(selected_subsets, str):
             # Backward compatibility
             selected_subsets = [s.strip() for s in selected_subsets.split(',') if s.strip()]
 
-        min_proteins = int(params.get('min_proteins', 1))
+        min_proteins = params.min_proteins
 
         df = await self._get_upset_data(selected_subsets)
 
@@ -293,6 +302,6 @@ class UpsetReport(BaseReport):
         )
 
 
-from ..registry import registry
+from dasmixer.api.reporting.registry import registry
 
 registry.register(UpsetReport)

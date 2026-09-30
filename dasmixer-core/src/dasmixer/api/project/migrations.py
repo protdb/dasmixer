@@ -68,6 +68,12 @@ MIGRATIONS: list[dict] = [
             ALTER TABLE identification ADD COLUMN q_value REAL;
         """,
     },
+    {
+        "version": "0.7.4",
+        "sql": """
+            ALTER TABLE generated_reports ADD COLUMN name TEXT;
+        """,
+    },
 ]
 
 

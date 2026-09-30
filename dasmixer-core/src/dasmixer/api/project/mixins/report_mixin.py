@@ -17,7 +17,7 @@ class ReportMixin:
         """
         if report_name:
             query = """
-                SELECT id, report_name, created_at, 
+                SELECT id, report_name, name, created_at,
                        project_settings, tools_settings, report_settings
                 FROM generated_reports
                 WHERE report_name = ?
@@ -26,7 +26,7 @@ class ReportMixin:
             rows = await self._fetchall(query, (report_name,))
         else:
             query = """
-                SELECT id, report_name, created_at,
+                SELECT id, report_name, name, created_at,
                        project_settings, tools_settings, report_settings
                 FROM generated_reports
                 ORDER BY created_at DESC

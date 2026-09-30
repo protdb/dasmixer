@@ -91,78 +91,25 @@
 <body>
     <div class="container">
         <h1>{{ report_name }}</h1>
-        
-        {% if show_parameters %}
-        <div class="settings-section">
-            <h2>Project Settings</h2>
-            
-            {% if settings.project_parameters %}
-            <h3>Project Parameters</h3>
-            <table class="param-table">
-                <thead>
-                    <tr>
-                        <th>Parameter</th>
-                        <th>Value</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for param in settings.project_parameters %}
-                    <tr>
-                        <td>{{ param.key }}</td>
-                        <td>{{ param.value }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            {% endif %}
-            
-            {% if settings.tools %}
-            <h3>Tools Configuration</h3>
-            {% for tool in settings.tools %}
-            <h4>{{ tool.name }} ({{ tool.type }})</h4>
-            {% if tool.settings %}
-            <table class="param-table">
-                <thead>
-                    <tr>
-                        <th>Setting</th>
-                        <th>Value</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for setting in tool.settings %}
-                    <tr>
-                        <td>{{ setting.key }}</td>
-                        <td>{{ setting.value }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            {% else %}
-            <p>No settings configured</p>
-            {% endif %}
-            {% endfor %}
-            {% endif %}
-            
-            {% if report_parameters %}
-            <h3>Report Parameters</h3>
-            <table class="param-table">
-                <thead>
-                    <tr>
-                        <th>Parameter</th>
-                        <th>Value</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for param in report_parameters %}
-                    <tr>
-                        <td>{{ param.key }}</td>
-                        <td>{{ param.value }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            {% endif %}
-        </div>
+
+        {% if report_parameters %}
+        <h2>Report Parameters</h2>
+        <table class="param-table">
+            <thead>
+                <tr>
+                    <th>Parameter</th>
+                    <th>Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for param in report_parameters %}
+                <tr>
+                    <td>{{ param.key }}</td>
+                    <td>{{ param.value }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
         {% endif %}
         
         {% if figures %}
@@ -207,6 +154,58 @@
             </tbody>
         </table>
         {% endfor %}
+        {% endif %}
+
+        {% if show_parameters %}
+        <div class="settings-section">
+            <h2>Project Parameters</h2>
+            
+            {% if settings.project_parameters %}
+            <table class="param-table">
+                <thead>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for param in settings.project_parameters %}
+                    <tr>
+                        <td>{{ param.key }}</td>
+                        <td>{{ param.value }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+            
+            {% if settings.tools %}
+            <h3>Tools Configuration</h3>
+            {% for tool in settings.tools %}
+            <h4>{{ tool.name }} ({{ tool.type }})</h4>
+            {% if tool.settings %}
+            <table class="param-table">
+                <thead>
+                    <tr>
+                        <th>Setting</th>
+                        <th>Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for setting in tool.settings %}
+                    <tr>
+                        <td>{{ setting.key }}</td>
+                        <td>{{ setting.value }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p>No settings configured</p>
+            {% endif %}
+            {% endfor %}
+            {% endif %}
+        </div>
         {% endif %}
     </div>
 </body>

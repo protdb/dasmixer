@@ -1,14 +1,26 @@
+from __future__ import annotations
+
 import pandas as pd
 import plotly.graph_objects as go
 
-from ..base import BaseReport
+from .params import MedianReportParams
+
+try:
+    from .form import MedianReportForm
+    _parameters = MedianReportForm
+except ImportError:
+    _parameters = None
+
+from dasmixer.api.reporting.base import BaseReport
+from dasmixer.api.reporting.registry import registry
 
 
 class MedianReport(BaseReport):
     """Median Report class."""
-
     name = "Basic statistics"
     description = "Creates table with common statistic parameters (mean, median, variance etc per subset"
+    params_class = MedianReportParams
+    parameters = _parameters
 
     async def _get_data(
         self, lfq_type, lfq_measure, subsets, exclude_outliers: bool = True
@@ -77,30 +89,26 @@ class MedianReport(BaseReport):
         df.columns = pd.MultiIndex.from_tuples(list(df.columns))
         return df
 
-
-
-
     async def _generate_impl(
         self,
-        params: dict
+        params: MedianReportParams
     ) -> tuple[list[tuple[str, "go.Figure"]], list[tuple[str, pd.DataFrame, bool]]]:
-        lfq_value = params.get('lfq', ('emPAI', 'rel_value'))
+        lfq_value = params.lfq
         if isinstance(lfq_value, (tuple, list)) and len(lfq_value) == 2:
             lfq_type = lfq_value[0]
             lfq_measure = lfq_value[1]
         else:
             lfq_type = str(lfq_value)
             lfq_measure = 'rel_value'
-        include_outliers = bool(params.get('include_outliers', False))
+        include_outliers = bool(params.include_outliers)
         exclude_outliers = not include_outliers
         df = await self._get_data(
-            lfq_type, lfq_measure, params.get('subsets', None),
+            lfq_type, lfq_measure, params.subsets if params.subsets else None,
             exclude_outliers=exclude_outliers,
         )
         if not df.empty:
             df.columns = [f"{col[0]}_{col[1]}" for col in df.columns]
         return [], [('Full statistic offload', df, False)]
 
-from ..registry import registry
 
 registry.register(MedianReport)

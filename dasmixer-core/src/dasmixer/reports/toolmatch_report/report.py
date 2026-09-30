@@ -7,7 +7,15 @@ import pandas as pd
 from dasmixer.api.reporting._icons import Icons
 from dasmixer.utils.logger import logger
 
-from ..base import BaseReport
+from .params import ToolMatchReportParams
+
+try:
+    from .form import ToolMatchReportForm
+    _parameters = ToolMatchReportForm
+except ImportError:
+    _parameters = None
+
+from dasmixer.api.reporting.base import BaseReport
 
 if TYPE_CHECKING:
     import plotly.graph_objects as go
@@ -18,7 +26,8 @@ class ToolMatchReport(BaseReport):
     description = "Shows increase in identifications between two selected tools"
     icon = Icons.PIE_CHART
     both_color = 'yellow'
-    parameters = None
+    params_class = ToolMatchReportParams
+    parameters = _parameters
 
     async def _get_proteins_data(self, tools: list[str]) -> tuple[pd.DataFrame, pd.DataFrame]:
         """
@@ -143,14 +152,14 @@ class ToolMatchReport(BaseReport):
 
     async def _generate_impl(
         self,
-        params: dict
+        params: ToolMatchReportParams
     ) -> tuple[list[tuple[str, go.Figure]], list[tuple[str, pd.DataFrame, bool]]]:
         import plotly.graph_objects as go
         from plotly.subplots import make_subplots
 
         logger.debug(params)
-        tool1 = str(params['tool1'])
-        tool2 = str(params['tool2'])
+        tool1 = str(params.tool1)
+        tool2 = str(params.tool2)
         tools = [tool1, tool2]
         logger.debug('loading data...')
         joined_data = await self.project.get_joined_peptide_data(
@@ -198,6 +207,6 @@ class ToolMatchReport(BaseReport):
         ]
 
 
-from ..registry import registry
+from dasmixer.api.reporting.registry import registry
 
 registry.register(ToolMatchReport)
