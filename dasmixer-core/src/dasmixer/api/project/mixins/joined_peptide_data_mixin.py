@@ -93,7 +93,7 @@ class JoinedPeptideDataMixin:
         params = []
 
         if is_preferred is not None:
-            conditions.append("id.is_preferred = ?")
+            conditions.append("i.is_preferred = ?")
             params.append(1 if is_preferred else 0)
 
         if spectre_id is not None:
@@ -102,42 +102,42 @@ class JoinedPeptideDataMixin:
 
         if sequence_identified is not None:
             if sequence_identified:
-                conditions.append("id.sequence IS NOT NULL")
+                conditions.append("i.sequence IS NOT NULL")
             else:
-                conditions.append("id.sequence IS NULL")
+                conditions.append("i.sequence IS NULL")
 
         if protein_identified is not None:
             if protein_identified:
-                conditions.append("mp.protein_id IS NOT NULL")
+                conditions.append("m.protein_id IS NOT NULL")
             else:
-                conditions.append("mp.protein_id IS NULL")
+                conditions.append("m.protein_id IS NULL")
 
         if sample is not None:
-            conditions.append("sb.sample = ?")
+            conditions.append("sm.name = ?")
             params.append(sample)
 
         if subset is not None:
-            conditions.append("sb.subset = ?")
+            conditions.append("sb.name = ?")
             params.append(subset)
 
         if sample_id is not None:
-            conditions.append("sb.sample_id = ?")
+            conditions.append("sm.id = ?")
             params.append(sample_id)
 
         if subset_id is not None:
-            conditions.append("sb.subset_id = ?")
+            conditions.append("sb.id = ?")
             params.append(subset_id)
 
         if sequence is not None:
-            conditions.append("id.sequence LIKE ?")
+            conditions.append("i.sequence LIKE ?")
             params.append(f"%{sequence}%")
 
         if canonical_sequence is not None:
-            conditions.append("id.canonical_sequence LIKE ?")
+            conditions.append("i.canonical_sequence LIKE ?")
             params.append(f"%{canonical_sequence}%")
 
         if matched_sequence is not None:
-            conditions.append("mp.matched_sequence LIKE ?")
+            conditions.append("m.matched_sequence LIKE ?")
             params.append(f"%{matched_sequence}%")
 
         if seq_no is not None:
@@ -149,56 +149,56 @@ class JoinedPeptideDataMixin:
             params.append(scans)
 
         if tool is not None:
-            conditions.append("id.tool = ?")
+            conditions.append("t.name = ?")
             params.append(tool)
 
         if tool_id is not None:
-            conditions.append("id.tool_id = ?")
+            conditions.append("t.id = ?")
             params.append(tool_id)
 
         if identification_id is not None:
-            conditions.append("id.identification_id = ?")
+            conditions.append("i.id = ?")
             params.append(identification_id)
 
         if max_ppm is not None:
-            conditions.append("abs(id.ppm) <= ?")
+            conditions.append("abs(i.ppm) <= ?")
             params.append(max_ppm)
 
         if min_score is not None:
-            conditions.append("id.score >= ?")
+            conditions.append("i.score >= ?")
             params.append(min_score)
 
         if protein_id is not None:
-            conditions.append('mp.protein_id = ?')
+            conditions.append('m.protein_id = ?')
             params.append(protein_id)
 
         if gene is not None:
-            conditions.append("mp.gene LIKE ?")
+            conditions.append("p.gene LIKE ?")
             params.append(f"%{gene}%")
 
         # Min Quality (NULL quality is treated as not meeting the threshold)
         mq = min_quality
         if mq is not None:
-            conditions.append("(id.quality IS NOT NULL AND id.quality >= ?)")
+            conditions.append("(i.quality IS NOT NULL AND i.quality >= ?)")
             params.append(float(mq))
 
         # Has PTM (values: 'Yes' | 'No'; anything else → no filter)
         if has_ptm == 'Yes':
-            conditions.append("id.has_ptm = 1")
+            conditions.append("i.has_ptm = 1")
         elif has_ptm == 'No':
             # no PTM = NULL (not computed) or 0
-            conditions.append("(id.has_ptm IS NULL OR id.has_ptm = 0)")
+            conditions.append("(i.has_ptm IS NULL OR i.has_ptm = 0)")
 
         # Has AA Substitution (peptide_match.substitution)
         if has_substitution == 'Yes':
-            conditions.append("mp.substitution = 1")
+            conditions.append("m.substitution = 1")
         elif has_substitution == 'No':
-            conditions.append("mp.substitution = 0")
+            conditions.append("m.substitution = 0")
 
         # Max FDR (strict: NULL fdr rows are excluded when threshold is set)
         mf = max_fdr
         if mf is not None:
-            conditions.append("(id.fdr IS NOT NULL AND id.fdr <= ?)")
+            conditions.append("(i.fdr IS NOT NULL AND i.fdr <= ?)")
             params.append(float(mf))
 
         return conditions, params
@@ -241,52 +241,14 @@ class JoinedPeptideDataMixin:
         """
         query = """
             SELECT COUNT(*) as count
-            FROM
-                spectre AS s
-            LEFT JOIN
-                (SELECT
-                    sm.id AS sample_id,
-                    f.id AS spectre_file_id,
-                    sm.name AS sample,
-                    sb.name AS subset,
-                    sb.id AS subset_id
-                 FROM sample sm, subset sb, spectre_file f
-                 WHERE sm.subset_id = sb.id AND f.sample_id = sm.id) AS sb
-                ON sb.spectre_file_id = s.spectre_file_id
-            LEFT JOIN
-                (SELECT
-                    i.spectre_id,
-                    t.name AS tool,
-                    t.id AS tool_id,
-                    i.id AS identification_id,
-                    i.sequence,
-                    i.canonical_sequence,
-                    i.ppm,
-                    i.score,
-                      i.is_preferred,
-                       i.quality,
-                       i.lcrr,
-                       i.unconfirmed_ptms,
-                       i.has_ptm,
-                       i.fdr,
-                       i.e_value,
-                       i.q_value
-                    FROM identification i, tool t
-                   WHERE t.id = i.tool_id) AS id
-                 ON id.spectre_id = s.id
-            LEFT JOIN
-                (SELECT
-                    m.matched_sequence,
-                    m.matched_ppm,
-                    m.protein_id,
-                    m.identification_id,
-                    m.unique_evidence,
-                    m.identity,
-                    m.substitution,
-                    p.gene
-                 FROM peptide_match m, protein p
-                 WHERE p.id = m.protein_id) AS mp
-                ON mp.identification_id = id.identification_id
+            FROM spectre AS s
+            LEFT JOIN spectre_file f ON f.id = s.spectre_file_id
+            LEFT JOIN sample sm ON sm.id = f.sample_id
+            LEFT JOIN subset sb ON sb.id = sm.subset_id
+            LEFT JOIN identification i ON i.spectre_id = s.id
+            LEFT JOIN tool t ON t.id = i.tool_id
+            LEFT JOIN peptide_match m ON m.identification_id = i.id
+            LEFT JOIN protein p ON p.id = m.protein_id
             WHERE 1=1
         """
 
@@ -412,79 +374,32 @@ class JoinedPeptideDataMixin:
                   matched_ion_type, matched_sequence_modified, substitution
         """
         query = """
-             SELECT
-                sb.sample, sb.subset, sb.sample_id, sb.subset_id,
-                s.id as spectre_id, s.seq_no, s.scans, s.charge, s.rt, s.pepmass, s.intensity, s.peaks_count AS peaks_count,
-                id.tool, id.tool_id, id.identification_id, id.sequence,
-                id.canonical_sequence, id.ppm, id.score, id.is_preferred,
-                id.ions_matched, id.ion_match_type, id.top_peaks_covered,
-                id.intensity_coverage,
-                id.override_charge, id.source_sequence, id.isotope_offset,
-                  id.theor_mass, id.quality, id.lcrr, id.unconfirmed_ptms, id.override_pepmass, id.has_ptm,
-                  id.fdr, id.e_value, id.q_value,
-                mp.matched_sequence, mp.matched_ppm, mp.protein_id, mp.identity,
-                mp.unique_evidence, mp.gene,
-                mp.matched_peaks, mp.matched_top_peaks, mp.matched_ion_type,
-                mp.matched_sequence_modified, mp.substitution
-            FROM
-                spectre AS s
-            LEFT JOIN
-                (SELECT
-                    sm.id AS sample_id,
-                    f.id AS spectre_file_id,
-                    sm.name AS sample,
-                    sb.name AS subset,
-                    sb.id AS subset_id
-                 FROM sample sm, subset sb, spectre_file f
-                 WHERE sm.subset_id = sb.id AND f.sample_id = sm.id) AS sb
-                ON sb.spectre_file_id = s.spectre_file_id
-            LEFT JOIN
-                (SELECT
-                    i.spectre_id,
-                    t.name AS tool,
-                    t.id AS tool_id,
-                    i.id AS identification_id,
-                    i.sequence,
-                    i.canonical_sequence,
-                    i.ppm,
-                    i.score,
-                    i.is_preferred,
-                    i.intensity_coverage,
-                    i.ions_matched,
-                    i.ion_match_type,
-                    i.top_peaks_covered,
-                    i.override_charge,
-                    i.source_sequence,
-                    i.isotope_offset,
-                    i.theor_mass,
-                      i.quality,
-                      i.lcrr,
-                      i.unconfirmed_ptms,
-                      i.override_pepmass,
-                      i.has_ptm,
-                      i.fdr,
-                      i.e_value,
-                      i.q_value
-                   FROM identification i, tool t
-                   WHERE t.id = i.tool_id) AS id
-                ON id.spectre_id = s.id
-            LEFT JOIN
-                (SELECT
-                    m.matched_sequence,
-                    m.matched_ppm,
-                    m.protein_id,
-                    m.identification_id,
-                    m.unique_evidence,
-                    m.identity,
-                    m.matched_peaks,
-                    m.matched_top_peaks,
-                    m.matched_ion_type,
-                    m.matched_sequence_modified,
-                    m.substitution,
-                    p.gene
-                 FROM peptide_match m, protein p
-                 WHERE p.id = m.protein_id) AS mp
-                ON mp.identification_id = id.identification_id
+            SELECT
+                sm.name AS sample, sb.name AS subset, sm.id AS sample_id,
+                sb.id AS subset_id,
+                s.id as spectre_id, s.seq_no, s.scans, s.charge, s.rt,
+                s.pepmass, s.intensity, s.peaks_count AS peaks_count,
+                t.name AS tool, t.id AS tool_id, i.id AS identification_id,
+                i.sequence, i.canonical_sequence, i.ppm, i.score,
+                i.is_preferred,
+                i.ions_matched, i.ion_match_type, i.top_peaks_covered,
+                i.intensity_coverage,
+                i.override_charge, i.source_sequence, i.isotope_offset,
+                i.theor_mass, i.quality, i.lcrr, i.unconfirmed_ptms,
+                i.override_pepmass, i.has_ptm,
+                i.fdr, i.e_value, i.q_value,
+                m.matched_sequence, m.matched_ppm, m.protein_id, m.identity,
+                m.unique_evidence, p.gene,
+                m.matched_peaks, m.matched_top_peaks, m.matched_ion_type,
+                m.matched_sequence_modified, m.substitution
+            FROM spectre AS s
+            LEFT JOIN spectre_file f ON f.id = s.spectre_file_id
+            LEFT JOIN sample sm ON sm.id = f.sample_id
+            LEFT JOIN subset sb ON sb.id = sm.subset_id
+            LEFT JOIN identification i ON i.spectre_id = s.id
+            LEFT JOIN tool t ON t.id = i.tool_id
+            LEFT JOIN peptide_match m ON m.identification_id = i.id
+            LEFT JOIN protein p ON p.id = m.protein_id
             WHERE 1=1
         """
 

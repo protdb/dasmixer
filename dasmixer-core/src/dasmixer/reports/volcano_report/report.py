@@ -24,6 +24,7 @@ class VolcanoReport(BaseReport):
     icon = Icons.VOLCANO
     params_class = VolcanoReportParams
     parameters = _parameters
+    name_template = '{exptl_subsets} {lfq} {stats_method} {date} {time}'
 
     async def get_data(
         self, lfq_type: str, subsets: list[str], exclude_outliers: bool = True

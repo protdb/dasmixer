@@ -353,6 +353,7 @@ class PCAReport(BaseReport):
     icon = Icons.SCATTER_PLOT
     params_class = PCAReportParams
     parameters = _parameters
+    name_template = '{subsets} {lfq} {date} {time}'
 
     async def _fetch_quant_df(
         self, lfq_type: str, selected_subsets: list[str],

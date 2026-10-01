@@ -146,8 +146,8 @@ class ReportItem(ft.Container):
             ft.Divider(),
 
             # Parameters area - always show the button
-            ft.Row([self.params_btn], spacing=10),
-            ft.Row([self.name_template_field], spacing=10),
+            ft.Row([self.params_btn, self.name_template_field], spacing=10),
+            # ft.Row([self.name_template_field], spacing=10),
 
             ft.Container(height=10),
 
@@ -299,6 +299,14 @@ class ReportItem(ft.Container):
         # Load saved reports list
         await self._load_saved_reports()
         
+        # Auto-select the most recent report if any exist
+        if self.saved_reports_dropdown.options:
+            first = self.saved_reports_dropdown.options[0]
+            self.saved_reports_dropdown.value = first.key
+            self.current_report_id = int(first.key)
+            self.view_btn.disabled = False
+            self.export_btn.disabled = False
+        
         if self.page:
             self.update()
     
@@ -354,7 +362,14 @@ class ReportItem(ft.Container):
                         json.dumps(data)
                     )
             else:
-                params = {}  # No configurable parameters
+                # No form — instantiate default params from the report's params_class
+                if hasattr(self.report_class, 'params_class') and self.report_class.params_class is not None:
+                    params = self.report_class.params_class()
+                    # Apply name_template from the card field
+                    if hasattr(params, 'name_template'):
+                        params.name_template = self.name_template_field.value or params.name_template
+                else:
+                    params = {}
             
             # Create report instance
             report = self.report_class(self.project)

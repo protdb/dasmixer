@@ -117,8 +117,12 @@ class BaseReport(ABC):
         self._tools_settings = await self._collect_tools_settings()
         
         # 3. Serialise report_settings from dataclass
-        from dataclasses import asdict as _asdict
-        self._report_settings = _asdict(params)
+        try:
+            from dataclasses import asdict as _asdict
+            self._report_settings = _asdict(params)
+        except TypeError:
+            # params is not a dataclass (e.g. dict) — use as-is
+            self._report_settings = dict(params) if isinstance(params, dict) else {}
         
         # 4. Generate
         plots, tables = await self._generate_impl(params)
@@ -195,22 +199,39 @@ class BaseReport(ABC):
         The template is taken from ``params.name_template``, falling back to
         ``self.name_template``.
         """
-        from dataclasses import asdict
         from datetime import datetime
         from dasmixer.utils.logger import logger
 
         now = datetime.now()
         subst: dict[str, str] = {}
-        for k, v in asdict(params).items():
-            if isinstance(v, (list, tuple)):
-                v = "_".join(str(x) for x in v)
-            subst[k] = str(v) if v is not None else ""
+
+        # Build substitution dict from params fields
+        if params is not None:
+            try:
+                from dataclasses import asdict
+                for k, v in asdict(params).items():
+                    if isinstance(v, (list, tuple)):
+                        v = "_".join(str(x) for x in v)
+                    subst[k] = str(v) if v is not None else ""
+            except TypeError:
+                # params is not a dataclass instance — treat as dict-like
+                if isinstance(params, dict):
+                    for k, v in params.items():
+                        if isinstance(v, (list, tuple)):
+                            v = "_".join(str(x) for x in v)
+                        subst[str(k)] = str(v) if v is not None else ""
+
         subst['date'] = now.strftime('%y%m%d')
         subst['time'] = now.strftime('%H:%M')
+
         template = (
             getattr(params, 'name_template', None)
-            or self.name_template
+            if params is not None and not isinstance(params, dict)
+            else None
         )
+        if not template:
+            template = self.name_template
+
         try:
             return template.format(**subst)
         except (KeyError, IndexError):

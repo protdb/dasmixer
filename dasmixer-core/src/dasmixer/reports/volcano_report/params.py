@@ -15,4 +15,4 @@ class VolcanoReportParams(ReportParams):
     fc_threshold: float = 1.5
     p_threshold: float = 0.05
     include_outliers: bool = False
-    name_template: str = field(default="{date} {time}")
+    name_template: str = field(default='{exptl_subsets} {lfq} {stats_method} {date} {time}')

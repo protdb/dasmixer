@@ -8,4 +8,4 @@ from dasmixer.api.reporting.report_params import ReportParams
 class ToolMatchReportParams(ReportParams):
     tool1: str = ""
     tool2: str = ""
-    name_template: str = field(default="{date} {time}")
+    name_template: str = field(default='{tool1}vs{tool2} {date} {time}')

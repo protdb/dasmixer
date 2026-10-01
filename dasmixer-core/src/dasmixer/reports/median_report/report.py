@@ -21,6 +21,7 @@ class MedianReport(BaseReport):
     description = "Creates table with common statistic parameters (mean, median, variance etc per subset"
     params_class = MedianReportParams
     parameters = _parameters
+    name_template = "{subsets} {lfq} {date} {time}"
 
     async def _get_data(
         self, lfq_type, lfq_measure, subsets, exclude_outliers: bool = True

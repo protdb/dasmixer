@@ -9,4 +9,4 @@ class MedianReportParams(ReportParams):
     subsets: list[str] = field(default_factory=list)
     lfq: tuple[str, str] = ("emPAI", "rel_value")
     include_outliers: bool = False
-    name_template: str = field(default="{date} {time}")
+    name_template: str = field(default="{subsets} {lfq} {date} {time}")

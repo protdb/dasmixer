@@ -12,4 +12,4 @@ class PCAReportParams(ReportParams):
     show_labels: bool = True
     top_n_proteins: int = 100
     include_outliers: bool = False
-    name_template: str = field(default="{date} {time}")
+    name_template: str = field(default="{subset} {lfq} {date} {time}")

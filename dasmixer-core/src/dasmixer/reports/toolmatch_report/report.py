@@ -28,6 +28,7 @@ class ToolMatchReport(BaseReport):
     both_color = 'yellow'
     params_class = ToolMatchReportParams
     parameters = _parameters
+    name_template = '{tool1}vs{tool2} {date} {time}'
 
     async def _get_proteins_data(self, tools: list[str]) -> tuple[pd.DataFrame, pd.DataFrame]:
         """
