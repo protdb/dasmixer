@@ -83,11 +83,12 @@ class PiPrimeNovoImporter(SimpleTableImporter):
         df = df.copy()
         df["prediction"] = df["prediction"].apply(self.transform_sequence)
         df["label"] = df["label"].astype(str).str.strip().str.lower()
-        canon_seq = []
-        for s in df["prediction"]:
-            print(s)
-            canon_seq.append("".join(aa for aa, _ in parse(s)[0]))
-        # df["canonical_sequence"] = df["prediction"].apply(
-        #     lambda s: "".join(aa for aa, _ in parse(s)[0])
-        # )
+        # canon_seq = []
+        # for s in df["prediction"]:
+        #     print(s)
+        #     canon_seq.append("".join(aa for aa, _ in parse(s)[0]))
+        #
+        df["canonical_sequence"] = df["prediction"].apply(
+            lambda s: "".join(aa for aa, _ in parse(s)[0])
+        )
         return df
