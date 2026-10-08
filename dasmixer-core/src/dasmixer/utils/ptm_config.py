@@ -8,6 +8,9 @@ from pathlib import Path
 
 import typer
 
+from dasmixer.utils.logger import logger
+from dasmixer.versions import APP_VERSION
+
 
 def get_ptm_config_dir() -> Path:
     d = Path(typer.get_app_dir("dasmixer")) / "ptm"
@@ -166,3 +169,119 @@ def load_ptm_renames() -> list[dict]:
                 "is_terminal": (row.get("is_terminal") or "").strip().upper() == "Y",
             })
     return result
+
+
+LAST_RUN_VERSION_FILENAME = "LASTRUN_VERSION"
+
+
+def get_lastrun_version_path() -> Path:
+    """Return the path to the LASTRUN_VERSION marker file in the app dir."""
+    return Path(typer.get_app_dir("dasmixer")) / LAST_RUN_VERSION_FILENAME
+
+
+def ensure_ptm_files() -> tuple[Path, Path]:
+    """Guarantee both CSV files exist, returning (all_ptm_config_path, import_ptm_renames_path)."""
+    return _ensure_all_ptm_config_file(), _ensure_import_ptm_renames_file()
+
+
+def _read_lastrun_version() -> str | None:
+    """Read the last-run version string, or None if the marker file is absent."""
+    p = get_lastrun_version_path()
+    return p.read_text(encoding="utf-8").strip() if p.exists() else None
+
+
+def _write_lastrun_version() -> None:
+    """Write the current APP_VERSION to the marker file."""
+    get_lastrun_version_path().write_text(APP_VERSION, encoding="utf-8")
+
+
+def merge_ptm_renames() -> int:
+    """Append DEFAULT_PTM_RENAMES rows whose (parser, source) pair is absent.
+
+    Reads import_ptm_renames.csv directly (ignoring any lru cache), then appends
+    missing rows. Existing rows are never modified or deleted.
+    Returns the number of rows added.
+    """
+    path = _ensure_import_ptm_renames_file()
+    existing_keys = set()
+    with open(path, "r", encoding="utf-8") as f:
+        for row in csv.DictReader(f):
+            existing_keys.add((row["parser"].strip(), row["source"]))
+    added = 0
+    with open(path, "a", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        for source, proforma, parser, is_terminal in DEFAULT_PTM_RENAMES:
+            if (parser, source) in existing_keys:
+                continue
+            w.writerow([source, proforma, parser, "Y" if is_terminal else "N"])
+            added += 1
+    return added
+
+
+def merge_ptm_config() -> int:
+    """Append DEFAULT_PTM_CONFIG rows whose `name` is absent.
+
+    Reads all_ptm_config.csv directly (ignoring any lru cache), then appends
+    missing rows by name. Existing rows are never modified or deleted.
+    Returns the number of rows added.
+    """
+    path = _ensure_all_ptm_config_file()
+    existing_names = set()
+    with open(path, "r", encoding="utf-8") as f:
+        for row in csv.DictReader(f):
+            existing_names.add(row["name"].strip())
+    added = 0
+    with open(path, "a", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        for name, attach_to, mono_mass, n_term, c_term, is_default in DEFAULT_PTM_CONFIG:
+            if name in existing_names:
+                continue
+            w.writerow([
+                name,
+                ";".join(attach_to) if attach_to else "",
+                "" if mono_mass is None else mono_mass,
+                "Y" if n_term else "N",
+                "Y" if c_term else "N",
+                "Y" if is_default else "N",
+            ])
+            added += 1
+    return added
+
+
+def _refresh_caches() -> None:
+    """Clear lru caches and reload seqfixer_utils PTM snapshots after a merge."""
+    load_ptm_config.cache_clear()
+    load_ptm_renames.cache_clear()
+    try:
+        from dasmixer.utils.seqfixer_utils import reload_ptms
+        reload_ptms()
+    except Exception:
+        logger.exception("reload_ptms failed")
+
+
+def check_and_update_ptm_config() -> None:
+    """GUI startup hook.
+
+    Ensure CSV files exist; if LASTRUN_VERSION already equals APP_VERSION, do
+    nothing. Otherwise merge both files, refresh caches and write LASTRUN_VERSION.
+    """
+    ensure_ptm_files()
+    if _read_lastrun_version() == APP_VERSION:
+        return
+    merge_ptm_renames()
+    merge_ptm_config()
+    _refresh_caches()
+    _write_lastrun_version()
+
+
+def update_ptm_list() -> tuple[int, int]:
+    """CLI hook: always merge (idempotent), refresh caches, update LASTRUN_VERSION.
+
+    Returns (renames_added, config_added).
+    """
+    ensure_ptm_files()
+    r = merge_ptm_renames()
+    c = merge_ptm_config()
+    _refresh_caches()
+    _write_lastrun_version()
+    return r, c

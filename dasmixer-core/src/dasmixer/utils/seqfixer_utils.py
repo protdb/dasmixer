@@ -110,6 +110,19 @@ DEFAULT_PTM_CODES: frozenset[str] = frozenset(
 )
 
 
+def reload_ptms() -> None:
+    """Rebuild module-level PTM snapshots from the current PTM config CSV.
+
+    Use after merging PTM CSV files (see dasmixer.utils.ptm_config) so that
+    in-process caches reflect the updated configuration.
+    """
+    global PTMS, DEFAULT_PTM_CODES
+    PTMS = _build_ptms_from_config()
+    DEFAULT_PTM_CODES = frozenset(
+        rec["name"] for rec in load_ptm_config() if rec["default"]
+    )
+
+
 def get_possible_ptm(
         ptm_list: list[FixedPTM],
         seq: str,

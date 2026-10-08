@@ -234,6 +234,7 @@ class SamplesTab(ft.Container):
             on_single_files_callback=lambda: self._on_import_identifications_single(tool_id),
             on_pattern_callback=lambda: self._on_import_identifications_pattern(tool_id),
             on_stacked_callback=lambda: self._on_import_identifications_stacked(tool_id),
+            on_multifile_callback=lambda: self._on_import_identifications_multifile(tool_id),
         )
         await dialog.show()
     
@@ -267,6 +268,17 @@ class SamplesTab(ft.Container):
             self.page,
             tool_id=tool_id,
             on_import_callback=self.import_handlers.import_identification_files_stacked,
+        )
+        await dialog.show()
+
+    async def _on_import_identifications_multifile(self, tool_id: int):
+        """Handle multi-file mzTab import for identifications."""
+        from .dialogs.import_multifile_dialog import ImportMzTabDialog
+        dialog = ImportMzTabDialog(
+            self.project,
+            self.page,
+            tool_id=tool_id,
+            on_import_callback=self.import_handlers.import_identification_files_multifile,
         )
         await dialog.show()
     

@@ -69,6 +69,24 @@ def register_parsers():
     except ImportError as e:
         logger.exception(e)
 
+    try:
+        from .peptides.MzTab import MzTabImporter
+        registry.add_identification_parser("mzTab", MzTabImporter)
+    except ImportError as e:
+        logger.exception(e)
+
+    try:
+        from .peptides.CasaNovo import CasaNovoImporter
+        registry.add_identification_parser("CasaNovo", CasaNovoImporter)
+    except ImportError as e:
+        logger.exception(e)
+
+    try:
+        from .peptides.PiPrimeNovo import PiPrimeNovoImporter
+        registry.add_identification_parser("Pi-PrimeNovo", PiPrimeNovoImporter)
+    except ImportError as e:
+        logger.exception(e)
+
 
 # Auto-register on import
 register_parsers()

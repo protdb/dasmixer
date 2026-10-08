@@ -24,6 +24,14 @@ try:
 except Exception as _log_init_exc:
     logger.error("Failed to configure logging from AppConfig: %s", _log_init_exc)
 
+# Update PTM configuration lists and the LASTRUN_VERSION marker before any
+# module that snapshots PTMS (plugin loaders and reports) is imported.
+try:
+    from dasmixer.utils.ptm_config import check_and_update_ptm_config
+    check_and_update_ptm_config()
+except Exception as _ptm_exc:
+    logger.error("PTM config update failed: %s", _ptm_exc)
+
 # Load external plugins before anything else.
 # Results are stored as module-level variable so PluginsView can access them.
 try:

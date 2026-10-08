@@ -21,7 +21,7 @@ class IdentificationParser(BaseImporter):
     Supports various tabular formats (CSV, XLSX, tool-specific outputs).
     
     Attributes:
-        spectra_id_field: Field name to use for spectrum mapping ('scans' or 'seq_no')
+        spectra_id_field: Field name to use for spectrum mapping ('scans', 'seq_no' or 'title')
     """
     
     # Default field for spectrum ID mapping - subclasses can override
@@ -34,6 +34,9 @@ class IdentificationParser(BaseImporter):
     # NEW: Whether this parser supports stacked files (one file — multiple samples).
     # Subclasses that support stacked import must set this to True.
     can_import_stacked: bool = False
+
+    # NEW: Whether this parser supports multi-file identification import (one file → multiple spectra files). Subclasses that support multi-file import must set this to True.
+    can_import_multifile: bool = False
 
     # NEW: Column name used to split stacked file by sample.
     # Set in subclass if can_import_stacked = True.
@@ -127,7 +130,7 @@ class IdentificationParser(BaseImporter):
         Yields:
             DataFrame with columns:
                 - scans: int | None
-                - seq_no: int | None  (at least one of scans/seq_no must be present)
+                - seq_no: int | None  (at least one of scans/seq_no/title must be present)
                 - sequence: str
                 - canonical_sequence: str
                 - ppm: float | None

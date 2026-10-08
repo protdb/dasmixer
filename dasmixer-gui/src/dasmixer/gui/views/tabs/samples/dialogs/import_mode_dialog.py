@@ -16,6 +16,7 @@ class ImportModeDialog:
         on_single_files_callback=None,
         on_pattern_callback=None,
         on_stacked_callback=None,
+        on_multifile_callback=None,
     ):
         """
         Initialize import mode dialog.
@@ -28,6 +29,7 @@ class ImportModeDialog:
             on_single_files_callback: Callback for single files mode
             on_pattern_callback: Callback for pattern matching mode
             on_stacked_callback: Callback for stacked file import mode
+            on_multifile_callback: Callback for multi-file mzTab import mode
         """
         self.project = project
         self.page = page
@@ -36,6 +38,7 @@ class ImportModeDialog:
         self.on_single_files_callback = on_single_files_callback
         self.on_pattern_callback = on_pattern_callback
         self.on_stacked_callback = on_stacked_callback
+        self.on_multifile_callback = on_multifile_callback
         
         self.dialog = None
     
@@ -75,6 +78,15 @@ class ImportModeDialog:
                 _parser_class = _registry.get_parser(_tool.parser, "identification")
                 show_stacked_btn = getattr(_parser_class, 'can_import_stacked', False)
 
+        # Check multi-file support
+        show_multifile_btn = False
+        if self.import_type == "identifications" and self.tool_id:
+            from dasmixer.api.inputs.registry import registry as _registry
+            _tool = await self.project.get_tool(self.tool_id)
+            if _tool:
+                _parser_class = _registry.get_parser(_tool.parser, "identification")
+                show_multifile_btn = getattr(_parser_class, 'can_import_multifile', False)
+
         self.dialog.title = ft.Text(title)
         controls = [
             ft.Text("Choose import mode:", size=16, weight=ft.FontWeight.BOLD),
@@ -106,6 +118,23 @@ class ImportModeDialog:
                 ft.Container(height=5),
                 ft.Text(
                     "Stacked file contains identifications for multiple samples",
+                    size=11,
+                    italic=True,
+                    color=ft.Colors.GREY_600,
+                ),
+            ]
+        if show_multifile_btn:
+            controls += [
+                ft.Container(height=5),
+                ft.ElevatedButton(
+                    content=ft.Text("Import multi-file mzTab"),
+                    icon=ft.Icons.TABLE_VIEW,
+                    on_click=lambda e: self.page.run_task(self._on_multifile, e),
+                    width=300,
+                ),
+                ft.Container(height=5),
+                ft.Text(
+                    "One mzTab file referencing multiple spectra files",
                     size=11,
                     italic=True,
                     color=ft.Colors.GREY_600,
@@ -145,3 +174,9 @@ class ImportModeDialog:
         self._close()
         if self.on_stacked_callback:
             await self.on_stacked_callback()
+
+    async def _on_multifile(self, e):
+        """Handle multi-file import mode selection."""
+        self._close()
+        if self.on_multifile_callback:
+            await self.on_multifile_callback()

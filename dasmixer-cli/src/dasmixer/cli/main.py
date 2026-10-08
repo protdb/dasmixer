@@ -11,6 +11,7 @@ import dasmixer.reports  # noqa: F401  — triggers registration of all built-in
 from dasmixer.cli.commands import calculate as calculate_cmd
 from dasmixer.cli.commands import import_data, portable, project, subset
 from dasmixer.cli.commands import import_project as import_project_cmd
+from dasmixer.cli.commands import ptm as ptm_cmd
 from dasmixer.cli.commands import tool as tool_cmd
 from dasmixer.versions import APP_VERSION
 
@@ -46,6 +47,7 @@ app.add_typer(portable.app, name="vacuum", help="Compact database file")
 app.add_typer(import_project_cmd.app, name="import-project", help="Merge another project into this one")
 app.add_typer(tool_cmd.app, name="tool", help="Manage project tools")
 app.add_typer(calculate_cmd.app, name="calculate", help="Run pipeline calculations")
+app.add_typer(ptm_cmd.app, name="update-ptm-list", help="Update PTM config lists")
 
 if __name__ == "__main__":
     app()
