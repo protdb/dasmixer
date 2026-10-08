@@ -38,32 +38,39 @@ class PiPrimeNovoImporter(SimpleTableImporter):
 
     _PHOSPHO_B = re.compile(r"B([STY])")
 
-    # Ordered replacements: N-terminal first, then amino-acid side-chain PTMs.
-    # Order matters (longer/more-specific keys first where they overlap).
+    # Amino-acid side-chain replacements (position-independent).
     _REPLACES = {
-        # N-terminal
-        "[+43.006-17.027]": "[Carbamyl][Ammonia-loss]-",
-        "[+42.011]": "[Acetyl]-",
-        "[+43.006]": "[Carbamyl]-",
-        "[-17.027]": "[Ammonia-loss]-",
-        # amino-acid side chains
         "[+57.021]": "[Carbamidomethyl]",
         "[+15.995]": "[Oxidation]",
         "[+0.984]": "[Deamidated]",
+    }
+
+    # N-terminal replacements: (at_start_form, in_sequence_form).
+    # At the start of the sequence the terminal form with "-" is used;
+    # the same mass token elsewhere in the sequence gets the form without "-".
+    _N_TERM_REPLACES = {
+        "[+43.006-17.027]": ("[Carbamyl][Ammonia-loss]-", "[Carbamyl][Ammonia-loss]"),
+        "[+42.011]":        ("[Acetyl]-", "[Acetyl]"),
+        "[+43.006]":        ("[Carbamyl]-", "[Carbamyl]"),
+        "[-17.027]":        ("[Ammonia-loss]-", "[Ammonia-loss]"),
     }
 
     @classmethod
     def transform_sequence(cls, raw: str) -> str:
         """Convert a Pi-PrimeNovo prediction string to ProForma notation.
 
-        Order (as agreed): (1) ``B`` before S/T/Y -> ``[Phospho]``,
-        (2) remove a lone ``B`` before any other residue, (3) apply the
-        mass/terminal replacements from ``_REPLACES``.
+        Order: (1) ``B`` before S/T/Y -> ``[Phospho]``, (2) remove a lone
+        ``B`` before any other residue, (3) apply amino-acid side-chain
+        replacements, (4) apply N-terminal replacements — at the start of the
+        sequence with the terminal "-" form, the same token elsewhere without.
         """
         s = cls._PHOSPHO_B.sub(r"\1[Phospho]", raw)
         s = re.sub(r"B(?=[A-Z])", "", s)
         for src, dst in cls._REPLACES.items():
             s = s.replace(src, dst)
+        for src, (start_dst, mid_dst) in cls._N_TERM_REPLACES.items():
+            s = re.sub(r"^" + re.escape(src), start_dst, s)
+            s = s.replace(src, mid_dst)
         return s
 
     def transform_df(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -76,7 +83,11 @@ class PiPrimeNovoImporter(SimpleTableImporter):
         df = df.copy()
         df["prediction"] = df["prediction"].apply(self.transform_sequence)
         df["label"] = df["label"].astype(str).str.strip().str.lower()
-        df["canonical_sequence"] = df["prediction"].apply(
-            lambda s: "".join(aa for aa, _ in parse(s)[0])
-        )
+        canon_seq = []
+        for s in df["prediction"]:
+            print(s)
+            canon_seq.append("".join(aa for aa, _ in parse(s)[0]))
+        # df["canonical_sequence"] = df["prediction"].apply(
+        #     lambda s: "".join(aa for aa, _ in parse(s)[0])
+        # )
         return df

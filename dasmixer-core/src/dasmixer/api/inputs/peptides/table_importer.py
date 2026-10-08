@@ -148,7 +148,7 @@ class TableImporter(IdentificationParser, ABC):
         """
         suffix = self.file_path.suffix.lower()
         
-        if suffix in ('.csv', '.txt'):
+        if suffix in ('.csv', '.txt', '.tsv'):
             sheet = TableSheet()
             sheet.no = 0
             sheet.name = None

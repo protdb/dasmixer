@@ -14,7 +14,7 @@ from dasmixer.api.calculations.spectra.ion_match import (
     match_predictions,
 )
 from dasmixer.utils.ppm import calculate_theor_mass, get_ppm_for_masses
-from dasmixer.utils.seqfixer_utils import PTMS
+from dasmixer.utils.seqfixer_utils import DEFAULT_PTM_CODES, PTMS
 
 # ---------------------------------------------------------------------------
 # Per-worker file logger
@@ -328,7 +328,7 @@ def process_identifications_batch(
         ammonia_loss=params_dict.get("ammonia_loss", False),
     )
     if ptm_names_list is None:
-        ptms = PTMS
+        ptms = [x for x in PTMS if x.code in DEFAULT_PTM_CODES]
     else:
         ptms = [x for x in PTMS if x.code in ptm_names_list]
 

@@ -1,7 +1,6 @@
 """Ion coverage and preferred identification selection actions."""
 
 import asyncio
-import math
 import os
 from concurrent.futures import ProcessPoolExecutor
 
@@ -13,6 +12,9 @@ from dasmixer.api.calculations.spectra.identification_processor import (
     process_identifications_batch,
 )
 from dasmixer.api.calculations.spectra.ion_match import IonMatchParameters
+from dasmixer.api.calculations.spectra.queue_runner import (
+    run_identification_queue,
+)
 from dasmixer.api.config import config as _config
 from dasmixer.api.project.project import Project
 from dasmixer.gui.views.tabs.peptides.shared_state import PeptidesTabState
@@ -141,50 +143,18 @@ class IonCoverageAction(BaseAction):
             )
 
         total_processed = 0
-        chunk_size = max(1, math.ceil(batch_size / worker_count))
+        chunk_size = max(1, int(batch_size / worker_count))
+        flush_every = worker_count
         stopped_early = False
 
-        async def _compute_batch(
-            loop, executor, worker_batch, ptm_list, max_ptm,
-            trust_ppm=False, unallocated_only=False, quality_threshold=0.25,
-        ) -> list:
-            """Submit worker_batch to the process pool and gather results."""
-            sub_batches = [
-                worker_batch[i:i + chunk_size]
-                for i in range(0, len(worker_batch), chunk_size)
-            ]
-            futures = [
-                loop.run_in_executor(
-                    executor,
-                    process_identifications_batch,
-                    sub_batch,
-                    params_dict,
-                    fragment_charges,
-                    target_ppm,
-                    min_charge,
-                    max_charge,
-                    max_isotope_offset,
-                    force_isotope_offset,
-                    ptm_list,
-                    max_ptm,
-                    seq_criteria,
-                    max_ptm_sites,
-                    trust_ppm,
-                    unallocated_only,
-                    quality_threshold,
-                )
-                for sub_batch in sub_batches
-            ]
-            sub_results = await asyncio.gather(*futures)
-            return [item for sub in sub_results for item in sub]
-
-        async def _write_and_commit(results: list) -> None:
+        async def _flush_to_db(results: list) -> None:
             """Write a computed batch to DB and commit without touching modified_at."""
             await self.project.put_identification_data_batch(results)
             await self.project._commit()
 
+        stop_check = lambda: dialog.stop_requested  # noqa: E731
+
         try:
-            loop = asyncio.get_event_loop()
             with ProcessPoolExecutor(max_workers=worker_count) as executor:
                 for tool_id in tool_ids:
                     if stopped_early:
@@ -193,60 +163,71 @@ class IonCoverageAction(BaseAction):
                     ptm_list = t_settings.get('ptm_list', None)
                     max_ptm = t_settings.get('max_ptm', 5)
 
+                    process_fn_kwargs = {
+                        'params_dict': params_dict,
+                        'fragment_charges': fragment_charges,
+                        'target_ppm': target_ppm,
+                        'min_charge': min_charge,
+                        'max_charge': max_charge,
+                        'max_isotope_offset': max_isotope_offset,
+                        'force_isotope_offset_lookover': force_isotope_offset,
+                        'ptm_names_list': ptm_list,
+                        'max_ptm': max_ptm,
+                        'seq_criteria': seq_criteria,
+                        'max_ptm_sites': max_ptm_sites,
+                        'trust_ppm': t_settings.get('trust_ppm', False),
+                        'unallocated_only': t_settings.get('unallocated_only', False),
+                        'quality_threshold': t_settings.get('quality_threshold', 0.25),
+                    }
+
                     offset = 0
 
-                    # --- Prime the pipeline: read and compute the first batch ---
-                    dialog.update_progress(None, "Loading...", "Reading first batch...")
-                    batch_objects = await self.project.get_identifications_with_spectra_batch(
-                        tool_id=tool_id,
-                        offset=0 if only_missing else offset,
-                        limit=batch_size,
-                        only_missing=only_missing,
-                        spectra_file_ids=spectra_file_ids,
-                    )
-
-                    if not batch_objects:
-                        continue
-
-                    worker_batch = [obj.to_worker_dict() for obj in batch_objects]
-                    del batch_objects  # free spectrum arrays from memory
-                    if not only_missing:
-                        offset += batch_size
-
-                    pending_results = await _compute_batch(
-                        loop, executor, worker_batch, ptm_list, max_ptm,
-                        trust_ppm=t_settings.get('trust_ppm', False),
-                        unallocated_only=t_settings.get('unallocated_only', False),
-                        quality_threshold=t_settings.get('quality_threshold', 0.25),
-                    )
-                    del worker_batch
-
                     while True:
-                        # --- Overlap: write previous results AND read next batch in parallel ---
-                        next_read_task = asyncio.create_task(
-                            self.project.get_identifications_with_spectra_batch(
-                                tool_id=tool_id,
-                                offset=0 if only_missing else offset,
-                                limit=batch_size,
-                                only_missing=only_missing,
-                                spectra_file_ids=spectra_file_ids,
-                            )
+                        batch_objects = await self.project.get_identifications_with_spectra_batch(
+                            tool_id=tool_id,
+                            offset=0 if only_missing else offset,
+                            limit=batch_size,
+                            only_missing=only_missing,
+                            spectra_file_ids=spectra_file_ids,
                         )
-                        write_task = asyncio.create_task(
-                            _write_and_commit(pending_results)
-                        )
-                        next_batch_objects, _ = await asyncio.gather(
-                            next_read_task, write_task
-                        )
+                        if not batch_objects:
+                            break
 
-                        total_processed += len(pending_results)
-                        del pending_results
+                        worker_dicts = [obj.to_worker_dict() for obj in batch_objects]
+                        del batch_objects  # free spectrum arrays
+
+                        batch_start = total_processed
+
+                        def _on_progress(cum: int) -> None:
+                            done = batch_start + cum
+                            value = (done / total_count) if total_count > 0 else None
+                            dialog.update_progress(
+                                value,
+                                "Calculating...",
+                                f"Processed {done} / {total_count}",
+                                processed=done,
+                                total=total_count,
+                            )
+
+                        processed_n = await run_identification_queue(
+                            worker_dicts,
+                            executor,
+                            chunk_size,
+                            flush_every,
+                            process_identifications_batch,
+                            process_fn_kwargs,
+                            _flush_to_db,
+                            progress_callback=_on_progress,
+                            stop_check=stop_check,
+                        )
+                        del worker_dicts
+                        total_processed += processed_n
+
                         if not only_missing:
                             offset += batch_size
 
-                        progress_value = (total_processed / total_count) if total_count > 0 else None
                         dialog.update_progress(
-                            progress_value,
+                            (total_processed / total_count) if total_count > 0 else None,
                             "Calculating...",
                             f"Processed {total_processed} / {total_count}",
                             processed=total_processed,
@@ -256,20 +237,6 @@ class IonCoverageAction(BaseAction):
                         if dialog.stop_requested:
                             stopped_early = True
                             break
-
-                        if not next_batch_objects:
-                            break
-
-                        # --- Compute next batch while loop iterates ---
-                        next_worker_batch = [obj.to_worker_dict() for obj in next_batch_objects]
-                        del next_batch_objects  # free spectrum arrays from memory
-                        pending_results = await _compute_batch(
-                            loop, executor, next_worker_batch, ptm_list, max_ptm,
-                            trust_ppm=t_settings.get('trust_ppm', False),
-                            unallocated_only=t_settings.get('unallocated_only', False),
-                            quality_threshold=t_settings.get('quality_threshold', 0.25),
-                        )
-                        del next_worker_batch
 
             await self.project.save()
 
