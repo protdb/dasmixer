@@ -1,9 +1,12 @@
+import shutil
+
 from pridepy.project.project import Project
 from pridepy.download.client import Client
 from requests.exceptions import ConnectionError
 from dasmixer.utils.exceptions import DasmixerException, DasmixerNetworkException
 from dasmixer.api.config import get_pxd_temp_dir
 import os
+import gzip
 from pathlib import Path
 
 class PrideDatasetNotFoundException(DasmixerException):
@@ -13,11 +16,16 @@ class PrideFile:
     dataset_id: str
     name: str
     extension: str
+    _compressed: bool = False
     _client: Client
     def __init__(self, client: Client | None, item: dict):
         self.dataset_id = item["projectAccessions"][0]
         self.name = item["fileName"]
-        self.extension = self.name.split(".")[-1].lower()
+        if not self.name.endswith(".gz"):
+            self.extension = self.name.split(".")[-1].lower()
+        else:
+            self.extension = self.name[:-3].split(".")[-1].lower()
+            self._compressed = True
         if client is not None:
             self._client = client
         else:
@@ -38,6 +46,11 @@ class PrideFile:
             checksum_check=True
         )
         if os.path.exists(file_path):
+            if self._compressed:
+                target_path = file_path.parent / file_path.name[:-3]
+                with gzip.open(file_path, 'rb') as f_in, open(target_path, 'wb') as f_out:
+                    shutil.copyfileobj(f_in, f_out)
+                return target_path
             return file_path
         else:
             raise DasmixerException(f'Error downloading file {self.name} from {self.dataset_id}')
@@ -73,7 +86,7 @@ class PrideDataset:
         self.title = self._metadata.get("title", 'dataset title not found')
         self.description = self._metadata.get("projectDescription", 'dataset description not found')
         files = self._client.get_all_category_file_list(
-            self.dataset_id, categories=['PEAK', 'SEARCH', 'RESULT', 'FASTA']
+            self.dataset_id, categories=['PEAK', 'SEARCH', 'RESULT', 'FASTA', 'OTHER']
         )
         self._files = [PrideFile(self._client, x) for x in files]
 

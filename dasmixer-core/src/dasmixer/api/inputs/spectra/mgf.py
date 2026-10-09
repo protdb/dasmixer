@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from dasmixer.utils import logger
 from dasmixer.utils.exceptions import SpectraScansNotFoundException
-from pyteomics.auxiliary.structures import PyteomicsError
+from pyteomics.auxiliary.structures import PyteomicsError, Charge
 from pyteomics.mgf import MGF
 
 from .base import SpectralDataParser
@@ -16,13 +16,18 @@ from .base import SpectralDataParser
 # Workaround to support float charges from PLGS, see https://github.com/levitsky/pyteomics/issues/185#issuecomment-3643486942
 # Should be refactored after Pyteomics version update
 class MGFFixFloatSpectra(MGF):
+
+    cherge_rg = re.compile(r'^-?\d+(?:\.\d+)?')
     @staticmethod
     def parse_peak_charge(charge_text, list_only=False):
         return int(float(charge_text))
 
     @staticmethod
-    def parse_pepmass_charge(pepmass_str):
-        return int(float(pepmass_str))
+    def parse_precursor_charge(charge_text, list_only=False):
+        try:
+            return Charge(charge_text)
+        except PyteomicsError:
+            return int(float(charge_text))
 
 
 TITLE_SCANS_REGEXP_LIST: list[re.Pattern] = [
@@ -94,7 +99,7 @@ class MGFParser(SpectralDataParser):
             except (IndexError, ValueError):
                 pass
         raise SpectraScansNotFoundException(
-            f"Can't find scans in title: `{title}` with rgs: [{', '.join([x.pattern for x in self.scan_regexp_list])}] and scan_regexp {self.scan_regexp.pattern}"
+            f"Can't find scans in title: `{title}` with rgs: [{', '.join([x.pattern for x in self.scan_regexp_list])}] and scan_regexp {self.scan_regexp}"
         )
 
 
