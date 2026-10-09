@@ -9,3 +9,13 @@ can catch DASMixer-specific errors without catching unrelated exceptions
 
 class DasmixerException(Exception):
     """Base exception for all DASMixer-specific errors."""
+    pass
+
+
+class SpectraScansNotFoundException(DasmixerException):
+    """Exception raised when parser was not able to find any spectra scans."""
+    pass
+
+class DasmixerNetworkException(DasmixerException):
+    """Exception raised when network request failed."""
+    pass

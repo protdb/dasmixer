@@ -6,6 +6,7 @@ from collections.abc import AsyncIterator
 import numpy as np
 import pandas as pd
 from dasmixer.utils import logger
+from dasmixer.utils.exceptions import SpectraScansNotFoundException
 from pyteomics.auxiliary.structures import PyteomicsError
 from pyteomics.mgf import MGF
 
@@ -19,6 +20,15 @@ class MGFFixFloatSpectra(MGF):
     def parse_peak_charge(charge_text, list_only=False):
         return int(float(charge_text))
 
+    @staticmethod
+    def parse_pepmass_charge(pepmass_str):
+        return int(float(pepmass_str))
+
+
+TITLE_SCANS_REGEXP_LIST: list[re.Pattern] = [
+    re.compile(r'scans?=(\d+)', re.IGNORECASE), # Generic MGF SCANS field in header
+    re.compile(r'lepeakid:(\d+)', re.IGNORECASE) # PLGS LePeakID format
+]
 
 class MGFParser(SpectralDataParser):
     """
@@ -36,7 +46,11 @@ class MGFParser(SpectralDataParser):
 
     mgf_file: MGF | None = None
     _file_position: int = 0
-    scan_regexp: re.Pattern = re.compile(r'scans?=(\d+)', re.IGNORECASE)
+    # OBSOLETE!
+    scan_regexp: re.Pattern | None = None #= re.compile(r'scans?=(\d+)', re.IGNORECASE)
+
+    scan_regexp_list: list[re.Pattern] | None = TITLE_SCANS_REGEXP_LIST
+
 
     def __init__(self, file_path: str, **kwargs):
         """
@@ -66,6 +80,24 @@ class MGFParser(SpectralDataParser):
         except (PyteomicsError, StopIteration) as e:
             logger.exception(e)
             return False
+
+    def get_scans_from_title(self, title: str) -> int:
+        if self.scan_regexp_list is not None:
+            for rg in self.scan_regexp_list:
+                try:
+                    return int(rg.findall(title.lower())[0])
+                except (IndexError, ValueError):
+                    pass
+        if self.scan_regexp is not None:
+            try:
+                return int(self.scan_regexp.findall(title.lower())[0])
+            except (IndexError, ValueError):
+                pass
+        raise SpectraScansNotFoundException(
+            f"Can't find scans in title: `{title}` with rgs: [{', '.join([x.pattern for x in self.scan_regexp_list])}] and scan_regexp {self.scan_regexp.pattern}"
+        )
+
+
 
     async def parse_batch(
         self,
@@ -121,10 +153,8 @@ class MGFParser(SpectralDataParser):
                 # Try to extract scan from title if not in params
                 if scans is None and title:
                     try:
-                        scans = int(self.scan_regexp.findall(title.lower())[0])
-                    except (IndexError, ValueError) as e:
-                        logger.info(title)
-                        logger.info(self.scan_regexp.pattern)
+                        scans = self.get_scans_from_title(title)
+                    except SpectraScansNotFoundException as e:
                         logger.exception(e)
                         scans = None
                 

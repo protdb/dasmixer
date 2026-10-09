@@ -275,3 +275,10 @@ def get_maxquant_import_temp_dir() -> Path:
     temp_dir = base / ts
     temp_dir.mkdir(parents=True, exist_ok=True)
     return temp_dir
+
+
+def get_pxd_temp_dir() -> Path:
+    if sys.platform == "win32":
+        return Path(tempfile.gettempdir()) / "dasmixer" / "pride"
+    else:
+        return Path.home() / ".cache" / "dasmixer" / "pride"
