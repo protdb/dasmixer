@@ -3,11 +3,45 @@
 import json
 import sys
 import tempfile
+import warnings
 from pathlib import Path
+from typing import Literal
 
 import typer
 from dasmixer.utils.logger import logger
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def default_tempdir() -> str:
+    """Return the platform-appropriate default temporary directory.
+
+    On Windows the system temp directory (``tempfile.gettempdir()``) is used.
+    On Linux/macOS ``~/.cache/dasmixer`` is used.
+    """
+    if sys.platform == "win32":
+        return str(Path(tempfile.gettempdir()))
+    return str(Path.home() / ".cache" / "dasmixer")
+
+
+_DEFAULT_TEMPDIR = default_tempdir()
+
+_TEMP_DIR_POSTFIXES: dict[str, dict[str, str]] = {
+    "HTML": {
+        "win32": "",
+        "default": "tmp/plots",
+    },
+    "MaxQuant": {
+        "win32": "dasmixer/maxquant_import",
+        "default": "tmp/maxquant_import",
+    },
+    "PXD": {
+        "win32": "dasmixer/pride",
+        "default": "pride",
+    },
+}
+
+# Types that use large_file_tempdir as their base (large temporary files).
+_LARGE_DIR_TYPES: frozenset[str] = frozenset({"PXD", "MaxQuant"})
 
 
 class AppConfig(BaseSettings):
@@ -75,6 +109,10 @@ class AppConfig(BaseSettings):
 
     # Plugin file paths: {plugin_id: str path to file or directory}
     plugin_paths: dict[str, str] = {}
+
+    # Temporary directories
+    tempdir: str = _DEFAULT_TEMPDIR
+    large_file_tempdir: str = _DEFAULT_TEMPDIR
 
     model_config = SettingsConfigDict(
         env_prefix="DASMIXER_",
@@ -224,6 +262,61 @@ class AppConfig(BaseSettings):
         self.plugin_paths.pop(plugin_id, None)
         self.save()
 
+    def get_tempdir(
+        self,
+        dir_type: Literal['HTML', 'PXD', 'MaxQuant', 'root', 'large_root'] = 'root',
+    ) -> Path:
+        """
+        Get a temporary directory path for the specified type.
+
+        The base directory is taken from :attr:`tempdir` (or
+        :attr:`large_file_tempdir` for ``large_root``). A platform-specific
+        sub-path (postfix) is appended for typed directories.
+
+        The returned directory is created (with parents) if it does not
+        exist.
+
+        Args:
+            dir_type: Type of temporary directory:
+
+                - ``'root'`` — base :attr:`tempdir`.
+                - ``'large_root'`` — base :attr:`large_file_tempdir`.
+                - ``'HTML'`` — directory for temporary HTML files (uses
+                  :attr:`tempdir`).
+                - ``'MaxQuant'`` — directory for MaxQuant import temp files
+                  (uses :attr:`large_file_tempdir`; includes a timestamp
+                  sub-directory).
+                - ``'PXD'`` — directory for PRIDE PXD temp files (uses
+                  :attr:`large_file_tempdir`).
+
+        Returns:
+            Path to an existing directory.
+        """
+        if dir_type == 'root':
+            path = Path(self.tempdir)
+            path.mkdir(parents=True, exist_ok=True)
+            return path
+        if dir_type == 'large_root':
+            path = Path(self.large_file_tempdir)
+            path.mkdir(parents=True, exist_ok=True)
+            return path
+
+        platform_key = "win32" if sys.platform == "win32" else "default"
+        postfix = _TEMP_DIR_POSTFIXES.get(dir_type, {}).get(platform_key, "")
+
+        base = self.large_file_tempdir if dir_type in _LARGE_DIR_TYPES else self.tempdir
+        path = Path(base)
+        if postfix:
+            path = path / postfix
+
+        if dir_type == 'MaxQuant':
+            from datetime import datetime
+            ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+            path = path / ts
+
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
 
 # Global config instance
 # Loaded once on module import
@@ -234,51 +327,54 @@ def get_temp_html_dir() -> Path:
     """
     Get directory for temporary HTML files produced in Browser display mode.
 
-    On Windows the system temp directory (``tempfile.gettempdir()``) is used.
-    On Linux/macOS we use ``~/.cache/dasmixer/tmp/plots/`` instead, because
-    browsers such as Firefox refuse to open ``file://`` URLs pointing at
-    ``/tmp`` due to security restrictions.
-
-    The directory is created (with parents) if it does not exist.
+    .. deprecated::
+        Use :meth:`AppConfig.get_tempdir` with ``dir_type='HTML'`` instead.
 
     Returns:
         Path to an existing directory for temporary HTML files.
     """
-    if sys.platform == "win32":
-        return Path(tempfile.gettempdir())
-
-    temp_dir = Path.home() / ".cache" / "dasmixer" / "tmp" / "plots"
-    temp_dir.mkdir(parents=True, exist_ok=True)
-    return temp_dir
+    warnings.warn(
+        "get_temp_html_dir() is deprecated; "
+        "use config.get_tempdir('HTML') instead",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return config.get_tempdir('HTML')
 
 
 def get_maxquant_import_temp_dir() -> Path:
     """
     Directory for temporary MGF/CSV files created during MaxQuant import.
 
-    On Linux/macOS: ``~/.cache/dasmixer/tmp/maxquant_import/<YYYYMMDD_HHMMSS_ffffff>/``
-    On Windows: ``<tempfile.gettempdir()>/dasmixer/maxquant_import/<YYYYMMDD_HHMMSS_ffffff>/``
-
-    The directory is created (with parents) if it does not exist.
-    The caller is responsible for cleanup.
+    .. deprecated::
+        Use :meth:`AppConfig.get_tempdir` with ``dir_type='MaxQuant'`` instead.
 
     Returns:
         Path to an existing directory for MaxQuant temporary files.
     """
-    from datetime import datetime
-
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-    if sys.platform == "win32":
-        base = Path(tempfile.gettempdir()) / "dasmixer" / "maxquant_import"
-    else:
-        base = Path.home() / ".cache" / "dasmixer" / "tmp" / "maxquant_import"
-    temp_dir = base / ts
-    temp_dir.mkdir(parents=True, exist_ok=True)
-    return temp_dir
+    warnings.warn(
+        "get_maxquant_import_temp_dir() is deprecated; "
+        "use config.get_tempdir('MaxQuant') instead",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return config.get_tempdir('MaxQuant')
 
 
 def get_pxd_temp_dir() -> Path:
-    if sys.platform == "win32":
-        return Path(tempfile.gettempdir()) / "dasmixer" / "pride"
-    else:
-        return Path.home() / ".cache" / "dasmixer" / "pride"
+    """
+    Directory for temporary PRIDE PXD dataset files.
+
+    .. deprecated::
+        Use :meth:`AppConfig.get_tempdir` with ``dir_type='PXD'`` instead.
+
+    Returns:
+        Path to the PRIDE temporary directory.
+    """
+    warnings.warn(
+        "get_pxd_temp_dir() is deprecated; "
+        "use config.get_tempdir('PXD') instead",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return config.get_tempdir('PXD')

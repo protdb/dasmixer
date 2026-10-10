@@ -1,6 +1,8 @@
 """Parameters for Volcano Report."""
 from __future__ import annotations
+
 from dataclasses import dataclass, field
+
 from dasmixer.api.reporting.report_params import ReportParams
 
 

@@ -6,6 +6,7 @@ import flet as ft
 from dasmixer.api.calculations.proteins.lfq import calculate_lfq
 from dasmixer.api.project.project import Project
 from dasmixer.gui.views.tabs.proteins.shared_state import ProteinsTabState
+
 from dasmixer.utils import logger
 
 from .base import BaseAction

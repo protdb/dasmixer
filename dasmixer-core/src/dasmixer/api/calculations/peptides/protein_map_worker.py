@@ -22,12 +22,13 @@ from __future__ import annotations
 import logging
 import math
 
-from dasmixer.api.calculations.ppm import SeqFixer, SeqMatchParams
 from dasmixer.api.calculations.spectra.ion_match import (
     IonMatchParameters,
     MatchResult,
     match_predictions,
 )
+
+from dasmixer.api.calculations.ppm import SeqFixer, SeqMatchParams
 
 logger = logging.getLogger(__name__)
 

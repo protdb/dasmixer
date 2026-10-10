@@ -9,8 +9,8 @@ from pathlib import Path
 import pandas as pd
 from dasmixer.api.config import config as app_config
 from dasmixer.api.config import get_pxd_temp_dir
-from dasmixer.api.inputs.registry import registry
 from dasmixer.api.inputs.proteins.fasta import FastaParser
+from dasmixer.api.inputs.registry import registry
 from dasmixer.api.project.project import Project
 from dasmixer.utils.logger import logger
 

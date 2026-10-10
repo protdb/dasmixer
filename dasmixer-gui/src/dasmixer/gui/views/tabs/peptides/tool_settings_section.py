@@ -1,8 +1,9 @@
 """Tool settings section for peptides tab."""
 
 import flet as ft
-from dasmixer.utils import logger
 from dasmixer.utils.seqfixer_utils import DEFAULT_PTM_CODES, PTMS
+
+from dasmixer.utils import logger
 
 from .base_section import BaseSection
 

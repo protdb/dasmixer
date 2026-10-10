@@ -1,5 +1,6 @@
 """GUI form for UpSet Plot Report. Imported only when dasmixer-gui is installed."""
-from dasmixer.gui.components.report_form import ReportForm, MultiSubsetSelector, IntSelector
+from dasmixer.gui.components.report_form import IntSelector, MultiSubsetSelector, ReportForm
+
 from .params import UpsetReportParams
 
 

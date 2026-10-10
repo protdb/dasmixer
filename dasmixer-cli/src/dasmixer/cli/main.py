@@ -6,14 +6,15 @@ Provides command-line tools for project management without GUI.
 
 from typing import Annotated
 
-import typer
 import dasmixer.reports  # noqa: F401  — triggers registration of all built-in reports
+import typer
+from dasmixer.versions import APP_VERSION
+
 from dasmixer.cli.commands import calculate as calculate_cmd
 from dasmixer.cli.commands import import_data, portable, project, subset
 from dasmixer.cli.commands import import_project as import_project_cmd
 from dasmixer.cli.commands import ptm as ptm_cmd
 from dasmixer.cli.commands import tool as tool_cmd
-from dasmixer.versions import APP_VERSION
 
 app = typer.Typer(
     name="dasmixer-cli",

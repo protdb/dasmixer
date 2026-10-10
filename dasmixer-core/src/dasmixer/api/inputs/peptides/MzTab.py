@@ -3,17 +3,15 @@
 import re
 
 import pandas as pd
-from pyteomics.mass import Unimod
-from pyteomics.mztab import MzTab
-from pyteomics.proforma import GenericModification, parse, to_proforma
-
 from dasmixer.api.project.dataclasses import Protein
 from dasmixer.utils.ident_spectra_pairing import resolve_spectra_file_by_location
 from dasmixer.utils.logger import logger
 from dasmixer.utils.ppm import calculate_ppm
+from pyteomics.mass import Unimod
+from pyteomics.mztab import MzTab
+from pyteomics.proforma import GenericModification, parse, to_proforma
 
 from .base import IdentificationParser
-
 
 _MOD_PARAM_RE = re.compile(
     r"^\s*\[\s*([^,]*),\s*([^,]*),\s*([^,]*),\s*([^\]]*)\]\s*$"
@@ -76,7 +74,7 @@ class MzTabImporter(IdentificationParser):
                             value = value[:-3]
                         self.ms_run_locations[int(m.group(1))] = value
                         continue
-                    if key.startswith("fixed_mod[") or key.startswith("variable_mod["):
+                    if key.startswith(("fixed_mod[", "variable_mod[")):
                         raw_mods.append(value)
                 elif line.startswith("COM") or line.strip() == "":
                     continue
@@ -92,7 +90,7 @@ class MzTabImporter(IdentificationParser):
             m = _MOD_PARAM_RE.match(raw)
             if not m:
                 continue
-            cv, accession, name, _value = (x.strip() for x in m.groups())
+            _cv, accession, name, _value = (x.strip() for x in m.groups())
             accession = accession.strip()
             if not accession:
                 continue
@@ -325,7 +323,7 @@ class MzTabImporter(IdentificationParser):
         Base mzTab returns None. Subclasses that provide per-position scores
         (e.g. CasaNovo) override this method.
         """
-        return None
+        return
 
     def _collect_proteins(self) -> None:
         if not self.contain_proteins or self._psm_df is None:

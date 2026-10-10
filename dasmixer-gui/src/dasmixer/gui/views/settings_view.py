@@ -1,12 +1,15 @@
 """Settings view — application settings screen."""
 
 import os
+import shutil
+from pathlib import Path
 
 import flet as ft
 import typer
-from dasmixer.api.config import config
+from dasmixer.api.config import config, default_tempdir
 from dasmixer.gui.components.color_picker import ColorPickerField
 from dasmixer.gui.utils import open_folder, show_snack
+
 from dasmixer.utils import logger
 
 
@@ -206,6 +209,73 @@ class SettingsView(ft.View):
             content=ft.Row([self._cpu_threads_field], spacing=10),
         )
 
+        # --- Temporary files ---
+        self._tempdir_field = ft.TextField(
+            label="Temporary files directory",
+            value=config.tempdir,
+            expand=True,
+        )
+        self._large_tempdir_field = ft.TextField(
+            label="Temporary large files directory",
+            value=config.large_file_tempdir,
+            expand=True,
+        )
+
+        temp_section = self._section(
+            title="Temporary Files",
+            subtitle=(
+                "Directories used for temporary files during processing. "
+                "Use Clear to remove all contents of a directory."
+            ),
+            content=ft.Column(
+                [
+                    ft.Row(
+                        [
+                            self._tempdir_field,
+                            ft.IconButton(
+                                icon=ft.Icons.FOLDER_OPEN,
+                                tooltip="Browse",
+                                on_click=lambda _: self.page.run_task(self._browse_tempdir),
+                            ),
+                            ft.IconButton(
+                                icon=ft.Icons.OPEN_IN_NEW,
+                                tooltip="Open",
+                                on_click=lambda _: open_folder(self._tempdir_field.value or config.tempdir),
+                            ),
+                            ft.IconButton(
+                                icon=ft.Icons.DELETE_SWEEP,
+                                tooltip="Clear",
+                                on_click=lambda _: self.page.run_task(self._clear_tempdir),
+                            ),
+                        ],
+                        spacing=5,
+                    ),
+                    ft.Row(
+                        [
+                            self._large_tempdir_field,
+                            ft.IconButton(
+                                icon=ft.Icons.FOLDER_OPEN,
+                                tooltip="Browse",
+                                on_click=lambda _: self.page.run_task(self._browse_large_tempdir),
+                            ),
+                            ft.IconButton(
+                                icon=ft.Icons.OPEN_IN_NEW,
+                                tooltip="Open",
+                                on_click=lambda _: open_folder(self._large_tempdir_field.value or config.large_file_tempdir),
+                            ),
+                            ft.IconButton(
+                                icon=ft.Icons.DELETE_SWEEP,
+                                tooltip="Clear",
+                                on_click=lambda _: self.page.run_task(self._clear_large_tempdir),
+                            ),
+                        ],
+                        spacing=5,
+                    ),
+                ],
+                spacing=10,
+            ),
+        )
+
         # --- Logging ---
         self._log_to_file_cb = ft.Checkbox(
             label="Log operations to file",
@@ -305,6 +375,8 @@ class SettingsView(ft.View):
                         batch_section,
                         ft.Divider(),
                         processing_section,
+                        ft.Divider(),
+                        temp_section,
                         ft.Divider(),
                         logging_section,
                         ft.Divider(),
@@ -461,6 +533,12 @@ class SettingsView(ft.View):
         log_folder_val = (self._log_folder_field.value or "").strip()
         config.log_folder = log_folder_val if log_folder_val else None
 
+        # Temporary directories
+        tempdir_val = (self._tempdir_field.value or "").strip()
+        config.tempdir = tempdir_val if tempdir_val else default_tempdir()
+        large_tempdir_val = (self._large_tempdir_field.value or "").strip()
+        config.large_file_tempdir = large_tempdir_val if large_tempdir_val else default_tempdir()
+
         # Apply
         config.theme = new_theme
         config.plot_aspect_ratio = self._plot_aspect_dropdown.value or "16:9"
@@ -495,6 +573,117 @@ class SettingsView(ft.View):
             logger.exception(ex)
             show_snack(self.page, f"Error: {ex}", ft.Colors.RED_400)
             self.page.update()
+
+    async def _browse_tempdir(self):
+        """Browse for temporary files directory."""
+        try:
+            folder = await ft.FilePicker().get_directory_path(
+                dialog_title="Select Temporary Files Directory"
+            )
+            if folder:
+                self._tempdir_field.value = folder
+                self._tempdir_field.update()
+        except Exception as ex:
+            logger.exception(ex)
+            show_snack(self.page, f"Error: {ex}", ft.Colors.RED_400)
+            self.page.update()
+
+    async def _browse_large_tempdir(self):
+        """Browse for temporary large files directory."""
+        try:
+            folder = await ft.FilePicker().get_directory_path(
+                dialog_title="Select Temporary Large Files Directory"
+            )
+            if folder:
+                self._large_tempdir_field.value = folder
+                self._large_tempdir_field.update()
+        except Exception as ex:
+            logger.exception(ex)
+            show_snack(self.page, f"Error: {ex}", ft.Colors.RED_400)
+            self.page.update()
+
+    async def _clear_tempdir(self):
+        """Clear the temporary files directory after confirmation."""
+        path_str = (self._tempdir_field.value or "").strip()
+        if not path_str:
+            show_snack(self.page, "No directory specified", ft.Colors.RED_400)
+            self.page.update()
+            return
+        confirmed = await self._confirm_clear("temporary files directory", path_str)
+        if not confirmed:
+            return
+        self._clear_directory(Path(path_str))
+
+    async def _clear_large_tempdir(self):
+        """Clear the temporary large files directory after confirmation."""
+        path_str = (self._large_tempdir_field.value or "").strip()
+        if not path_str:
+            show_snack(self.page, "No directory specified", ft.Colors.RED_400)
+            self.page.update()
+            return
+        confirmed = await self._confirm_clear("temporary large files directory", path_str)
+        if not confirmed:
+            return
+        self._clear_directory(Path(path_str))
+
+    def _clear_directory(self, path: Path) -> None:
+        """Delete all contents of *path* (files and subdirectories)."""
+        if not path.exists():
+            show_snack(self.page, "Directory does not exist", ft.Colors.AMBER_400)
+            self.page.update()
+            return
+        count = 0
+        for item in path.iterdir():
+            try:
+                if item.is_dir():
+                    shutil.rmtree(item, ignore_errors=True)
+                else:
+                    item.unlink()
+                count += 1
+            except Exception as e:
+                logger.warning("Could not remove %s: %s", item, e)
+        show_snack(self.page, f"Cleared {count} item(s)", ft.Colors.GREEN_400)
+        self.page.update()
+
+    async def _confirm_clear(self, dir_name: str, path: str) -> bool:
+        """Show confirmation dialog for clearing a directory. Returns True if confirmed."""
+        result: list[bool] = [False]
+
+        def on_confirm(_):
+            result[0] = True
+            dlg.open = False
+            self.page.update()
+
+        def on_cancel(_):
+            result[0] = False
+            dlg.open = False
+            self.page.update()
+
+        dlg = ft.AlertDialog(
+            modal=True,
+            title=ft.Text(f"Clear {dir_name}"),
+            content=ft.Text(
+                f"Are you sure you want to clear the {dir_name}?\n"
+                f"Path: {path}\n\n"
+                f"All files and subdirectories in this folder will be permanently deleted."
+            ),
+            actions=[
+                ft.TextButton("Cancel", on_click=on_cancel),
+                ft.ElevatedButton("OK", on_click=on_confirm),
+            ],
+        )
+
+        self.page.overlay.append(dlg)
+        dlg.open = True
+        self.page.update()
+
+        import asyncio
+        while dlg.open:
+            await asyncio.sleep(0.05)
+
+        self.page.overlay.remove(dlg)
+        self.page.update()
+        return result[0]
 
     async def _confirm_large_batch(self, large_fields: list[str]) -> bool:
         """Show warning dialog for very large batch sizes. Returns True if confirmed."""

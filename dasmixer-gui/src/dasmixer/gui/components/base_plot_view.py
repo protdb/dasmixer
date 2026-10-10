@@ -14,6 +14,7 @@ from dasmixer.gui.components.plotly_viewer import (
     show_webview,
 )
 from dasmixer.gui.utils import show_snack
+
 from dasmixer.utils import logger
 
 WINDOW_HEAD_GAP = 200

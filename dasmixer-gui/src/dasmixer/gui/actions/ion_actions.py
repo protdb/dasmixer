@@ -18,6 +18,7 @@ from dasmixer.api.calculations.spectra.queue_runner import (
 from dasmixer.api.config import config as _config
 from dasmixer.api.project.project import Project
 from dasmixer.gui.views.tabs.peptides.shared_state import PeptidesTabState
+
 from dasmixer.utils import logger
 
 from .base import BaseAction
@@ -152,7 +153,7 @@ class IonCoverageAction(BaseAction):
             await self.project.put_identification_data_batch(results)
             await self.project._commit()
 
-        stop_check = lambda: dialog.stop_requested  # noqa: E731
+        stop_check = lambda: dialog.stop_requested
 
         try:
             with ProcessPoolExecutor(max_workers=worker_count) as executor:
@@ -198,8 +199,8 @@ class IonCoverageAction(BaseAction):
 
                         batch_start = total_processed
 
-                        def _on_progress(cum: int) -> None:
-                            done = batch_start + cum
+                        def _on_progress(cum: int, _batch_start: int = batch_start) -> None:
+                            done = _batch_start + cum
                             value = (done / total_count) if total_count > 0 else None
                             dialog.update_progress(
                                 value,

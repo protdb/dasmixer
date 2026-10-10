@@ -19,8 +19,9 @@
 import re
 
 import flet as ft
-from dasmixer.utils import logger
 from flet_color_pickers import ColorPicker, SlidePicker
+
+from dasmixer.utils import logger
 
 __all__ = [
     "HEX_COLOR_RE",

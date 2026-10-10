@@ -2,6 +2,7 @@
 
 import flet as ft
 from dasmixer.api.project.project import Project
+
 from dasmixer.utils import logger
 
 from .dialogs.import_mode_dialog import ImportModeDialog

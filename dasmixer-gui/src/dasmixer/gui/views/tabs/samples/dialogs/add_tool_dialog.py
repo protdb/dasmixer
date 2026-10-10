@@ -3,6 +3,7 @@
 import flet as ft
 from dasmixer.api.inputs.registry import registry
 from dasmixer.gui.utils import show_snack
+
 from dasmixer.utils import logger
 
 

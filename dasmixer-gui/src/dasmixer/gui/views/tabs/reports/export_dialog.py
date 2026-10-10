@@ -2,12 +2,9 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, Awaitable
+from collections.abc import Awaitable, Callable
 
 import flet as ft
-
-if TYPE_CHECKING:
-    pass
 
 
 class ExportDialog:

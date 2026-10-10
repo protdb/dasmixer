@@ -1,8 +1,15 @@
 """GUI form for Volcano Report. Imported only when dasmixer-gui is installed."""
 from dasmixer.gui.components.report_form import (
-    ReportForm, SubsetSelector, MultiSubsetSelector, LFQSelector,
-    EnumSelector, IntSelector, FloatSelector, BoolSelector,
+    BoolSelector,
+    EnumSelector,
+    FloatSelector,
+    IntSelector,
+    LFQSelector,
+    MultiSubsetSelector,
+    ReportForm,
+    SubsetSelector,
 )
+
 from .params import VolcanoReportParams
 
 

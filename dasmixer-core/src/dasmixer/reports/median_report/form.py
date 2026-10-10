@@ -1,7 +1,11 @@
 """GUI form for Median Report. Imported only when dasmixer-gui is installed."""
 from dasmixer.gui.components.report_form import (
-    ReportForm, MultiSubsetSelector, LFQSelector, BoolSelector,
+    BoolSelector,
+    LFQSelector,
+    MultiSubsetSelector,
+    ReportForm,
 )
+
 from .params import MedianReportParams
 
 

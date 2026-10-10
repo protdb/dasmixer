@@ -1,7 +1,6 @@
 """CLI command to update PTM configuration lists."""
 
 import typer
-
 from dasmixer.utils.ptm_config import update_ptm_list
 
 app = typer.Typer(help="Update PTM configuration lists")

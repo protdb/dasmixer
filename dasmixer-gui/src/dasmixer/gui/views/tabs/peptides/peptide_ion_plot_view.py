@@ -9,6 +9,7 @@ from dasmixer.api.project.mixins.plot_mixin import (
 )
 from dasmixer.api.project.project import Project
 from dasmixer.gui.components.base_plot_view import BasePlotView
+
 from dasmixer.utils import logger
 
 

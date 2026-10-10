@@ -7,7 +7,6 @@ from pyteomics.proforma import parse
 
 from .table_importer import ColumnRenames, SimpleTableImporter
 
-
 # Column mapping for Pi-PrimeNovo TSV output.
 # - label       -> title (spectrum mapping via normalized title)
 # - prediction  -> sequence (transformed to ProForma in transform_df)

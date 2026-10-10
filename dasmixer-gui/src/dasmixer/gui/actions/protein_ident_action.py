@@ -7,6 +7,7 @@ from dasmixer.api.calculations.proteins.map_identifications import (
     find_protein_identifications,
 )
 from dasmixer.api.project.project import Project
+
 from dasmixer.utils import logger
 
 from .base import BaseAction

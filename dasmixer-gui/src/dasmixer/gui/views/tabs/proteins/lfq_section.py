@@ -2,10 +2,11 @@
 
 
 import flet as ft
-from dasmixer.api.calculations.proteins.sempai import SUPPORTED_ENZYMES
 from dasmixer.gui.views.tabs.proteins.dialogs.lfq_abs_references_dialog import (
     LFQAbsReferencesDialog,
 )
+
+from dasmixer.api.calculations.proteins.sempai import SUPPORTED_ENZYMES
 from dasmixer.utils import logger
 
 from .base_section import BaseSection

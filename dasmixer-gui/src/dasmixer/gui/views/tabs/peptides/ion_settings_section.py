@@ -2,6 +2,7 @@
 
 import flet as ft
 from dasmixer.api.calculations.spectra.ion_match import IonMatchParameters
+
 from dasmixer.utils import logger
 
 from .base_section import BaseSection

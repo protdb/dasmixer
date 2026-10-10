@@ -9,7 +9,6 @@ import pickle
 from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
-from dataclasses import asdict as _dataclass_asdict
 from typing import TYPE_CHECKING
 
 import pandas as pd
@@ -200,6 +199,7 @@ class BaseReport(ABC):
         ``self.name_template``.
         """
         from datetime import datetime
+
         from dasmixer.utils.logger import logger
 
         now = datetime.now()
@@ -327,7 +327,7 @@ class BaseReport(ABC):
         project_settings = json.loads(row['project_settings']) if row['project_settings'] else None
         tools_settings = json.loads(row['tools_settings']) if row['tools_settings'] else None
         report_settings = json.loads(row['report_settings']) if row['report_settings'] else None
-        report_display_name = row['name'] if 'name' in row.keys() else None
+        report_display_name = row.get('name')
         
         # Create instance
         return cls(

@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 from dasmixer.api.reporting._icons import Icons
-
 from dasmixer.api.reporting.base import BaseReport
 
 if TYPE_CHECKING:

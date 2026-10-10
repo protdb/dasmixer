@@ -1,8 +1,13 @@
 """GUI form for PCA ROC-AUC Report. Imported only when dasmixer-gui is installed."""
 from dasmixer.gui.components.report_form import (
-    ReportForm, MultiSubsetSelector, EnumSelector, LFQSelector,
-    BoolSelector, IntSelector,
+    BoolSelector,
+    EnumSelector,
+    IntSelector,
+    LFQSelector,
+    MultiSubsetSelector,
+    ReportForm,
 )
+
 from .params import PCAReportParams
 
 

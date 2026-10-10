@@ -7,7 +7,6 @@ from functools import lru_cache
 from pathlib import Path
 
 import typer
-
 from dasmixer.utils.logger import logger
 from dasmixer.versions import APP_VERSION
 

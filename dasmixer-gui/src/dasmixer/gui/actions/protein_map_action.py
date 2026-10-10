@@ -7,6 +7,7 @@ from dasmixer.api.calculations.peptides.protein_map import map_proteins
 from dasmixer.api.config import config as _config
 from dasmixer.api.project.project import Project
 from dasmixer.gui.views.tabs.peptides.shared_state import PeptidesTabState
+
 from dasmixer.utils import logger
 
 from .base import BaseAction
@@ -97,7 +98,7 @@ class MatchProteinsAction(BaseAction):
                     f"Processed {processed} identifications",
                 )
 
-            stop_check = lambda: dialog.stop_requested  # noqa: E731
+            stop_check = lambda: dialog.stop_requested
 
             await map_proteins(
                 self.project,

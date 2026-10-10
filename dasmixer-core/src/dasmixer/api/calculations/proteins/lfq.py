@@ -1,8 +1,9 @@
 from typing import Literal
 
 import pandas as pd
-from dasmixer.api.project import Project
 from dasmixer.utils.logger import logger
+
+from dasmixer.api.project import Project
 
 from .sempai import DigestionParams, Protein, ProteomicSample
 

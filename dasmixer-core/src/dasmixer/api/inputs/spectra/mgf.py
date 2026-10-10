@@ -5,10 +5,11 @@ from collections.abc import AsyncIterator
 
 import numpy as np
 import pandas as pd
-from dasmixer.utils import logger
 from dasmixer.utils.exceptions import SpectraScansNotFoundException
-from pyteomics.auxiliary.structures import PyteomicsError, Charge
+from pyteomics.auxiliary.structures import Charge, PyteomicsError
 from pyteomics.mgf import MGF
+
+from dasmixer.utils import logger
 
 from .base import SpectralDataParser
 

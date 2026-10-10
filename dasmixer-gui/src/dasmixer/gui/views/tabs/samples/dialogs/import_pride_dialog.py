@@ -6,8 +6,9 @@ import flet as ft
 from dasmixer.api.inputs.registry import registry
 from dasmixer.api.project.project import Project
 from dasmixer.gui.utils import show_snack
-from dasmixer.utils import logger
 from dasmixer.utils.exceptions import DasmixerNetworkException
+
+from dasmixer.utils import logger
 
 # ---------------------------------------------------------------------------
 # Lazy PRIDE module loading (pridepy may not be installed)
@@ -41,7 +42,7 @@ def _load_pride_module():
                 "PrideImportProgress": PrideImportProgress,
                 "run_pride_import": run_pride_import,
             }
-        except Exception as e:  # noqa: BLE001 — pridepy may be missing entirely
+        except Exception as e:
             _pride_import_error = e
     return _pride_module, _pride_import_error
 
@@ -81,7 +82,7 @@ class ImportPrideDialog:
 
     async def show(self):
         """Open the dialog and show screen 1 (or an error if pridepy missing)."""
-        module, err = _load_pride_module()
+        _module, err = _load_pride_module()
         if err is not None:
             self.dialog.content = ft.Text(
                 "PRIDE import is unavailable: pridepy not installed. "
@@ -230,7 +231,7 @@ class ImportPrideDialog:
             label="Spectra parser",
             options=[
                 ft.DropdownOption(key=name)
-                for name in registry.get_spectra_parsers().keys()
+                for name in registry.get_spectra_parsers()
             ],
             value="MGF",
             expand=1,
@@ -301,7 +302,7 @@ class ImportPrideDialog:
 
         def _build_per_sample_mapping_area():
             rows = []
-            for spectra_name, cb in self._spectra_checkboxes.items():
+            for spectra_name in self._spectra_checkboxes:
                 matched = _match_ident_by_stem(spectra_name)
                 ident_dropdown = ft.Dropdown(
                     options=[ft.DropdownOption(key=f.name) for f in dataset.ident_files],

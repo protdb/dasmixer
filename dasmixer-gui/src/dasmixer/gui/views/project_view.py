@@ -2,6 +2,7 @@
 
 import flet as ft
 from dasmixer.api.project.project import Project
+
 from dasmixer.utils import logger
 
 # Tab definitions: (label, icon, factory_import_path, factory_class_name)

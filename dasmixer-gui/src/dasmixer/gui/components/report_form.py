@@ -335,7 +335,7 @@ class ReportForm(_CoreReportForm):
         values = form.get_values()        # dict for _generate_impl
     """
 
-    params_class: type["ReportParams"] | None = None
+    params_class: type[ReportParams] | None = None
 
     def __init__(self, project: Project):
         super().__init__(project)

@@ -16,8 +16,8 @@ Results are written directly into the project database in batches.
 import asyncio
 import math
 import os
+from collections.abc import Callable
 from concurrent.futures import ProcessPoolExecutor
-from typing import Callable
 
 try:
     import npysearch as npy
@@ -25,14 +25,15 @@ except ImportError:  # pragma: no cover
     npy = None  # type: ignore[assignment]
 
 import pandas as pd
-from dasmixer.api import Project
-from dasmixer.api.calculations.ppm import SeqFixer
 from dasmixer.api.calculations.peptides.protein_map_worker import process_protein_map_row
 from dasmixer.api.config import config as _config
 from dasmixer.utils.exceptions import DasmixerException
 from dasmixer.utils.lic import get_leucine_combinations
 from dasmixer.utils.logger import logger
 from dasmixer.utils.seqfixer_utils import DEFAULT_PTM_CODES, PTMS, FixedPTM
+
+from dasmixer.api import Project
+from dasmixer.api.calculations.ppm import SeqFixer
 
 # ---------------------------------------------------------------------------
 # Internal helpers

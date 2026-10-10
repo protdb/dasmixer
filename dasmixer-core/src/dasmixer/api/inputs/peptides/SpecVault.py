@@ -1,7 +1,6 @@
 import pandas as pd
-from pyteomics.proforma import parse
 from dasmixer.api.inputs.peptides.table_importer import ColumnRenames, SimpleTableImporter
-from dasmixer.api.inputs.registry import registry
+from pyteomics.proforma import parse
 
 renames = ColumnRenames(
     seq_no="query_identifier",

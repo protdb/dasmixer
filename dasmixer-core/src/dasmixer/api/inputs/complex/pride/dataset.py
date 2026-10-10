@@ -1,13 +1,14 @@
-import shutil
-
-from pridepy.project.project import Project
-from pridepy.download.client import Client
-from requests.exceptions import ConnectionError
-from dasmixer.utils.exceptions import DasmixerException, DasmixerNetworkException
-from dasmixer.api.config import get_pxd_temp_dir
-import os
 import gzip
+import os
+import shutil
 from pathlib import Path
+
+from dasmixer.api.config import get_pxd_temp_dir
+from dasmixer.utils.exceptions import DasmixerException, DasmixerNetworkException
+from pridepy.download.client import Client
+from pridepy.project.project import Project
+from requests.exceptions import ConnectionError
+
 
 class PrideDatasetNotFoundException(DasmixerException):
     pass

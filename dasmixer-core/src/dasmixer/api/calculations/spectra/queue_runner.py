@@ -11,8 +11,8 @@ from __future__ import annotations
 import asyncio
 import functools
 import logging
+from collections.abc import Awaitable, Callable
 from concurrent.futures import ProcessPoolExecutor
-from typing import Awaitable, Callable
 
 logger = logging.getLogger(__name__)
 
@@ -79,10 +79,8 @@ async def run_identification_queue(
         logger.debug("run_identification_queue: empty input, nothing to do")
         return 0
 
-    if chunk_size < 1:
-        chunk_size = 1
-    if flush_every < 1:
-        flush_every = 1
+    chunk_size = max(chunk_size, 1)
+    flush_every = max(flush_every, 1)
 
     chunks = [worker_dicts[i:i + chunk_size] for i in range(0, len(worker_dicts), chunk_size)]
 

@@ -746,10 +746,9 @@ def import_pride(
                 err=True,
             )
             raise typer.Exit(1)
-        from dasmixer.utils.exceptions import DasmixerNetworkException
-
         from dasmixer.api.config import config as app_config
         from dasmixer.api.project.project import Project
+        from dasmixer.utils.exceptions import DasmixerNetworkException
 
         try:
             dataset = PrideDataset(dataset_id)
