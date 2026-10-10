@@ -15,6 +15,7 @@ from dasmixer.api.calculations.spectra.ion_match import IonMatchParameters
 from dasmixer.api.config import config as _config
 from dasmixer.api.project.project import Project
 from dasmixer.gui.utils import show_snack
+
 from dasmixer.utils import logger
 
 from .dialogs.progress_dialog import ProgressDialog

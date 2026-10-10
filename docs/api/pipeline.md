@@ -362,21 +362,26 @@ Peptide identifications are searched against the protein database using
 NumPy backend).
 
 ```python
-async for matches_df, count, _tid in map_proteins(
+def _progress(processed: int, total: int) -> None:
+    # total is always -1 (unknown) from map_proteins
+    print(f"  Protein mapping: processed {processed} identifications")
+
+await map_proteins(
     project=project,
     tool_settings={tool.id: TOOL_MAP_SETTINGS},
     ion_params=ION_PARAMS,
     fragment_charges=FRAGMENT_CHARGES,
     seqfixer_params=SEQFIXER_PARAMS,
     batch_size=5000,
-):
-    if not matches_df.empty:
-        await project.add_peptide_matches_batch(matches_df)
-
+    progress_callback=_progress,
+)
+# map_proteins writes peptide matches into the project internally and
+# performs a final save; the extra save below is harmless but kept.
 await project.save()
 ```
 
-**What `map_proteins` does per batch:**
+**What `map_proteins` does per batch** (`map_proteins` is a plain async
+function, not a generator — it runs all batches internally):
 
 1. Fetches identifications from the database (filtered by `tool_id` and `max_ppm`).
 2. Builds a BLAST query from canonical sequences (with optional leucine/I combinatorics).
@@ -386,9 +391,14 @@ await project.save()
 5. For **identity < 1.0** (partial match): recalculates PPM and ion coverage using
    SeqFixer + `match_predictions`, and applies **match correction criteria** to
    decide whether to accept.
-6. Yields a `pd.DataFrame` ready for `add_peptide_matches_batch`.
+6. Writes the peptide matches into the project via
+   `add_peptide_matches_batch` internally and performs a final `save()` — the
+   caller passes a `progress_callback(processed, total)` (and optionally
+   `stop_check`) instead of iterating over yielded batches.
 
-The final `await project.save()` commits the accumulated peptide matches.
+Since `map_proteins` now writes the matches and saves the project itself, the
+trailing `await project.save()` in the example above is a harmless no-op kept
+for symmetry with the other steps.
 
 ---
 
@@ -763,16 +773,21 @@ async def run_pipeline(
         # ---------------------------------------------------------------
         # 10. Protein mapping (BLAST)
         # ---------------------------------------------------------------
-        async for matches_df, count, _tid in map_proteins(
+        def _progress(processed: int, total: int) -> None:
+            # total is always -1 (unknown) from map_proteins
+            print(f"  Protein mapping: processed {processed} identifications")
+
+        await map_proteins(
             project=project,
             tool_settings={tool.id: TOOL_MAP_SETTINGS},
             ion_params=ION_PARAMS,
             fragment_charges=FRAGMENT_CHARGES,
             seqfixer_params=SEQFIXER_PARAMS,
             batch_size=5000,
-        ):
-            if not matches_df.empty:
-                await project.add_peptide_matches_batch(matches_df)
+            progress_callback=_progress,
+        )
+        # map_proteins writes peptide matches into the project internally and
+        # performs a final save; the extra save below is harmless but kept.
         await project.save()
         print("[OK] Protein mapping completed")
 

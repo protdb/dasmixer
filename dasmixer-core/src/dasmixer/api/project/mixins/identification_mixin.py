@@ -637,3 +637,20 @@ class IdentificationMixin:
             (file_path,)
         )
         return dict(row) if row else None
+
+    async def get_identification_file_by_path_and_spectra(
+        self,
+        file_path: str,
+        spectra_file_id: int,
+    ) -> dict | None:
+        """
+        Find identification file by exact file path AND spectra file id.
+
+        Returns dict with identification_file fields, or None if not found.
+        Used by multi-file import, where one file maps to several spectra files.
+        """
+        row = await self._fetchone(
+            "SELECT * FROM identification_file WHERE file_path = ? AND spectre_file_id = ?",
+            (file_path, int(spectra_file_id)),
+        )
+        return dict(row) if row else None

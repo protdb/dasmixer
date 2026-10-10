@@ -17,6 +17,7 @@ from dasmixer.api.reporting.report_form import (
 
 if TYPE_CHECKING:
     from dasmixer.api.project.project import Project
+    from dasmixer.api.reporting.report_params import ReportParams
 
 
 # ---------------------------------------------------------------------------
@@ -124,6 +125,14 @@ class FloatSelector(ReportParamBase):
         )
         return self._control
 
+    def get_value(self) -> float:
+        if self._control is None:
+            return float(self.default)
+        try:
+            return float(self._control.value)
+        except (ValueError, TypeError):
+            return float(self.default)
+
 
 class IntSelector(ReportParamBase):
     """Text field for an integer parameter."""
@@ -139,6 +148,14 @@ class IntSelector(ReportParamBase):
             keyboard_type=ft.KeyboardType.NUMBER,
         )
         return self._control
+
+    def get_value(self) -> int:
+        if self._control is None:
+            return int(self.default)
+        try:
+            return int(self._control.value)
+        except (ValueError, TypeError):
+            return int(self.default)
 
 
 class SubsetSelector(ReportParamBase):
@@ -317,6 +334,8 @@ class ReportForm(_CoreReportForm):
         container = form.get_container()  # put in UI
         values = form.get_values()        # dict for _generate_impl
     """
+
+    params_class: type[ReportParams] | None = None
 
     def __init__(self, project: Project):
         super().__init__(project)

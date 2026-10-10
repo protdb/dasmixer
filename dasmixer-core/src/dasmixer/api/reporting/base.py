@@ -19,6 +19,7 @@ from ..project import Project
 if TYPE_CHECKING:
     import plotly.graph_objects as go
     from dasmixer.api.reporting.report_form import ReportForm
+    from dasmixer.api.reporting.report_params import ReportParams
 
 
 class BaseReport(ABC):
@@ -42,6 +43,12 @@ class BaseReport(ABC):
     # Typed parameter form class (set in subclasses to a ReportForm subclass).
     # When set, ReportItem will render a Parameters dialog instead of TextArea.
     parameters: type[ReportForm] | None = None
+
+    # Typed dataclass for report parameters (set in subclasses)
+    params_class: type[ReportParams] | None = None
+
+    # Default name template, e.g. "{date} {time}" (overridable in subclasses)
+    name_template: str = "{date} {time}"
     
     def __init__(
         self,
@@ -50,7 +57,8 @@ class BaseReport(ABC):
         tables: list[tuple[str, pd.DataFrame, bool]] | None = None,
         project_settings: dict | None = None,
         tools_settings: list[dict] | None = None,
-        report_settings: dict | None = None
+        report_settings: dict | None = None,
+        report_display_name: str | None = None,
     ):
         """
         Initialize report.
@@ -69,32 +77,12 @@ class BaseReport(ABC):
         self._project_settings = project_settings
         self._tools_settings = tools_settings
         self._report_settings = report_settings
-    
-    @staticmethod
-    def get_parameter_defaults() -> dict[str, tuple[type, str]]:
-        """
-        Get report parameters with defaults.
-        
-        Returns:
-            dict: {
-                'param_name': (type, 'default_value_as_string'),
-                ...
-            }
-            
-        Example:
-            {
-                'tool1': (str, 'PN2'),
-                'tool2': (str, 'MQ'),
-                'max_values': (int, '42'),
-                'include_plots': (str, 'Y')
-            }
-        """
-        return {}
-    
+        self._report_display_name = report_display_name
+
     @abstractmethod
     async def _generate_impl(
         self,
-        params: dict
+        params: ReportParams
     ) -> tuple[list[tuple[str, go.Figure]], list[tuple[str, pd.DataFrame, bool]]]:
         """
         Internal implementation of report generation.
@@ -110,99 +98,48 @@ class BaseReport(ABC):
                 - tables: list[tuple[name, dataframe, show_in_ui]]
         """
     
-    async def generate(self, params: dict) -> None:
+    async def generate(self, params: ReportParams) -> int:
         """
-        Generate report with validation and saving.
-        
-        Wrapper around _generate_impl() that:
-        1. Validates parameters
-        2. Collects context (project/tools settings)
-        3. Calls _generate_impl()
-        4. Applies settings to figures
-        5. Saves to database
+        Generate report and save to database.
         
         Args:
-            params: Parameters dict (raw from UI)
+            params: Typed parameters dataclass (from form.get_params())
             
-        Raises:
-            ValueError: If parameters are invalid
+        Returns:
+            int: ID of created record in generated_reports
         """
-        # 1. Validate parameters
-        validated_params = self._validate_parameters(params)
+        # 1. Compute display name
+        self._report_display_name = self.get_report_name(params)
         
         # 2. Collect context
         self._project_settings = await self._collect_project_settings()
         self._tools_settings = await self._collect_tools_settings()
-        self._report_settings = validated_params
         
-        # 3. Generate
-        plots, tables = await self._generate_impl(validated_params)
+        # 3. Serialise report_settings from dataclass
+        try:
+            from dataclasses import asdict as _asdict
+            self._report_settings = _asdict(params)
+        except TypeError:
+            # params is not a dataclass (e.g. dict) — use as-is
+            self._report_settings = dict(params) if isinstance(params, dict) else {}
         
-        # 4. Apply settings to figures
+        # 4. Generate
+        plots, tables = await self._generate_impl(params)
+        
+        # 5. Apply settings to figures
         plots_with_settings = [
             (name, self._apply_settings_to_figure(fig))
             for name, fig in plots
         ]
         
-        # 5. Save to memory
+        # 6. Save to memory
         self._plots = plots_with_settings
         self._tables = tables
         
-        # 6. Save to database
-        await self._save_to_db()
-    
-    def _validate_parameters(self, params: dict) -> dict:
-        """
-        Validate and convert parameter types.
+        # 7. Save to database (returns report_id)
+        report_id = await self._save_to_db()
+        return report_id
 
-        For reports that declare a ``parameters`` ReportForm class, the dict
-        coming from the UI already contains correctly-typed Python values
-        (int, float, bool, list[str] …) — no further conversion needed.
-        In that case the method just passes ``params`` through unchanged.
-
-        For legacy reports that still rely on ``get_parameter_defaults()``
-        (returning {name: (type, default_str)}) the old string-conversion
-        path is used.
-
-        Args:
-            params: Parameters dict from UI
-
-        Returns:
-            dict: Validated parameters with correct types
-
-        Raises:
-            ValueError: If a legacy parameter cannot be converted
-        """
-        # --- New path: report uses a typed ReportForm ---
-        if self.__class__.parameters is not None:
-            return dict(params)
-
-        # --- Legacy path: report uses get_parameter_defaults() ---
-        defaults = self.get_parameter_defaults()
-        validated = {}
-
-        for param_name, (param_type, default_value) in defaults.items():
-            raw_value = params.get(param_name, default_value)
-
-            try:
-                if param_type == int:
-                    validated[param_name] = int(raw_value)
-                elif param_type == float:
-                    validated[param_name] = float(raw_value)
-                elif param_type == str:
-                    validated[param_name] = str(raw_value)
-                elif param_type == bool:
-                    validated[param_name] = str(raw_value).lower() in ('true', '1', 'yes', 'y')
-                else:
-                    validated[param_name] = raw_value
-            except (ValueError, AttributeError) as e:
-                raise ValueError(
-                    f"Parameter '{param_name}': cannot convert '{raw_value}'"
-                    f" to {param_type.__name__}"
-                ) from e
-
-        return validated
-    
     async def _collect_project_settings(self) -> dict:
         """Collect project settings."""
         settings = await self.project.get_all_settings()
@@ -252,7 +189,58 @@ class BaseReport(ABC):
         fig.update_annotations(font_size=font_size)
         
         return fig
-    
+
+    def get_report_name(self, params: ReportParams) -> str:
+        """Compute report display name from template and dataclass fields.
+
+        Substitutes ``{field_name}``, ``{date}`` (YYMMDD), and ``{time}`` (HH:MM)
+        placeholders from the current datetime and all fields of *params*.
+        The template is taken from ``params.name_template``, falling back to
+        ``self.name_template``.
+        """
+        from datetime import datetime
+
+        from dasmixer.utils.logger import logger
+
+        now = datetime.now()
+        subst: dict[str, str] = {}
+
+        # Build substitution dict from params fields
+        if params is not None:
+            try:
+                from dataclasses import asdict
+                for k, v in asdict(params).items():
+                    if isinstance(v, (list, tuple)):
+                        v = "_".join(str(x) for x in v)
+                    subst[k] = str(v) if v is not None else ""
+            except TypeError:
+                # params is not a dataclass instance — treat as dict-like
+                if isinstance(params, dict):
+                    for k, v in params.items():
+                        if isinstance(v, (list, tuple)):
+                            v = "_".join(str(x) for x in v)
+                        subst[str(k)] = str(v) if v is not None else ""
+
+        subst['date'] = now.strftime('%y%m%d')
+        subst['time'] = now.strftime('%H:%M')
+
+        template = (
+            getattr(params, 'name_template', None)
+            if params is not None and not isinstance(params, dict)
+            else None
+        )
+        if not template:
+            template = self.name_template
+
+        try:
+            return template.format(**subst)
+        except (KeyError, IndexError):
+            logger.warning(
+                "Invalid name_template %r for report %r",
+                template, self.name,
+            )
+            return template
+
     async def _save_to_db(self) -> int:
         """
         Save report results to database.
@@ -282,11 +270,12 @@ class BaseReport(ABC):
         cursor = await self.project._execute(
             """
             INSERT INTO generated_reports 
-            (report_name, created_at, plots, tables, project_settings, tools_settings, report_settings)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            (report_name, name, created_at, plots, tables, project_settings, tools_settings, report_settings)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 self.name,
+                self._report_display_name,
                 now,
                 plots_blob,
                 tables_blob,
@@ -338,6 +327,7 @@ class BaseReport(ABC):
         project_settings = json.loads(row['project_settings']) if row['project_settings'] else None
         tools_settings = json.loads(row['tools_settings']) if row['tools_settings'] else None
         report_settings = json.loads(row['report_settings']) if row['report_settings'] else None
+        report_display_name = row.get('name')
         
         # Create instance
         return cls(
@@ -346,7 +336,8 @@ class BaseReport(ABC):
             tables=tables,
             project_settings=project_settings,
             tools_settings=tools_settings,
-            report_settings=report_settings
+            report_settings=report_settings,
+            report_display_name=report_display_name,
         )
     
     def get_context(self, show_parameters: bool = True) -> dict:
@@ -376,12 +367,23 @@ class BaseReport(ABC):
         
         return context
     
+    PROJECT_PARAMS_WHITELIST = [
+        'max_blast_accept', 'max_blast_reject', 'ion_types', 'water_loss',
+        'nh3_loss', 'ion_ppm_threshold', 'fragment_charges',
+        'ignore_spectre_charges', 'min_precursor_charge', 'max_precursor_charge',
+        'force_isotope_offset', 'max_isotope_offset', 'seq_criteria',
+        'proteins_min_peptides', 'proteins_min_unique_evidence', 'lfq_enzyme',
+        'lfq_min_peptide_length', 'lfq_max_peptide_length',
+        'lfq_max_cleavage_sites',
+    ]
+
     def _build_settings_context(self) -> dict:
         """Build settings section."""
         project_params = []
         if self._project_settings:
             for key, value in self._project_settings.items():
-                project_params.append({"key": key, "value": str(value)})
+                if key in self.PROJECT_PARAMS_WHITELIST:
+                    project_params.append({"key": key, "value": str(value)})
         
         tools = []
         if self._tools_settings:
@@ -466,38 +468,40 @@ class BaseReport(ABC):
         
         return html
     
-    async def export(self, output_path: Path | str) -> dict[str, Path]:
+    async def export(
+        self,
+        output_path: Path | str,
+        formats: set[str] | frozenset[str] = frozenset({'html', 'docx', 'xlsx'}),
+        xlsx_mode: str = 'all',
+    ) -> dict[str, Path]:
         """
         Export report to files.
         
         Args:
             output_path: Path to folder for saving
+            formats: set of formats to export ('html', 'docx', 'xlsx')
+            xlsx_mode: 'all' for all tables, 'large_only' for non-UI tables only
             
         Returns:
             dict: Paths to created files
-            
-        Creates:
-            - {report_name}-{datetime}.html
-            - {report_name}-{datetime}.docx
-            - {report_name}-{datetime}.xlsx
         """
         output_path = Path(output_path)
         output_path.mkdir(parents=True, exist_ok=True)
         
-        # Generate timestamp for filenames
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        base_filename = f"{self.name}-{timestamp}"
+        # Use the saved display name for filename (without timestamp)
+        report_name = self._report_display_name or self.name
+        base_filename = self._sanitize_filename(f"{self.name}_{report_name}")
         
-        # Export to all formats
-        html_path = await self._export_html(output_path, base_filename)
-        docx_path = await self._export_word(output_path, base_filename)
-        xlsx_path = await self._export_excel(output_path, base_filename)
+        result: dict[str, Path] = {}
         
-        return {
-            'html': html_path,
-            'docx': docx_path,
-            'xlsx': xlsx_path
-        }
+        if 'html' in formats:
+            result['html'] = await self._export_html(output_path, base_filename)
+        if 'docx' in formats:
+            result['docx'] = await self._export_word(output_path, base_filename)
+        if 'xlsx' in formats:
+            result['xlsx'] = await self._export_excel(output_path, base_filename, mode=xlsx_mode)
+        
+        return result
     
     async def _export_html(self, output_path: Path, base_filename: str) -> Path:
         """
@@ -556,7 +560,7 @@ class BaseReport(ABC):
         
         return output_file
     
-    async def _export_excel(self, output_path: Path, base_filename: str) -> Path:
+    async def _export_excel(self, output_path: Path, base_filename: str, mode: str = 'all') -> Path:
         """
         Export tables to Excel with each table on separate sheet.
         
@@ -577,11 +581,10 @@ class BaseReport(ABC):
         
         # Create Excel writer
         with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
-            for name, df, _ in self._tables:
-                # Sanitize sheet name (Excel has limitations)
+            for name, df, show_in_ui in self._tables:
+                if mode == 'large_only' and show_in_ui:
+                    continue  # Skip UI-visible tables; export only large/background tables
                 sheet_name = self._sanitize_sheet_name(name)
-                
-                # Write DataFrame to sheet
                 df.to_excel(writer, sheet_name=sheet_name, index=False)
         
         return output_file
@@ -612,3 +615,29 @@ class BaseReport(ABC):
             sanitized = sanitized[:31]
         
         return sanitized
+
+    @staticmethod
+    def _sanitize_filename(name: str) -> str:
+        """
+        Sanitize filename for NTFS/Windows.
+        
+        Removes characters invalid in NTFS filenames:
+        \\ / : * ? " < > |
+        Also replaces ':' with '-' before filtering for readability.
+        
+        Args:
+            name: Original filename
+            
+        Returns:
+            Sanitized filename
+        """
+        # Replace colon with dash first for readability
+        sanitized = name.replace(':', '-')
+        # Remove remaining invalid characters
+        invalid_chars = '\\/*?"<>|'
+        for char in invalid_chars:
+            sanitized = sanitized.replace(char, '_')
+        # Collapse multiple underscores
+        import re
+        sanitized = re.sub(r'_+', '_', sanitized)
+        return sanitized.strip()

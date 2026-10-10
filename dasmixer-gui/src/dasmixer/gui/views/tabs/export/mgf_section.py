@@ -8,6 +8,7 @@ from dasmixer.api.export.shared_state import ExportTabState
 from dasmixer.gui.components.progress_dialog import ProgressDialog
 from dasmixer.gui.components.sample_select_dialog import SampleSelectDialog
 from dasmixer.gui.utils import show_snack
+
 from dasmixer.utils import logger
 
 

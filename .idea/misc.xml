@@ -4,4 +4,7 @@
     <option name="sdkName" value="Poetry (dasmixer)" />
   </component>
   <component name="ProjectRootManager" version="2" project-jdk-name="Poetry (dasmixer)" project-jdk-type="Python SDK" />
+  <component name="ProjectType">
+    <option name="id" value="jpab" />
+  </component>
 </project>

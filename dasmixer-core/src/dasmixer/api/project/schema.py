@@ -234,6 +234,7 @@ CREATE INDEX IF NOT EXISTS idx_sample_status_cache ON sample_status_cache(sample
 CREATE TABLE IF NOT EXISTS generated_reports (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     report_name TEXT NOT NULL,
+    name            TEXT,
     created_at TEXT NOT NULL,
     plots BLOB,  -- pickle + gzip: list[tuple[str, go.Figure]]
     tables BLOB,  -- pickle + gzip: list[tuple[str, pd.DataFrame, bool]]

@@ -1,24 +1,16 @@
 """Protein mapping action."""
 
 import asyncio
-from typing import Any
 
 import flet as ft
 from dasmixer.api.calculations.peptides.protein_map import map_proteins
 from dasmixer.api.config import config as _config
 from dasmixer.api.project.project import Project
 from dasmixer.gui.views.tabs.peptides.shared_state import PeptidesTabState
+
 from dasmixer.utils import logger
 
 from .base import BaseAction
-
-
-async def _anext_or_none(gen) -> Any | None:
-    """Advance an async iterator, returning None on exhaustion."""
-    try:
-        return await gen.__anext__()
-    except StopAsyncIteration:
-        return None
 
 
 class MatchProteinsAction(BaseAction):
@@ -87,16 +79,9 @@ class MatchProteinsAction(BaseAction):
         from dasmixer.gui.views.tabs.peptides.dialogs.progress_dialog import (
             ProgressDialog,
         )
-        dialog = ProgressDialog(self.page, "Matching Proteins")
+        dialog = ProgressDialog(self.page, "Matching Proteins", stoppable=True)
         dialog.show()
         dialog.update_progress(0, "Mapping...")
-
-        total_matches = 0
-
-        async def _write_batch_and_commit(matches_df) -> None:
-            """Write peptide matches and lightweight-commit (no modified_at update)."""
-            await self.project.add_peptide_matches_batch(matches_df)
-            await self.project._commit()
 
         try:
             batch_size = _config.protein_mapping_batch_size
@@ -104,7 +89,18 @@ class MatchProteinsAction(BaseAction):
             use_src_protein_ids = any(
                 s.get('use_protein_from_file', False) for s in tool_settings.values()
             )
-            gen = map_proteins(
+
+            def _on_progress(processed: int, total: int) -> None:
+                # total is always -1 (unknown) from map_proteins — show indeterminate bar
+                dialog.update_progress(
+                    None,
+                    "Mapping...",
+                    f"Processed {processed} identifications",
+                )
+
+            stop_check = lambda: dialog.stop_requested
+
+            await map_proteins(
                 self.project,
                 tool_settings,
                 ion_params=ion_params,
@@ -113,35 +109,18 @@ class MatchProteinsAction(BaseAction):
                 batch_size=batch_size,
                 sample_id=sample_id,
                 use_src_protein_ids=use_src_protein_ids,
+                progress_callback=_on_progress,
+                stop_check=stop_check,
             )
 
-            # Prime: get first batch from generator
-            first_item = await _anext_or_none(gen)
-            if first_item is not None:
-                pending_df, pending_count, _ = first_item
+            if dialog.stop_requested:
+                dialog.complete("Stopped")
             else:
-                pending_df, pending_count = None, 0
-
-            while pending_df is not None:
-                # Overlap: write previous batch AND advance generator in parallel
-                write_task = asyncio.create_task(_write_batch_and_commit(pending_df))
-                next_task = asyncio.create_task(_anext_or_none(gen))
-                _, next_item = await asyncio.gather(write_task, next_task)
-
-                total_matches += pending_count
-                dialog.update_progress(None, "Mapping...", f"Mapped {total_matches} matches...")
-
-                if next_item is None:
-                    pending_df = None
-                else:
-                    pending_df, pending_count, _ = next_item
-
-            await self.project.save()
-            dialog.complete(f"Total: {total_matches}")
+                dialog.complete("Mapping complete")
             await asyncio.sleep(1)
             dialog.close()
 
-            self.show_success(f"Mapped {total_matches} matches")
+            self.show_success("Protein mapping completed")
 
         except Exception as ex:
             logger.exception(ex)

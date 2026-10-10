@@ -440,11 +440,11 @@ class ImportProjectMixin(ProjectBase):
             # 4.9 generated_reports
             b_gr = base_ids['generated_reports']
             await self._db.execute(f"""
-                INSERT INTO generated_reports (id, report_name, created_at,
+                INSERT INTO generated_reports (id, report_name, name, created_at,
                     plots, tables, project_settings, tools_settings,
                     report_settings)
                 SELECT gr.id + {b_gr},
-                       gr.report_name, gr.created_at, gr.plots, gr.tables,
+                       gr.report_name, gr.name, gr.created_at, gr.plots, gr.tables,
                        gr.project_settings, gr.tools_settings,
                        gr.report_settings
                 FROM src.generated_reports gr

@@ -6,12 +6,19 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 from dasmixer.api.reporting._icons import Icons
+from dasmixer.api.reporting.base import BaseReport
 from dasmixer.utils.logger import logger
 from sklearn.decomposition import PCA
 from sklearn.metrics import roc_auc_score
 from sklearn.preprocessing import StandardScaler, label_binarize
 
-from ..base import BaseReport
+from .params import PCAReportParams
+
+try:
+    from .form import PCAReportForm
+    _parameters = PCAReportForm
+except ImportError:
+    _parameters = None
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -343,7 +350,9 @@ class PCAReport(BaseReport):
     name = "PCA ROC-AUC"
     description = "PCA scatter plot and ROC/AUC curves colored by comparison group"
     icon = Icons.SCATTER_PLOT
-    parameters = None
+    params_class = PCAReportParams
+    parameters = _parameters
+    name_template = '{subsets} {lfq} {date} {time}'
 
     async def _fetch_quant_df(
         self, lfq_type: str, selected_subsets: list[str],
@@ -397,22 +406,22 @@ class PCAReport(BaseReport):
 
     async def _generate_impl(
         self,
-        params: dict,
+        params: PCAReportParams,
     ) -> tuple[list[tuple[str, go.Figure]], list[tuple[str, pd.DataFrame, bool]]]:
-        selected_subsets: list[str] = params.get("subsets", [])
+        selected_subsets: list[str] = params.subsets
         if isinstance(selected_subsets, str):
             selected_subsets = [s.strip() for s in selected_subsets.split(",") if s.strip()]
 
-        lfq_value = params.get("lfq", ("emPAI", "rel_value"))
+        lfq_value = params.lfq
         if not isinstance(lfq_value, (tuple, list)):
             lfq_value = (lfq_value, "rel_value")
         lfq_type = lfq_value[0]
         lfq_measure = lfq_value[1]
-        show_labels = params.get("show_labels", False)
-        include_outliers = bool(params.get("include_outliers", False))
+        show_labels = params.show_labels
+        include_outliers = params.include_outliers
         exclude_outliers = not include_outliers
-        group_by = params.get("group_by", "Sample")
-        top_n_proteins = int(params.get("top_n_proteins", 100))
+        group_by = params.group_by
+        top_n_proteins = params.top_n_proteins
 
         if group_by == "Protein":
             # --- Protein × Group mode ---
@@ -516,6 +525,6 @@ class PCAReport(BaseReport):
         )
 
 
-from ..registry import registry
+from dasmixer.api.reporting.registry import registry
 
 registry.register(PCAReport)

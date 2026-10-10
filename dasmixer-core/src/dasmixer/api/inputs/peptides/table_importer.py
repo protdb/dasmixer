@@ -45,6 +45,7 @@ class ColumnRenames:
     Attributes:
         scans: Source column name for scan numbers
         seq_no: Source column name for sequential spectrum numbers
+        title: Source column name for spectrum title
         sequence: Source column name for peptide sequence with modifications
         canonical_sequence: Source column name for sequence without modifications
         score: Source column name for identification score
@@ -58,6 +59,7 @@ class ColumnRenames:
     """
     scans: str | None = None
     seq_no: str | None = None
+    title: str | None = None
     sequence: str = ''
     canonical_sequence: str | None = None
     score: str | None = None
@@ -146,7 +148,7 @@ class TableImporter(IdentificationParser, ABC):
         """
         suffix = self.file_path.suffix.lower()
         
-        if suffix in ('.csv', '.txt'):
+        if suffix in ('.csv', '.txt', '.tsv'):
             sheet = TableSheet()
             sheet.no = 0
             sheet.name = None
@@ -207,7 +209,7 @@ class SimpleTableImporter(TableImporter):
             DataFrame with standard column names
             
         Raises:
-            ValueError: If neither scans nor seq_no can be mapped
+            ValueError: If none of scans/seq_no/title can be mapped
         """
 
         rename_cols = self.renames.mapping
@@ -216,10 +218,10 @@ class SimpleTableImporter(TableImporter):
         logger.debug(result)
         
         # Validate that at least one mapping column exists
-        if 'scans' not in result.columns and 'seq_no' not in result.columns:
+        if not ({"scans", "seq_no", "title"} & set(result.columns)):
             raise ValueError(
-                "Parser must provide at least one of 'scans' or 'seq_no' columns "
-                f"for spectrum mapping. Available columns: {list(df.columns)}"
+                "Parser must provide at least one of 'scans', 'seq_no' or 'title' "
+                f"columns for spectrum mapping. Available columns: {list(df.columns)}"
             )
         
         # Return only standard columns that exist

@@ -11,6 +11,7 @@ from dasmixer.api.project.project import Project
 from dasmixer.gui.components.merge_options_dialog import MergeOptionsDialog
 from dasmixer.gui.components.progress_dialog import ProgressDialog
 from dasmixer.gui.utils import cleanup_temp_html_files, get_asset_path, show_snack
+
 from dasmixer.utils import logger
 
 

@@ -1,6 +1,6 @@
 [project]
 name = "dasmixer-core"
-version = "0.7.3rc3"
+version = "0.7.4a1"
 description = "DASMixer core library — project API, calculations, and data import"
 authors = [
     {name = "gluck", email = "glucksistemi@gmail.com"}
@@ -42,8 +42,11 @@ proteins = [
     "npysearch >=1.3.1,<2.0.0 ; sys_platform != 'win32'",
     "npysearch-win >=1.3.1,<2.0.0 ; sys_platform == 'win32'",
 ]
+pride = [
+    "pridepy ==0.0.16",
+]
 all = [
-    "dasmixer-core[plotly,proteins]",
+    "dasmixer-core[plotly,proteins,pride]",
 ]
 
 [build-system]

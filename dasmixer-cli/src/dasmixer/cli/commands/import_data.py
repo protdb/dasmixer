@@ -705,3 +705,140 @@ def import_maxquant(
     except Exception as e:
         typer.echo(f"Error during MaxQuant import: {e}", err=True)
         raise typer.Exit(1)
+
+
+@app.command(name="pride")
+def import_pride(
+    project_path: str = typer.Argument(..., help="Path to .dasmix project file"),
+    dataset_id: str = typer.Argument(..., help="PRIDE dataset accession, e.g. PXD000001"),
+    tool_name: str = typer.Option("PRIDE Import", "--tool-name"),
+    subset_name: str = typer.Option("PRIDE Import", "--subset-name"),
+    spectra_parser: str = typer.Option("MGF", "--spectra-parser"),
+    ident_parser: str = typer.Option("mzTab", "--ident-parser"),
+    ident_mode: str = typer.Option("single", "--ident-mode", help="Import mode: 'single' (one mzTab for all) or 'per_sample' (one ident per spectra file, auto-matched by stem)"),
+    import_fasta: bool = typer.Option(False, "--import-fasta/--no-import-fasta"),
+    collect_proteins: bool = typer.Option(False, "--collect-proteins/--no-collect-proteins"),
+    delete_temp_files: bool = typer.Option(True, "--delete-temp-files/--keep-temp-files"),
+):
+    """
+    Import a PRIDE dataset into a DASMixer project.
+
+    Spectra and identification files are matched automatically via ms_run
+    location from the mzTab file (single mode) or by PrideFile.stem
+    (per_sample mode). If the project does not exist, it is created.
+
+    Example:
+        dasmixer-cli import pride project.dasmix PXD000001
+        dasmixer-cli import pride project.dasmix PXD000001 --ident-mode per_sample
+    """
+
+    async def _run():
+        try:
+            from dasmixer.api.inputs.complex.pride import (
+                PrideDataset,
+                PrideDatasetNotFoundException,
+                PrideImportOptions,
+                run_pride_import,
+            )
+        except ImportError:
+            typer.echo(
+                "Error: pridepy is not installed. Install it with `pip install dasmixer-core[pride]`.",
+                err=True,
+            )
+            raise typer.Exit(1)
+        from dasmixer.api.config import config as app_config
+        from dasmixer.api.project.project import Project
+        from dasmixer.utils.exceptions import DasmixerNetworkException
+
+        try:
+            dataset = PrideDataset(dataset_id)
+        except DasmixerNetworkException as e:
+            typer.echo(f"Error: no network connection. {e}", err=True)
+            raise typer.Exit(1)
+        except PrideDatasetNotFoundException as e:
+            typer.echo(f"Error: {e}", err=True)
+            raise typer.Exit(1)
+
+        project_file = Path(project_path)
+        create_new = not project_file.exists()
+
+        async with Project(path=project_file, create_if_not_exists=create_new) as project:
+            # Get or create subset
+            subsets = await project.get_subsets()
+            subset = next((s for s in subsets if s.name == subset_name), None)
+            if not subset:
+                subset = await project.add_subset(subset_name)
+
+            # Default selection: all .mgf spectra files
+            spectra_names = [f.name for f in dataset.spectra_files]
+            ident_names = [f.name for f in dataset.ident_files]
+            if not spectra_names:
+                typer.echo("Error: dataset has no .mgf spectra files.", err=True)
+                raise typer.Exit(1)
+            if not ident_names:
+                typer.echo("Error: dataset has no .mztab identification files.", err=True)
+                raise typer.Exit(1)
+
+            if ident_mode not in ("single", "per_sample"):
+                typer.echo(f"Error: unknown ident_mode '{ident_mode}'. Use 'single' or 'per_sample'.", err=True)
+                raise typer.Exit(1)
+
+            single_ident_file: str | None = None
+            ident_file_mapping: dict[str, str] = {}
+
+            if ident_mode == "single":
+                single_ident_file = ident_names[0]
+            else:
+                # Auto-map spectra to ident files by PrideFile.stem
+                ident_by_stem: dict[str, str] = {}
+                for ifile in dataset.ident_files:
+                    ident_by_stem[ifile.stem.lower()] = ifile.name
+                for sfile in dataset.spectra_files:
+                    matched = ident_by_stem.get(sfile.stem.lower())
+                    if matched is not None:
+                        ident_file_mapping[sfile.name] = matched
+                    else:
+                        typer.echo(
+                            f"Warning: no ident file matched for '{sfile.name}' (stem='{sfile.stem}')",
+                            err=True,
+                        )
+                if not ident_file_mapping:
+                    typer.echo("Error: could not match any spectra file to an ident file by stem.", err=True)
+                    raise typer.Exit(1)
+
+            options = PrideImportOptions(
+                dataset_id=dataset_id,
+                subset_id=subset.id,
+                spectra_parser=spectra_parser,
+                ident_parser=ident_parser,
+                ident_mode=ident_mode,
+                tool_name=tool_name,
+                selected_spectra_files=spectra_names,
+                ident_file_mapping=ident_file_mapping,
+                single_ident_file=single_ident_file,
+                import_fasta=import_fasta,
+                collect_proteins=collect_proteins,
+                delete_temp_files=delete_temp_files,
+            )
+
+            async def _progress(p):
+                typer.echo(f"  [{p.stage}] {p.message}")
+
+            summary = await run_pride_import(project, dataset, options, progress_callback=_progress)
+
+        typer.echo(f"Import complete: {summary['samples_processed']} sample(s), "
+                   f"{summary['spectra_imported']} spectra, "
+                   f"{summary['identifications_imported']} identifications")
+        if summary['fasta_files_imported']:
+            typer.echo(f"  FASTA files: {summary['fasta_files_imported']}")
+
+        if create_new:
+            app_config.add_recent_project(str(project_file))
+
+    try:
+        asyncio.run(_run())
+    except typer.Exit:
+        raise
+    except Exception as e:
+        typer.echo(f"Error during PRIDE import: {e}", err=True)
+        raise typer.Exit(1)

@@ -255,19 +255,29 @@ class SpectraMixin:
         
         Args:
             spectra_file_id: Spectra file ID to get mapping for
-            by: Field to use as key - "seq_no" or "scans"
+            by: Field to use as key - "seq_no", "scans" or "title"
             
         Returns:
-            Dict mapping seq_no/scans value to spectrum database ID
+            Dict mapping seq_no/scans/title value to spectrum database ID
             
         Raises:
             ValueError: If 'by' parameter is invalid
         """
         logger.debug(f'getting idlist: by {by} for id: {spectra_file_id}')
-        if by not in ("seq_no", "scans"):
+        if by not in ("seq_no", "scans", "title"):
             raise ValueError(
-                f"Invalid 'by' parameter: {by}. Must be 'seq_no' or 'scans'"
+                f"Invalid 'by' parameter: {by}. Must be 'seq_no', 'scans' or 'title'"
             )
+        
+        if by == "title":
+            query = """
+                SELECT id, LOWER(TRIM(title)) AS title
+                FROM spectre
+                WHERE spectre_file_id = ?
+                  AND title IS NOT NULL AND TRIM(title) <> ''
+            """
+            rows = await self._fetchall(query, (int(spectra_file_id),))
+            return [{'title': row['title'], 'spectre_id': row['id']} for row in rows]
         
         query = f"""
             SELECT id, {by}

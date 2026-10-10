@@ -1,8 +1,9 @@
 """Tool settings section for peptides tab."""
 
 import flet as ft
-from dasmixer.utils import logger
 from dasmixer.utils.seqfixer_utils import DEFAULT_PTM_CODES, PTMS
+
+from dasmixer.utils import logger
 
 from .base_section import BaseSection
 
@@ -593,7 +594,8 @@ class ToolSettingsSection(BaseSection):
         if not tool:
             raise ValueError(f"Tool {tool_id} not found")
 
-        # PTM list: store None if all PTMs selected (== default), else store list
+        # PTM list: store None if default PTMs selected, else store explicit list.
+        # Backend interprets None as DEFAULT_PTM_CODES (not all PTMs).
         ptm_selected: list[str] = controls['ptm_selected']
         ptm_list_to_save = None if set(ptm_selected) == set(_DEFAULT_PTM_CODES) else ptm_selected
 
@@ -654,7 +656,7 @@ class ToolSettingsSection(BaseSection):
         tool_settings = {}
         for tool_id, controls in self.state.tool_settings_controls.items():
             ptm_selected: list[str] = controls['ptm_selected']
-            # Pass None to pipeline if default PTMs selected (use full PTMS list)
+            # Pass None to pipeline if default PTMs selected (backend uses DEFAULT_PTM_CODES)
             ptm_list = None if set(ptm_selected) == set(_DEFAULT_PTM_CODES) else ptm_selected
 
             criteria_map = {

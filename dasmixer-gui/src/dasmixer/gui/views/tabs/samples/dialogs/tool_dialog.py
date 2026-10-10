@@ -6,6 +6,7 @@ from dasmixer.api.project.dataclasses import Tool
 from dasmixer.api.project.project import Project
 from dasmixer.gui.components.color_picker import ColorPickerField
 from dasmixer.gui.utils import show_snack
+
 from dasmixer.utils import logger
 
 from ..constants import get_default_color

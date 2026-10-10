@@ -141,12 +141,23 @@ api/
 │   ├── peptides/          # matching (preferred selection), protein_map (npysearch)
 │   ├── proteins/          # lfq, map_identifications, sempai/
 │   └── ppm/               # seqfixer, dataclasses
-└── reporting/
-    ├── base.py            # BaseReport ABC
-    ├── registry.py        # ReportRegistry
-    ├── _icons.py          # Mock Icons (no-flet fallback)
-    ├── report_form.py     # Abstract ReportForm (no-flet)
-    └── reports/           # PCA, Volcano, UpSet, Coverage, Sample, ToolMatch
+├── reporting/
+│   ├── base.py            # BaseReport (revised in 0.7.4a1)
+│   ├── registry.py        # ReportRegistry
+│   ├── report_form.py     # Abstract ReportForm (no-flet)
+│   ├── report_params.py   # ReportParams marker dataclass (0.7.4a1)
+│   ├── _icons.py          # Mock Icons (no-flet fallback)
+│   └── templates/
+│       └── report.html.j2
+└── reports/               # Built-in concrete reports (0.7.4a1)
+    ├── __init__.py
+    ├── coverage_report/   # ToolCoverageReport
+    ├── median_report/     # MedianReport
+    ├── pca_report/        # PCAReport
+    ├── sample_report/     # SampleReport
+    ├── tool_match_report/ # ToolMatchReport
+    ├── upset_report/      # UpsetReport
+    └── volcano_report/    # VolcanoReport
 ```
 
 ### `dasmixer-gui/src/dasmixer/gui/`
@@ -309,16 +320,25 @@ registry.add_spectra_parser("MGF", MGFParser)
 ### In code (API-side)
 
 ```python
+from dataclasses import dataclass
 from dasmixer.api.reporting._icons import Icons
 from dasmixer.api.reporting.base import BaseReport
+from dasmixer.api.reporting.report_params import ReportParams
+
+@dataclass
+class MyReportParams(ReportParams):
+    threshold: float = 0.5
+    name_template: str = "{date} {time}"
 
 class MyReport(BaseReport):
     name = "My Report"
     description = "..."
     icon = Icons.REPORT           # works without flet installed
-    parameters = None             # set by GUI-side monkey-patch
+    params_class = MyReportParams
+    name_template = "{date} {time}"
 
-    async def _generate_impl(self, params: dict) -> tuple[list, list]:
+    async def _generate_impl(self, params: MyReportParams) -> tuple[list, list]:
+        threshold = params.threshold  # typed access
         plots = [("Plot name", go.Figure(...))]
         tables = [("Table name", df, True)]
         return plots, tables
@@ -326,20 +346,32 @@ class MyReport(BaseReport):
 
 Register:
 ```python
-from dasmixer.api.reporting.registry import registry
-registry.register(MyReport)
+# Auto-registration via dasmixer/reports/__init__.py
+from .my_report import MyReport  # triggers registry.register(...)
 ```
 
-### In code (GUI-side) — `gui/reports/forms.py`
+### In code (GUI-side) — `dasmixer/reports/my_report/form.py`
 
 ```python
-from dasmixer.gui.components.report_form import ReportForm, BoolSelector, IntSelector
+# form.py (inside dasmixer/reports/my_report/)
+from dasmixer.gui.components.report_form import ReportForm, FloatSelector, BoolSelector
+from .params import MyReportParams
 
 class MyForm(ReportForm):
+    params_class = MyReportParams
     threshold = FloatSelector(default=0.05)
     show_labels = BoolSelector(default=True)
 
-MyReport.parameters = MyForm  # monkey-patch at startup
+# In report.py:
+try:
+    from .form import MyForm
+    _parameters = MyForm
+except ImportError:
+    _parameters = None
+
+class MyReport(BaseReport):
+    ...
+    parameters = _parameters
 ```
 
 ---
@@ -407,7 +439,24 @@ error-prone and must be avoided.
 8. **Do not generate test data** — test data is provided by the developer.
 9. **Flet 0.80.5 API** — see notes above.
 10. **Namespace packages**: directories `src/dasmixer/` in each subpackage must NOT contain `__init__.py`.
-11. **Core reports** must not import from `dasmixer.gui.*`. Use `dasmixer.api.reporting._icons` for icons, set `parameters = None`.
+11. **Core-reports and GUI imports (0.7.4a1 exception).** Reports are now
+    structured as `dasmixer/reports/<name>/report.py` (core-side) with an
+    adjacent `form.py` that may import from `dasmixer.gui.components.report_form`
+    under a `try/except ImportError` guard (see rule #11.1 below).
+    The report class remains usable without the GUI because `form.py` is
+    only imported inside `report.py`'s own `try/except ImportError` block.
+    The old blanket prohibition "Core reports must not import from
+    `dasmixer.gui.*`" is replaced by this narrower rule.
+
+11.1. **Core reports and GUI imports** — file `form.py` located inside
+    `dasmixer/reports/<name>/` (which physically lives in the core tree)
+    is allowed to import `dasmixer.gui.components.report_form` **inside a
+    `try/except ImportError` block in `report.py`**. The report class itself
+    (in `report.py`) and all other core code continue to respect the rule
+    "no import from `dasmixer.gui.*`". The `try/except` is placed in
+    `report.py` (not in `form.py`) so that a single guard covers the whole
+    form import; `form.py` contains a plain (unguarded) import of the GUI
+    form classes for clarity.
 12. **pyproject.toml** changes: use path dependencies in `[tool.poetry.dependencies]` for local dev (`{path = "..", develop = true}`), keep `[project.dependencies]` for PyPI versions.
 13. **Batch entry point naming:** the public batch function in
     `dasmixer.api.calculations.spectra.identification_processor` is

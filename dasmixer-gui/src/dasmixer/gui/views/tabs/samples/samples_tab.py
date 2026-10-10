@@ -2,6 +2,7 @@
 
 import flet as ft
 from dasmixer.api.project.project import Project
+
 from dasmixer.utils import logger
 
 from .dialogs.import_mode_dialog import ImportModeDialog
@@ -11,6 +12,7 @@ from .groups_section import GroupsSection
 from .import_handlers import ImportHandlers
 from .import_section import ImportSection
 from .maxquant_import_section import MaxQuantImportSection
+from .pride_import_section import PrideImportSection
 from .samples_summary_section import SamplesSummarySection
 from .shared_state import SamplesTabState
 from .tools_section import ToolsSection
@@ -72,6 +74,10 @@ class SamplesTab(ft.Container):
         sections['import_maxquant'] = MaxQuantImportSection(self.project, self.state, self)
         logger.debug("import_maxquant...")
         
+        # PRIDE import section
+        sections['import_pride'] = PrideImportSection(self.project, self.state, self)
+        logger.debug("import_pride...")
+        
         # Tools section
         sections['tools'] = ToolsSection(self.project, self.state, self)
         logger.debug("tools...")
@@ -94,6 +100,7 @@ class SamplesTab(ft.Container):
             ft.Row([
                 ft.Container(content=self.sections['import'], expand=True),
                 ft.Container(content=self.sections['import_maxquant'], expand=True),
+                ft.Container(content=self.sections['import_pride'], expand=True),
             ], spacing=10),
             ft.Container(height=10),
             
@@ -234,6 +241,7 @@ class SamplesTab(ft.Container):
             on_single_files_callback=lambda: self._on_import_identifications_single(tool_id),
             on_pattern_callback=lambda: self._on_import_identifications_pattern(tool_id),
             on_stacked_callback=lambda: self._on_import_identifications_stacked(tool_id),
+            on_multifile_callback=lambda: self._on_import_identifications_multifile(tool_id),
         )
         await dialog.show()
     
@@ -269,7 +277,18 @@ class SamplesTab(ft.Container):
             on_import_callback=self.import_handlers.import_identification_files_stacked,
         )
         await dialog.show()
-    
+
+    async def _on_import_identifications_multifile(self, tool_id: int):
+        """Handle multi-file mzTab import for identifications."""
+        from .dialogs.import_multifile_dialog import ImportMzTabDialog
+        dialog = ImportMzTabDialog(
+            self.project,
+            self.page,
+            tool_id=tool_id,
+            on_import_callback=self.import_handlers.import_identification_files_multifile,
+        )
+        await dialog.show()
+
     def show_import_maxquant(self):
         """Show MaxQuant import dialog."""
         self.page.run_task(self._show_import_maxquant_dialog)
@@ -278,6 +297,19 @@ class SamplesTab(ft.Container):
         """Show the MaxQuant import dialog."""
         from .dialogs.import_maxquant_dialog import ImportMaxQuantDialog
         dialog = ImportMaxQuantDialog(
+            self.project, self.page,
+            on_complete_callback=self._on_import_complete,
+        )
+        await dialog.show()
+
+    def show_import_pride(self):
+        """Show PRIDE import dialog."""
+        self.page.run_task(self._show_import_pride_dialog)
+
+    async def _show_import_pride_dialog(self):
+        """Show the PRIDE dataset import dialog."""
+        from .dialogs.import_pride_dialog import ImportPrideDialog
+        dialog = ImportPrideDialog(
             self.project, self.page,
             on_complete_callback=self._on_import_complete,
         )

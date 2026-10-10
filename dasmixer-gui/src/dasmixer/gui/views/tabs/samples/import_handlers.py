@@ -7,6 +7,7 @@ from dasmixer.api.config import config as _config
 from dasmixer.api.inputs.registry import registry
 from dasmixer.api.project.project import Project
 from dasmixer.gui.utils import show_snack
+
 from dasmixer.utils import logger
 
 
@@ -557,5 +558,195 @@ class ImportHandlers:
             logger.exception(ex)
             progress_dialog.open = False
             self.page.update()
+            show_snack(self.page, f"Import error: {ex!s}", ft.Colors.RED_400)
+            self.page.update()
+
+    async def import_identification_files_multifile(
+        self,
+        file_path,
+        tool_id: int,
+        collect_proteins: bool = False,
+        is_uniprot_proteins: bool = False,
+        on_duplicates: str = "skip",
+    ):
+        """Import a multi-file mzTab identification file.
+
+        One file maps to several spectra files via ms_run locations. A separate
+        identification_file record is created per resolved ms_run; each batch is
+        grouped by (spectra_file_id, ms_run_index) and merged with the matching
+        spectra mapping before saving.
+        """
+        from pathlib import Path
+
+        progress_text = ft.Text("Preparing import...")
+        progress_bar = ft.ProgressBar(value=0)
+        progress_details = ft.Text("", size=11, color=ft.Colors.GREY_600)
+
+        progress_dialog = ft.AlertDialog(
+            title=ft.Text("Importing Multi-file Identifications"),
+            content=ft.Column([
+                progress_text,
+                progress_bar,
+                ft.Container(height=5),
+                progress_details,
+            ], tight=True, width=400),
+            modal=True,
+        )
+        self.page.overlay.append(progress_dialog)
+        progress_dialog.open = True
+        self.page.update()
+
+        try:
+            tool = await self.project.get_tool(tool_id)
+            if not tool:
+                raise ValueError(f"Tool with id={tool_id} not found")
+
+            parser_class = registry.get_parser(tool.parser, "identification")
+
+            parser = parser_class(
+                str(file_path),
+                collect_proteins=collect_proteins,
+                is_uniprot_proteins=is_uniprot_proteins,
+            )
+            if parser.require_project:
+                parser.project = self.project
+
+            is_valid = await parser.validate()
+            if not is_valid:
+                progress_dialog.open = False
+                self.page.update()
+                show_snack(
+                    self.page,
+                    f"Invalid file format: {Path(file_path).name}",
+                    ft.Colors.RED_400,
+                )
+                self.page.update()
+                return
+
+            ms_run_spectra: dict[int, int] = getattr(parser, "ms_run_spectra", {}) or {}
+            if not ms_run_spectra:
+                progress_dialog.open = False
+                self.page.update()
+                show_snack(
+                    self.page,
+                    "No ms_run locations resolved to spectra files",
+                    ft.Colors.RED_400,
+                )
+                self.page.update()
+                return
+
+            # Duplicate policy + one identification_file per resolved ms_run.
+            # targets: ms_run_idx -> (spectra_file_id, ident_file_id)
+            targets: dict[int, tuple[int, int]] = {}
+            skipped_count = 0
+            for ms_run_idx, spectra_file_id in sorted(ms_run_spectra.items()):
+                existing_if = await self.project.get_identification_file_by_path_and_spectra(
+                    str(file_path), int(spectra_file_id)
+                )
+                if existing_if is not None:
+                    if on_duplicates == "skip":
+                        skipped_count += 1
+                        continue
+                    elif on_duplicates == "reload":
+                        await self.project.delete_identification_file(existing_if['id'])
+                    # "add_as_new": create a new record below
+
+                ident_file_id = await self.project.add_identification_file(
+                    spectra_file_id=int(spectra_file_id),
+                    tool_id=tool.id,
+                    file_path=str(file_path),
+                    selection_field="mz_run",
+                    selection_field_value=str(ms_run_idx),
+                )
+                targets[ms_run_idx] = (int(spectra_file_id), ident_file_id)
+
+            if not targets:
+                progress_dialog.open = False
+                self.page.update()
+                show_snack(
+                    self.page,
+                    f"{skipped_count} ms_run(s) skipped (already imported)",
+                    ft.Colors.ORANGE_400,
+                )
+                self.page.update()
+                return
+
+            # Spectra mapping per target spectra file.
+            mappings: dict[int, list[dict]] = {}
+            for spectra_file_id, _ in targets.values():
+                if spectra_file_id not in mappings:
+                    mappings[spectra_file_id] = await self.project.get_spectra_idlist(
+                        spectra_file_id, by=parser.spectra_id_field
+                    )
+
+            batch_size = _config.identification_batch_size
+            total_identifications = 0
+            async for batch in parser.parse_batch(batch_size=batch_size):
+                for key, group in batch.groupby(["spectra_file_id", "ms_run_index"]):
+                    spectra_file_id, ms_run_idx = int(key[0]), int(key[1])
+                    if ms_run_idx not in targets:
+                        continue
+                    mapping = mappings.get(spectra_file_id)
+                    if mapping is None:
+                        continue
+                    merged = pd.merge(
+                        group,
+                        pd.json_normalize(mapping),
+                        on=parser.spectra_id_field,
+                        how="inner",
+                    )
+                    if len(merged) == 0:
+                        continue
+                    merged["tool_id"] = tool.id
+                    merged["ident_file_id"] = targets[ms_run_idx][1]
+                    await self.project.add_identifications_batch(merged)
+                    total_identifications += len(merged)
+
+            # Save proteins collected during parsing.
+            if collect_proteins and parser.contain_proteins and parser.proteins:
+                proteins_df = pd.DataFrame([
+                    p.to_dict() for p in parser.proteins.values()
+                ])
+                proteins_df['is_uniprot'] = 1 if is_uniprot_proteins else 0
+                await self._save_proteins_batch(proteins_df)
+
+            if skipped_count > 0:
+                show_snack(
+                    self.page,
+                    f"{skipped_count} ms_run(s) skipped (already imported)",
+                    ft.Colors.ORANGE_400,
+                )
+                self.page.update()
+
+            progress_bar.value = 1.0
+            progress_text.value = "Import complete!"
+            progress_details.value = f"Total: {total_identifications} identifications"
+            progress_bar.update()
+            progress_text.update()
+            progress_details.update()
+
+            import asyncio
+            await asyncio.sleep(1)
+            progress_dialog.open = False
+            self.page.update()
+
+            show_snack(
+                self.page,
+                f"Successfully imported {total_identifications} identifications",
+                ft.Colors.GREEN_400,
+            )
+            self.page.update()
+
+            if self.on_complete_callback:
+                await self.on_complete_callback()
+
+        except Exception as ex:
+            logger.exception(ex)
+            import traceback
+            logger.debug(f"Import error: {traceback.format_exc()}")
+
+            progress_dialog.open = False
+            self.page.update()
+
             show_snack(self.page, f"Import error: {ex!s}", ft.Colors.RED_400)
             self.page.update()

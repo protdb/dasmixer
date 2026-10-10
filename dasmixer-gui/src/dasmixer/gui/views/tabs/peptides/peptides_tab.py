@@ -3,6 +3,7 @@
 import flet as ft
 from dasmixer.api.project.project import Project
 from dasmixer.gui.components.base_table_and_plot_view import BaseTableAndPlotView
+
 from dasmixer.utils import logger
 
 from .actions_section import ActionsSection
