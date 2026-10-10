@@ -32,7 +32,8 @@ class MGFFixFloatSpectra(MGF):
 
 TITLE_SCANS_REGEXP_LIST: list[re.Pattern] = [
     re.compile(r'scans?=(\d+)', re.IGNORECASE), # Generic MGF SCANS field in header
-    re.compile(r'lepeakid:(\d+)', re.IGNORECASE) # PLGS LePeakID format
+    re.compile(r'lepeakid:(\d+)', re.IGNORECASE), # PLGS LePeakID format
+    re.compile(r'spectrum[:=](\d+)', re.IGNORECASE), # Spectrum (old Mascot format from PRIDE
 ]
 
 class MGFParser(SpectralDataParser):

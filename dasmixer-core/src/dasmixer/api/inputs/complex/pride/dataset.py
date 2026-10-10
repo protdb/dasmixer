@@ -31,6 +31,13 @@ class PrideFile:
         else:
             self._client = Client()
 
+    @property
+    def stem(self) -> str:
+        max_split = 2 if self._compressed else 1
+        return self.name.rsplit('.', maxsplit=max_split)[0]
+
+
+
     def download_file(self) -> Path:
         dataset_path = get_pxd_temp_dir() / self.dataset_id
         file_path = dataset_path / self.name

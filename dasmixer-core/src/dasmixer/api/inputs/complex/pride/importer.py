@@ -205,7 +205,25 @@ async def run_pride_import(
 
     ident_parser_class = registry.get_parser(options.ident_parser, "identification")
 
-    if options.ident_mode == "single":
+    # Determine the effective import approach.
+    # In "single" mode with only one ms_run, fall back to per-sample
+    # import (one ident file per spectra file) so that the MzTab parser's
+    # _ignore_ms_run optimization binds all identifications to the given
+    # spectra_file_id.
+    use_multifile = options.ident_mode == "single"
+    if use_multifile:
+        _probe = ident_parser_class(
+            str(local_paths[options.single_ident_file]),
+            collect_proteins=False,
+            is_uniprot_proteins=False,
+        )
+        if _probe.require_project:
+            _probe.project = project
+        _probe._read_mtd()
+        if len(_probe.ms_run_locations) == 1:
+            use_multifile = False
+
+    if use_multifile:
         # Mirror import_identification_files_multifile: one mzTab with
         # several ms_run locations, one identification_file per ms_run.
         await _progress("identifications", f"Parsing {options.single_ident_file}...")
@@ -274,9 +292,20 @@ async def run_pride_import(
             logger.info("Saved %d proteins from identification file", len(parser.proteins))
 
     else:
-        # Mirror import_identification_files: one ident file per spectra file.
-        total_idents = len(options.ident_file_mapping)
-        for i, (spectra_name, ident_name) in enumerate(options.ident_file_mapping.items()):
+        # Per-sample import: one ident file per spectra file.
+        # Used both for "per_sample" mode and for "single" mode when the
+        # mzTab has only one ms_run (the _ignore_ms_run optimization in
+        # MzTabImporter binds all rows to the given spectra_file_id).
+        if options.ident_mode == "single":
+            ident_mapping = {
+                name: options.single_ident_file
+                for name in spectra_file_id_by_name
+            }
+        else:
+            ident_mapping = options.ident_file_mapping
+
+        total_idents = len(ident_mapping)
+        for i, (spectra_name, ident_name) in enumerate(ident_mapping.items()):
             await _progress(
                 "identifications",
                 f"Importing identifications for {spectra_name} ({i + 1}/{total_idents})...",

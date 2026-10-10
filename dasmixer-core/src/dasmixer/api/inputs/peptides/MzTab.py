@@ -18,7 +18,7 @@ from .base import IdentificationParser
 _MOD_PARAM_RE = re.compile(
     r"^\s*\[\s*([^,]*),\s*([^,]*),\s*([^,]*),\s*([^\]]*)\]\s*$"
 )
-_SPECTRA_REF_RE = re.compile(r"ms_run\[(\d+)\]\s*[:\-]\s*(scan|index)=(\d+)")
+_SPECTRA_REF_RE = re.compile(r"ms_run\[(\d+)\]\s*[:\-]\s*(scan|index|spectrum)=(\d+)")
 _LOCATION_KEY_RE = re.compile(r"ms_run\[(\d+)\][-_]location$")
 
 
@@ -50,6 +50,7 @@ class MzTabImporter(IdentificationParser):
         self._rows: list[list] = []
         self._psm_df: pd.DataFrame | None = None
         self.ms_run_spectra: dict[int, int] = {}
+        self._ignore_ms_run: bool = False
 
     # --- lazy Unimod (network; may raise when offline) ---
     @property
@@ -71,6 +72,8 @@ class MzTabImporter(IdentificationParser):
                     key, value = parts[1], parts[2]
                     m = _LOCATION_KEY_RE.match(key)
                     if m:
+                        if value.lower().endswith('.gz'):
+                            value = value[:-3]
                         self.ms_run_locations[int(m.group(1))] = value
                         continue
                     if key.startswith("fixed_mod[") or key.startswith("variable_mod["):
@@ -195,16 +198,18 @@ class MzTabImporter(IdentificationParser):
             _, kind, _ = self._parse_spectra_ref(ref)
             if kind == "index":
                 self.spectra_id_field = "seq_no"
-            elif kind == "scan":
+            elif kind in ("scan", "spectrum"):
                 self.spectra_id_field = "scans"
             return
 
     # ---- ms_run -> spectra_file resolution ----
     async def _resolve_ms_runs(self) -> None:
         self.ms_run_spectra = {}
+        self._ignore_ms_run = False
         if self.spectra_file_id is not None and len(self.ms_run_locations) == 1:
             (idx,) = self.ms_run_locations
             self.ms_run_spectra[idx] = self.spectra_file_id
+            self._ignore_ms_run = True
             return
         spectra_files = await self.project.get_spectra_files()
         for idx, location in self.ms_run_locations.items():
@@ -258,13 +263,16 @@ class MzTabImporter(IdentificationParser):
         for row in self._collapse_psms():
             ref = row.get("spectra_ref") or ""
             ms_run_idx, kind, value = self._parse_spectra_ref(ref)
-            if ms_run_idx is None:
-                continue
-            spectra_file_id = self.ms_run_spectra.get(ms_run_idx)
-            if spectra_file_id is None:
-                continue
+            if self._ignore_ms_run:
+                spectra_file_id = self.spectra_file_id
+            else:
+                if ms_run_idx is None:
+                    continue
+                spectra_file_id = self.ms_run_spectra.get(ms_run_idx)
+                if spectra_file_id is None:
+                    continue
             if self.spectra_id_field == "scans":
-                map_val = value if kind == "scan" else None
+                map_val = value if kind in ("scan", "spectrum") else None
             else:
                 map_val = value if kind == "index" else None
             if map_val is None:

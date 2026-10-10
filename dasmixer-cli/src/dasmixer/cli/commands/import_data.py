@@ -715,6 +715,7 @@ def import_pride(
     subset_name: str = typer.Option("PRIDE Import", "--subset-name"),
     spectra_parser: str = typer.Option("MGF", "--spectra-parser"),
     ident_parser: str = typer.Option("mzTab", "--ident-parser"),
+    ident_mode: str = typer.Option("single", "--ident-mode", help="Import mode: 'single' (one mzTab for all) or 'per_sample' (one ident per spectra file, auto-matched by stem)"),
     import_fasta: bool = typer.Option(False, "--import-fasta/--no-import-fasta"),
     collect_proteins: bool = typer.Option(False, "--collect-proteins/--no-collect-proteins"),
     delete_temp_files: bool = typer.Option(True, "--delete-temp-files/--keep-temp-files"),
@@ -723,10 +724,12 @@ def import_pride(
     Import a PRIDE dataset into a DASMixer project.
 
     Spectra and identification files are matched automatically via ms_run
-    location from the mzTab file. If the project does not exist, it is created.
+    location from the mzTab file (single mode) or by PrideFile.stem
+    (per_sample mode). If the project does not exist, it is created.
 
     Example:
         dasmixer-cli import pride project.dasmix PXD000001
+        dasmixer-cli import pride project.dasmix PXD000001 --ident-mode per_sample
     """
 
     async def _run():
@@ -767,7 +770,7 @@ def import_pride(
             if not subset:
                 subset = await project.add_subset(subset_name)
 
-            # Default selection: all .mgf spectra files, first .mztab ident file (single mode)
+            # Default selection: all .mgf spectra files
             spectra_names = [f.name for f in dataset.spectra_files]
             ident_names = [f.name for f in dataset.ident_files]
             if not spectra_names:
@@ -776,16 +779,43 @@ def import_pride(
             if not ident_names:
                 typer.echo("Error: dataset has no .mztab identification files.", err=True)
                 raise typer.Exit(1)
-            single_ident_file = ident_names[0]
+
+            if ident_mode not in ("single", "per_sample"):
+                typer.echo(f"Error: unknown ident_mode '{ident_mode}'. Use 'single' or 'per_sample'.", err=True)
+                raise typer.Exit(1)
+
+            single_ident_file: str | None = None
+            ident_file_mapping: dict[str, str] = {}
+
+            if ident_mode == "single":
+                single_ident_file = ident_names[0]
+            else:
+                # Auto-map spectra to ident files by PrideFile.stem
+                ident_by_stem: dict[str, str] = {}
+                for ifile in dataset.ident_files:
+                    ident_by_stem[ifile.stem.lower()] = ifile.name
+                for sfile in dataset.spectra_files:
+                    matched = ident_by_stem.get(sfile.stem.lower())
+                    if matched is not None:
+                        ident_file_mapping[sfile.name] = matched
+                    else:
+                        typer.echo(
+                            f"Warning: no ident file matched for '{sfile.name}' (stem='{sfile.stem}')",
+                            err=True,
+                        )
+                if not ident_file_mapping:
+                    typer.echo("Error: could not match any spectra file to an ident file by stem.", err=True)
+                    raise typer.Exit(1)
 
             options = PrideImportOptions(
                 dataset_id=dataset_id,
                 subset_id=subset.id,
                 spectra_parser=spectra_parser,
                 ident_parser=ident_parser,
-                ident_mode="single",
+                ident_mode=ident_mode,
                 tool_name=tool_name,
                 selected_spectra_files=spectra_names,
+                ident_file_mapping=ident_file_mapping,
                 single_ident_file=single_ident_file,
                 import_fasta=import_fasta,
                 collect_proteins=collect_proteins,

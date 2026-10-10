@@ -1,7 +1,6 @@
 """PRIDE dataset import dialog — 3-screen wizard: PXD id → configure → progress."""
 
 import asyncio
-from pathlib import Path
 
 import flet as ft
 from dasmixer.api.inputs.registry import registry
@@ -288,10 +287,15 @@ class ImportPrideDialog:
         )
 
         def _match_ident_by_stem(spectra_name):
-            """Find ident file whose stem matches the spectra file stem."""
-            stem = Path(spectra_name).stem.lower()
+            """Find ident file whose PrideFile.stem matches the spectra file stem."""
+            spectra_file = next(
+                (f for f in dataset.spectra_files if f.name == spectra_name), None
+            )
+            if spectra_file is None:
+                return None
+            spectra_stem = spectra_file.stem.lower()
             for f in dataset.ident_files:
-                if Path(f.name).stem.lower() == stem:
+                if f.stem.lower() == spectra_stem:
                     return f.name
             return None
 
