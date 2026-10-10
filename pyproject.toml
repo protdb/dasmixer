@@ -15,6 +15,7 @@ packages = []
 
 [tool.poetry.dependencies]
 python = "<3.16, >=3.11"
+pylint = "^4.1.2"
 
 [dependency-groups]
 dev = [
