@@ -1,0 +1,7 @@
+site_name: DASMixer guide
+
+nav:
+  - Home: index.md
+  - User guide:
+    - Installation: installation.md
+    - Getting started: user/getting_started.md
