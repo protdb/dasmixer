@@ -181,12 +181,18 @@ class IonSettingsSection(BaseSection):
 
     def _get_selected_ion_types(self) -> list[str]:
         selected = []
-        if self.ion_type_a_cb.value: selected.append('a')
-        if self.ion_type_b_cb.value: selected.append('b')
-        if self.ion_type_c_cb.value: selected.append('c')
-        if self.ion_type_x_cb.value: selected.append('x')
-        if self.ion_type_y_cb.value: selected.append('y')
-        if self.ion_type_z_cb.value: selected.append('z')
+        if self.ion_type_a_cb.value:
+            selected.append('a')
+        if self.ion_type_b_cb.value:
+            selected.append('b')
+        if self.ion_type_c_cb.value:
+            selected.append('c')
+        if self.ion_type_x_cb.value:
+            selected.append('x')
+        if self.ion_type_y_cb.value:
+            selected.append('y')
+        if self.ion_type_z_cb.value:
+            selected.append('z')
         return selected
 
     def _sync_to_state(self):

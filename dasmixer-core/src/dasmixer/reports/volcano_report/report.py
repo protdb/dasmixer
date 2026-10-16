@@ -7,6 +7,7 @@ from dasmixer.api.reporting._icons import Icons
 from dasmixer.api.reporting.base import BaseReport
 from scipy.stats import false_discovery_control, mannwhitneyu, ttest_ind
 from smart_round import format_dataframe
+from dasmixer.api.reporting.registry import registry
 
 from .params import VolcanoReportParams
 
@@ -300,8 +301,5 @@ class VolcanoReport(BaseReport):
             ('FC table', calculated, False),
             ('POI', format_dataframe(pois), False),
         ]
-
-
-from dasmixer.api.reporting.registry import registry
 
 registry.register(VolcanoReport)

@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 from dasmixer.api.reporting._icons import Icons
 from dasmixer.api.reporting.base import BaseReport
+from dasmixer.api.reporting.registry import registry
 
 if TYPE_CHECKING:
     import plotly.graph_objects as go
@@ -300,7 +301,5 @@ class UpsetReport(BaseReport):
             ],
         )
 
-
-from dasmixer.api.reporting.registry import registry
 
 registry.register(UpsetReport)
