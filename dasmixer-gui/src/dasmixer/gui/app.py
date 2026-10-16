@@ -337,12 +337,7 @@ class DASMixerApp:
 
         async def on_project_selected(path: str):
             # 1. Close the Open Recent modal dialog
-            dialog.open = False
-            try:
-                self.page.overlay.remove(dialog)
-            except ValueError:
-                pass
-            self.page.update()
+            self.page.pop_dialog()
 
             # 2. Close current project completely (routes to start view)
             if self.current_project:
@@ -356,12 +351,7 @@ class DASMixerApp:
             await self.open_project(path)
 
         def on_cancel(_):
-            dialog.open = False
-            try:
-                self.page.overlay.remove(dialog)
-            except ValueError:
-                pass
-            self.page.update()
+            self.page.pop_dialog()
 
         recent_list = RecentProjectsList(
             recent_projects=config.recent_projects,
@@ -381,9 +371,7 @@ class DASMixerApp:
             ],
         )
 
-        self.page.overlay.append(dialog)
-        dialog.open = True
-        self.page.update()
+        self.page.show_dialog(dialog)
 
     # ------------------------------------------------------------------
     # Navigation helpers

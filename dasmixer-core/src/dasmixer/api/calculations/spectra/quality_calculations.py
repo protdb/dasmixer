@@ -36,7 +36,7 @@ def calculate_longest_consec_run_ratio(matches: list[FragmentMatch], sequence: s
     for match in matches:
         typ = match.fragment.ion_type
         pos = match.fragment.end - match.fragment.start
-        if not typ in ions:
+        if typ not in ions:
             ions[typ] = set()
         ions[typ].add(pos)
     res = 0

@@ -86,7 +86,7 @@ class ToolDialog:
         )
         self.tool_type_group = ft.RadioGroup(
             content=ft.Column([
-                ft.Radio(value="Library", label="Library Search"),
+                ft.Radio(value="Library", label="Database Search"),
                 ft.Radio(value="De Novo", label="De Novo Sequencing"),
             ]),
             value=self.tool.type if self.is_edit_mode else "Library",

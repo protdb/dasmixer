@@ -6,6 +6,7 @@ from dasmixer.api.project.project import Project
 from dasmixer.gui.components.base_table_view import BaseTableView
 
 from dasmixer.utils import logger
+from dasmixer.utils.nullables import Nullables
 
 _MAX_SEQ_LEN = 31
 
@@ -409,8 +410,31 @@ class PeptideIonTableView(BaseTableView):
             return df, None
 
         # Format is_preferred
-        if 'is_preferred' in df.columns:
-            df['is_preferred'] = df['is_preferred'].apply(lambda x: '✓' if x else '')
+
+        NULLABLE_BOOL_COLUMNS: list[str] = [
+            'is_preferred',
+            'has_ptm',
+            'substitution',
+        ]
+
+        NULLABLE_INT_COLUMNS: list[str] = [
+            'identification_id',
+            'charge',
+            'override_charge',
+            'ions_matched',
+            'top_peaks_covered',
+            'isotope_offset',
+            'tool_id',
+            'unconfirmed_ptms'
+        ]
+
+        for col in NULLABLE_BOOL_COLUMNS:
+            if col in df.columns:
+                df[col] = Nullables.bool_column(df[col], return_str=True)
+
+        for col in NULLABLE_INT_COLUMNS:
+            if col in df.columns:
+                df[col] = Nullables.int_column(df[col], to_string=True)
 
         tips = pd.DataFrame(index=df.index)
 

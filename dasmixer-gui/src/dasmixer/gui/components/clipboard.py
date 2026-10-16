@@ -111,6 +111,15 @@ def _win_copy(png_bytes: bytes) -> None:
 # ---------------------------------------------------------------------------
 
 def _linux_copy(png_bytes: bytes) -> None:
+    xclip = shutil.which("xclip")
+    if xclip:
+        subprocess.run(
+            [xclip, "-selection", "clipboard", "-t", "image/png"],
+            input=png_bytes,
+            check=True,
+        )
+        return
+
     wl = shutil.which("wl-copy")
     if wl:
         subprocess.run(
@@ -120,14 +129,7 @@ def _linux_copy(png_bytes: bytes) -> None:
         )
         return
 
-    xclip = shutil.which("xclip")
-    if xclip:
-        subprocess.run(
-            [xclip, "-selection", "clipboard", "-t", "image/png"],
-            input=png_bytes,
-            check=True,
-        )
-        return
+
 
     raise RuntimeError(
         "Neither 'wl-copy' nor 'xclip' is installed. "

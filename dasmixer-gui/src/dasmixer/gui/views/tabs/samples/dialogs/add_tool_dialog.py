@@ -57,7 +57,7 @@ class AddToolDialog:
         # NEW: Tool type selector
         tool_type_group = ft.RadioGroup(
             content=ft.Column([
-                ft.Radio(value="Library", label="Library Search"),
+                ft.Radio(value="Library", label="Database Search"),
                 ft.Radio(value="De Novo", label="De Novo Sequencing")
             ]),
             value="Library"
