@@ -98,7 +98,8 @@ class MatchProteinsAction(BaseAction):
                     f"Processed {processed} identifications",
                 )
 
-            stop_check = lambda: dialog.stop_requested
+            def stop_check():
+                return dialog.stop_requested
 
             await map_proteins(
                 self.project,

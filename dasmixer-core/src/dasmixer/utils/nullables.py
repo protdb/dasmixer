@@ -17,7 +17,7 @@ class Nullables:
         def _run(x):
             if not x:
                 return false_val
-            if type(x) is float and np.isnan(x):
+            if isinstance(x, float) and np.isnan(x):
                 return false_val
             return true_val
         return column.apply(_run)
@@ -34,7 +34,7 @@ class Nullables:
         def _run(x):
             if x is None:
                 return ret_none
-            if type(x) is float and np.isnan(x):
+            if isinstance(x, float) and np.isnan(x):
                 return ret_none
             try:
                 return int(x)

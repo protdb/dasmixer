@@ -126,7 +126,7 @@ class SpectraMixin:
             if peaks_count is None and 'mz_array' in row and row['mz_array'] is not None:
                 peaks_count = len(row['mz_array'])
             charge_array_common_value = row.get('charge_array_common_value', None)
-            if charge_array_common_value is not None and type(charge_array_common_value) is float:
+            if charge_array_common_value is not None and isinstance(charge_array_common_value, float):
                 if np.isnan(charge_array_common_value):
                     charge_array_common_value = None
                 else:

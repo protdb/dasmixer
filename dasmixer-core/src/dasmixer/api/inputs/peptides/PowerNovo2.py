@@ -41,7 +41,7 @@ class PowerNovo2Importer(SimpleTableImporter):
 
     @staticmethod
     def process_positional_score(score):
-        if type(score) == str:
+        if isinstance(score, str):
             return [float(s) for s in score.split()]
         else:
             return None

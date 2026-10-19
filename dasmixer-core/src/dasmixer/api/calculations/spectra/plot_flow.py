@@ -16,9 +16,9 @@ def make_full_spectrum_plot(
         spectrum_info: Any
 ):
     logger.debug(spectrum_info)
-    if type(params) is dict:
+    if isinstance(params, dict):
         params = IonMatchParameters(**params)
-    if type(sequences) is not list:
+    if not isinstance(sequences, list):
         if sequences is None:
             sequences = ['']
         else:

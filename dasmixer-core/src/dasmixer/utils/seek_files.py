@@ -11,7 +11,7 @@ def seek_files(root: str | Path, accept_template: str, id_template: str) -> list
     :param id_template: template to get sample ID from file_name
     :return: list of tuples (path_to_file, sample_id)
     """
-    if type(root) is str:
+    if isinstance(root, str):
         root = Path(root)
     res = []
     for file in root.rglob(accept_template):

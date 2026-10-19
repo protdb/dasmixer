@@ -153,7 +153,8 @@ class IonCoverageAction(BaseAction):
             await self.project.put_identification_data_batch(results)
             await self.project._commit()
 
-        stop_check = lambda: dialog.stop_requested
+        def stop_check():
+            return dialog.stop_requested
 
         try:
             with ProcessPoolExecutor(max_workers=worker_count) as executor:

@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 from dasmixer.api.reporting._icons import Icons
+from dasmixer.api.reporting.base import BaseReport
+from dasmixer.api.reporting.registry import registry
 from dasmixer.utils.logger import logger
 
 from .params import ToolMatchReportParams
@@ -14,8 +16,6 @@ try:
     _parameters = ToolMatchReportForm
 except ImportError:
     _parameters = None
-
-from dasmixer.api.reporting.base import BaseReport
 
 if TYPE_CHECKING:
     import plotly.graph_objects as go
@@ -126,7 +126,7 @@ class ToolMatchReport(BaseReport):
         merged['sequences_match'] = merged['matched_sequence_t1'] == merged['matched_sequence_t2']
 
         def nan_to_none(val) -> bool:
-            if type(val) is float:
+            if isinstance(val, float):
                 return not np.isnan(val)
             return bool(val)
 
@@ -207,7 +207,5 @@ class ToolMatchReport(BaseReport):
             ('Protein counts', protein_stats, True)
         ]
 
-
-from dasmixer.api.reporting.registry import registry
 
 registry.register(ToolMatchReport)

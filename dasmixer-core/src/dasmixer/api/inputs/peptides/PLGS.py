@@ -36,7 +36,7 @@ class PLGSImporter(SimpleTableImporter):
         logger.debug(ptm_str)
         if not ptm_str or ptm_str == 'None':
             return seq
-        if type(ptm_str) != str:
+        if not isinstance(ptm_str, str):
             return seq
         pf_seq, pf_params = parse(seq)
         ptm_list = ptm_parser_re.findall(ptm_str)
