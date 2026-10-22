@@ -1,0 +1,49 @@
+site_name: DASMixer guide
+
+theme:
+  name: material
+  favicon: img/favicon.ico
+  features:
+    - navigation.footer
+
+nav:
+  - Home: index.md
+  - User guide:
+    - Install: installation.md
+    - Create project and import data: user/project_sample.md
+    - Work with peptides and identifications: user/peptides_tab.md
+    - Preview peptide data: user/peptides_table.md
+    - Work with proteins: user/proteins_tab.md
+    - Reports: user/reports.md
+    - advanced:
+        - MaxQuant project import: user/advanced/MaxQuant.md
+        - PTM Configuration: user/advanced/ptm_configuration.md
+        - Absolute concentrations settings: user/advanced/abs_concentrations.md
+  - Concepts and algorithms:
+    - Concepts: concepts.md
+    - LFQ Methods: lfq.md
+  - Roadmap: roadmap.md
+
+markdown_extensions:
+  - mdx_truly_sane_lists:
+      nested_indent: 2
+  - pymdownx.arithmatex:
+      generic: true
+  - toc:
+      toc_depth: 3
+  - attr_list
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+plugins:
+  - glightbox
+
+extra_css:
+  - stylesheets/extra.css
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js

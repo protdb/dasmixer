@@ -38,7 +38,8 @@ class PeptideIonPlotView(BasePlotView):
         )
         self.show_legend_checkbox = ft.Checkbox(
             label="Show legend",
-            value=self.plot_settings.get('show_legend', True)
+            value=self.plot_settings.get('show_legend', True),
+            visible=False
         )
         self.show_protein_sequences_cb = ft.Checkbox(
             label="Show sequences in proteins",

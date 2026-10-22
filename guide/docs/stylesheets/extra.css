@@ -1,0 +1,18 @@
+.md-header {
+  background-color: #f8f9ff;
+  color: rgba(0, 0, 0, 0.87);
+}
+
+.md-header .md-header__title {
+  color: rgba(0, 0, 0, 0.87);
+}
+
+.md-header .md-header__button,
+.md-header .md-search__icon,
+.md-header .md-search__input {
+  color: rgba(0, 0, 0, 0.87);
+}
+
+.md-header .md-search__input::placeholder {
+  color: rgba(0, 0, 0, 0.54);
+}
