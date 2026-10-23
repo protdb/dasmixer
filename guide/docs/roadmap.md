@@ -1,5 +1,7 @@
 # DASMixer development roadmap
 
+The diagram below shows the feature planned with estimation of release version and date. This list is not the authors commitment as some features can be considered more urgent than planned.
+
 ```mermaid
 ---
 config:

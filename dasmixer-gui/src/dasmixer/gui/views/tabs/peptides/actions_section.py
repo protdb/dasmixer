@@ -253,20 +253,20 @@ class ActionsSection(BaseSection):
         Run complete peptide calculation workflow.
 
         Steps:
-        1. Match proteins to identifications
-        2. Calculate ion coverage (only missing)
+        1. Calculate ion coverage (only missing)
+        2. Match proteins to identifications
         3. Select preferred identifications
         """
         try:
             logger.debug("Starting Calculate Peptides workflow...")
 
-            fasta_section = self.parent_tab.sections.get('fasta')
-            if fasta_section and hasattr(fasta_section, 'match_proteins_internal'):
-                await fasta_section.match_proteins_internal()
+            await self.parent_tab.ion_calculations.run_coverage_calc(recalc_all=False)
 
             await asyncio.sleep(0.5)
 
-            await self.parent_tab.ion_calculations.run_coverage_calc(recalc_all=False)
+            fasta_section = self.parent_tab.sections.get('fasta')
+            if fasta_section and hasattr(fasta_section, 'match_proteins_internal'):
+                await fasta_section.match_proteins_internal()
 
             await asyncio.sleep(0.5)
 

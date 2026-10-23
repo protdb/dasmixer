@@ -9,8 +9,6 @@ Developed at the **Laboratory of Structural Proteomics, IBMC, Moscow**.
 
 ## Reading the Guide
 
-* [Use cases and publications **TBD**]()
-* [Features and capabilities **TBD**]()
 * [Core concepts and formulas](concepts.md)
 * [Label-Free Quantification (LFQ) methods](lfq.md)
 * [Installation](installation.md)
