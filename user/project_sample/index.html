@@ -1,0 +1,1741 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../../lfq/">
+      
+      
+        <link rel="next" href="../peptides_tab/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../img/favicon.ico">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Project & Samples - DASMixer Guide</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+   <link href="../../assets/stylesheets/glightbox.min.css" rel="stylesheet"/><style>
+    html.glightbox-open { overflow: initial; height: 100%; }
+    .gslide-title { margin-top: 0px; user-select: text; }
+    .gslide-desc { color: #666; user-select: text; }
+    .gslide-image img { background: white; }
+    .gscrollbar-fixer { padding-right: 15px; }
+    .gdesc-inner { font-size: 0.75rem; }
+    body[data-md-color-scheme="slate"] .gdesc-inner { background: var(--md-default-bg-color);}
+    body[data-md-color-scheme="slate"] .gslide-title { color: var(--md-default-fg-color);}
+    body[data-md-color-scheme="slate"] .gslide-desc { color: var(--md-default-fg-color);}</style> <script src="../../assets/javascripts/glightbox.min.js"></script></head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#getting-started-projects-and-samples" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="DASMixer Guide" class="md-header__button md-logo" aria-label="DASMixer Guide" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            DASMixer Guide
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Project & Samples
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="DASMixer Guide" class="md-nav__button md-logo" aria-label="DASMixer Guide" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    DASMixer Guide
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core Concepts & Formulas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../lfq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LFQ Methods
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Project & Samples
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Project & Samples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#creating-a-project" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Creating a Project
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#working-with-comparison-groups-subsets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Working with Comparison Groups (Subsets)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#importing-spectral-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Importing Spectral Data
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Importing Spectral Data">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#batch-import-with-pattern-matching" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Batch Import with Pattern Matching
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#creating-tools-and-importing-identifications" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Creating Tools and Importing Identifications
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#managing-samples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Managing Samples
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../peptides_tab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Processing Identifications
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../peptides_table/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Viewing Identification Data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../proteins_tab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Working with Proteins
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reports/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reports
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../plots_tab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Saved Plots
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../export_tab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Export & Project Merge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration & Plugins
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../system_menus/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    System Menus (File & Options)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_10" id="__nav_3_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Advanced Topics
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Advanced Topics
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../advanced/MaxQuant/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MaxQuant Project Import
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../advanced/pride_import/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PRIDE Dataset Import
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../advanced/ptm_configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PTM Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../advanced/abs_concentrations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Absolute Concentrations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../advanced/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Command-Line Interface (CLI)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developer Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Developer Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_1" id="__nav_4_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API & Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API & Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Modules & Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/core_api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core Library API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/project_structure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Project File Structure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_2" id="__nav_4_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Examples
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/example_pipeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Running an Automated Pipeline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/example_plots/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Generating Spectrum Plots
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_3" id="__nav_4_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plugin Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Plugin Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/custom_importers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Identification Importers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/custom_reports/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Reports
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#creating-a-project" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Creating a Project
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#working-with-comparison-groups-subsets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Working with Comparison Groups (Subsets)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#importing-spectral-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Importing Spectral Data
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Importing Spectral Data">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#batch-import-with-pattern-matching" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Batch Import with Pattern Matching
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#creating-tools-and-importing-identifications" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Creating Tools and Importing Identifications
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#managing-samples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Managing Samples
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="getting-started-projects-and-samples">Getting Started: Projects and Samples</h1>
+<p>When you launch DASMixer, you are greeted by the Start screen, which provides options to:</p>
+<ul>
+<li><strong>Create New Project</strong></li>
+<li><strong>Open Project</strong> from disk</li>
+<li>Quickly reopen any of your <strong>Recent Projects</strong> (up to 10 recent <code>.dasmix</code> files)</li>
+</ul>
+<p>The current version of DASMixer is displayed directly beneath the application title. At the top-right corner of the window, the application bar provides the <strong>File</strong> (folder icon) and <strong>Options</strong> (gear icon) menus, which remain accessible from every screen for saving, merging, or closing projects and configuring global preferences — see <a href="../system_menus/">System Menus (File &amp; Options)</a> for a complete overview.</p>
+<p><a class="glightbox" href="../../img/user/start_screen.png" data-type="image" data-width="auto" data-height="auto" data-description="The DASMixer Start screen — create, open, or quickly reopen recent .dasmix projects." data-desc-position="bottom"><img alt="Start screen" data-description="The DASMixer Start screen — create, open, or quickly reopen recent .dasmix projects." src="../../img/user/start_screen.png" /></a></p>
+<h2 id="creating-a-project">Creating a Project</h2>
+<p>Click <strong>Create New Project</strong> to start. DASMixer will open a file dialog asking you to choose a location and filename for your new <code>.dasmix</code> project file.</p>
+<blockquote>
+<p><strong>Disk Space Note:</strong> A DASMixer project file is a self-contained SQLite database that stores a compressed copy of all imported spectral peak lists (typically compressed to around 25–30% of the original MGF size, i.e., deflated by ~70–75%). For example, if you plan to import 10 GB of raw MGF files, ensure you have at least 3–8 GB of free disk space available on the target drive. See <a href="../../developer/project_structure/">Project File Structure</a> for technical details.</p>
+</blockquote>
+<p>Once the project is created, the main <strong>Project View</strong> opens on the <strong>Samples</strong> tab:</p>
+<p><a class="glightbox" href="../img/new_project_samples.png" data-type="image" data-width="auto" data-height="auto" data-description="Freshly created project open on the Samples tab, showing the default Control comparison group." data-desc-position="bottom"><img alt="New project, samples tab" data-description="Freshly created project open on the Samples tab, showing the default Control comparison group." src="../img/new_project_samples.png" /></a></p>
+<p>Project data and workflows are organized into six tabs across the top of the window:</p>
+<ol>
+<li><strong>Samples</strong> — manage comparison groups, tools, spectral files, and sample metadata</li>
+<li><strong>Peptides</strong> — configure ion matching, tool thresholds, FASTA mapping, and inspect PSMs</li>
+<li><strong>Proteins</strong> — infer protein identifications, enrich from UniProt, and run LFQ</li>
+<li><strong>Reports</strong> — generate statistical and comparative reports</li>
+<li><strong>Plots</strong> — review and batch-export saved figures</li>
+<li><strong>Export</strong> — export raw tables, joined views, filtered MGFs, or mzTab files</li>
+</ol>
+<p>A newly created project starts empty except for one default comparison group named <strong>Control</strong>. You can rename this group or add additional groups using the <strong>Add Group</strong> button.</p>
+<h2 id="working-with-comparison-groups-subsets">Working with Comparison Groups (Subsets)</h2>
+<p>Comparison groups (referred to as <strong>Subsets</strong> in DASMixer's internal data model and some report parameters) divide your samples into biological or experimental conditions (e.g., <em>Control</em> vs. <em>Treatment</em>).</p>
+<blockquote>
+<p><strong>Technical note:</strong> The term <em>Subset</em> is used internally because a DASMixer project is a SQLite database, and <code>GROUP</code> is a reserved keyword in SQL.</p>
+</blockquote>
+<p>To create a new group, click <strong>Add Group</strong> in the <strong>Comparison Groups</strong> section on the <strong>Samples</strong> tab. This opens the <strong>Add Comparison Group</strong> dialog:</p>
+<p><a class="glightbox" href="../img/add_subset.png" data-type="image" data-width="auto" data-height="auto" data-description="Add Comparison Group dialog — name, description, and display colour." data-desc-position="bottom"><img alt="Add subset dialog" data-description="Add Comparison Group dialog — name, description, and display colour." src="../img/add_subset.png" /></a></p>
+<p>Here you can specify:</p>
+<ul>
+<li><strong>Name</strong> — a unique name for the group</li>
+<li><strong>Details</strong> — an optional description of the experimental condition</li>
+<li><strong>Display color</strong> — the color used to represent this group in PCA, Volcano, and protein concentration plots</li>
+</ul>
+<p>To edit an existing group, click the pencil icon next to its name. To delete a group, click the trash bin icon. Note that <strong>only empty groups can be deleted</strong> — if a group already contains samples, you must first reassign or delete those samples via <strong>Manage Samples</strong>.</p>
+<h2 id="importing-spectral-data">Importing Spectral Data</h2>
+<p>The next step in a standard workflow is importing MS/MS spectra. DASMixer supports <code>.mgf</code> (Mascot Generic Format) files, including both standard MGF and Waters <strong>MGF (PLGS Pseudo-DIA)</strong> formats. For best results, we recommend using peak-picked, deconvoluted, denoised, and deisotoped MGF files.</p>
+<p>Click <strong>Import Spectra</strong> to begin:</p>
+<p><a class="glightbox" href="../img/import_spectra_all.png" data-type="image" data-width="auto" data-height="auto" data-description="Import Spectra dialog — Single file and Pattern matching import modes." data-desc-position="bottom"><img alt="Import spectra dialog" data-description="Import Spectra dialog — Single file and Pattern matching import modes." src="../img/import_spectra_all.png" /></a></p>
+<p>DASMixer offers two modes for importing spectra:</p>
+<ul>
+<li><strong>Single file</strong> — select one <code>.mgf</code> file via the file picker, assign it to a comparison group, and optionally customize the sample name.</li>
+<li><strong>Pattern matching</strong> — batch-import multiple <code>.mgf</code> files from a directory and automatically extract sample names from their filenames.</li>
+</ul>
+<h3 id="batch-import-with-pattern-matching">Batch Import with Pattern Matching</h3>
+<p>When you choose <strong>Pattern matching</strong>, first select or paste the path to the folder containing your MGF files, then click <strong>Preview files</strong>:</p>
+<p><a class="glightbox" href="../img/pattern_matching_spectra.png" data-type="image" data-width="auto" data-height="auto" data-description="Pattern matching spectra import — configure File pattern and Sample ID pattern, then preview extracted sample names." data-desc-position="bottom"><img alt="Batch spectra import settings" data-description="Pattern matching spectra import — configure File pattern and Sample ID pattern, then preview extracted sample names." src="../img/pattern_matching_spectra.png" /></a></p>
+<p>This dialog uses two pattern fields to discover files and name samples:</p>
+<ul>
+<li><strong>File pattern:</strong> A glob pattern used to filter which files in the folder (and its subfolders) to import. The <code>*</code> wildcard matches any sequence of characters. To import all MGF files in the directory, leave the default <code>*.mgf</code>. To import only files starting with <code>CNT_</code>, use <code>CNT*.mgf</code>.</li>
+<li><strong>Sample ID pattern:</strong> A template used to extract the sample name from each filename. Use <code>{id}</code> to mark the portion of the filename that should become the sample name, and <code>{}</code> to ignore other variable parts. For example, if your files are named <code>20260912_S01_DDA.mgf</code> and <code>20260914_S02_DDA.mgf</code>, the pattern <code>{}_{id}_DDA.mgf</code> will extract sample names <code>S01</code> and <code>S02</code> respectively.</li>
+</ul>
+<blockquote>
+<p><strong>Technical note for Python users:</strong> The <em>File pattern</em> is evaluated with <code>pathlib.Path.rglob()</code>, while the <em>Sample ID pattern</em> is parsed using the <a href="https://pypi.org/project/parse/"><code>parse</code></a> library's <code>parse.parse()</code> function.</p>
+</blockquote>
+<p>After adjusting the patterns, click <strong>Preview files</strong> to verify that the extracted sample names match your expectations. In the preview list, you can manually edit individual sample names or uncheck files you wish to skip.</p>
+<p>Once everything looks right, click <strong>Import</strong> and wait for the batch import to complete:</p>
+<p><a class="glightbox" href="../img/spectra_import.png" data-type="image" data-width="auto" data-height="auto" data-description="Spectra import progress dialog with per-file status." data-desc-position="bottom"><img alt="Spectra import in progress" data-description="Spectra import progress dialog with per-file status." src="../img/spectra_import.png" /></a></p>
+<p>The progress dialog will close automatically when all spectra have been imported.</p>
+<blockquote>
+<p><strong>One-click workflow imports:</strong> If you are importing a complete <strong>MaxQuant</strong> project (<code>mqpar.xml</code>) or downloading a public dataset directly from the <strong>PRIDE Archive</strong> (<code>PXD...</code>), you can skip manual MGF and tool creation by using the <strong>Import From MaxQuant…</strong> or <strong>Import From PRIDE…</strong> buttons directly on the Samples tab. See <a href="../advanced/MaxQuant/">MaxQuant Import</a> and <a href="../advanced/pride_import/">PRIDE Dataset Import</a> for details.</p>
+</blockquote>
+<h2 id="creating-tools-and-importing-identifications">Creating Tools and Importing Identifications</h2>
+<p>Once spectra are loaded into the project, register the search engines or <em>de novo</em> tools whose results you want to integrate. Click <strong>Add Tool</strong> in the <strong>Identification Tools</strong> section:</p>
+<p><a class="glightbox" href="../img/tool_add.png" data-type="image" data-width="auto" data-height="auto" data-description="Add Tool dialog — name, type (Library / De Novo), parser, and display colour." data-desc-position="bottom"><img alt="Tool creation dialog" data-description="Add Tool dialog — name, type (Library / De Novo), parser, and display colour." src="../img/tool_add.png" /></a></p>
+<p>In the <strong>Add Tool</strong> dialog, configure:</p>
+<ul>
+<li><strong>Tool name</strong> — a unique display name (e.g., <code>PowerNovo2</code>, <code>MaxQuant</code>, <code>CasaNovo</code>)</li>
+<li><strong>Tool type</strong> — <code>Library</code> (database search) or <code>De Novo</code></li>
+<li><strong>Parser</strong> — the file format importer matching your tool's output (<code>PowerNovo2</code>, <code>MaxQuant</code>, <code>PLGS</code>, <code>PeptideShaker XLS</code>, <code>mzTab</code>, <code>CasaNovo</code>, <code>Pi-PrimeNovo</code>, or any installed custom plugin)</li>
+<li><strong>Color</strong> — the display color used for this tool in comparison charts</li>
+</ul>
+<p>After adding the tool, click <strong>Import Identifications</strong> on the tool card. Depending on the selected parser's capabilities, you can import identifications via:</p>
+<ul>
+<li><strong>Single file</strong> — link one identification file to a specific sample/spectra file</li>
+<li><strong>Pattern matching</strong> — batch-match identification files to existing samples using <code>{id}</code> patterns</li>
+<li><strong>Stacked file</strong> (e.g., MaxQuant <code>evidence.txt</code>) — split a single multi-sample table across samples using the sample column (<code>Raw file</code>)</li>
+<li><strong>Multifile</strong> (e.g., multi-run <code>mzTab</code>) — automatically map identifications from a combined file to their respective spectra files</li>
+</ul>
+<p>When using <strong>Pattern matching</strong> for identifications, pay close attention to the <strong>File pattern</strong>. Many search engines generate multiple CSV/TSV files in the same output folder with different suffixes:</p>
+<ul>
+<li>For <strong>PowerNovo2</strong>, import only <code>*_denovo.csv</code> files (and set the Sample ID pattern to <code>{id}_denovo.csv</code>).</li>
+<li>For <strong>Waters PLGS</strong>, import only <code>*_peptide.csv</code> files.</li>
+</ul>
+<blockquote>
+<p><strong>Tip:</strong> Because pattern matching searches subdirectories recursively, if your results are organized in a nested folder structure such as <code>/data/group_A/denovo_output/sample_01/sample_01_denovo.csv</code>, you can simply point the folder picker to <code>/data/</code> and use <code>*_denovo.csv</code> as the file pattern.</p>
+<p><strong>Watch out:</strong> If your files have identical names inside sample-specific folders (e.g., <code>/experiment/sample01/denovo.tsv</code> and <code>/experiment/sample02/denovo.tsv</code>), filename-based pattern matching cannot distinguish them — either rename the files to include the sample ID or import them individually.</p>
+</blockquote>
+<p><a class="glightbox" href="../img/import_identifications.png" data-type="image" data-width="auto" data-height="auto" data-description="Import identifications configuration — Single file, Pattern matching, Stacked file, or Multifile modes." data-desc-position="bottom"><img alt="Import identifications configuration" data-description="Import identifications configuration — Single file, Pattern matching, Stacked file, or Multifile modes." src="../img/import_identifications.png" /></a></p>
+<p>If your identification files contain protein accessions (supported by parsers like <code>PLGS</code>, <code>MaxQuant</code>, <code>PeptideShaker XLS</code>, and <code>mzTab</code>), you can also enable <strong>Import protein IDs from file</strong> during import.</p>
+<h2 id="managing-samples">Managing Samples</h2>
+<p>At the bottom of the <strong>Samples</strong> tab, the <strong>Samples</strong> summary bar displays the total number of samples in the project along with status counters (<strong>OK</strong>, <strong>Warning</strong>, <strong>Error</strong>, <strong>Pending</strong>).</p>
+<p>Clicking <strong>Manage Samples</strong> opens a dedicated full-screen view where you can:</p>
+<ul>
+<li>Inspect each sample's imported spectra files and identification files</li>
+<li>Filter samples by name, comparison group, status, or outlier flag</li>
+<li>Mark or unmark samples as <strong>Outliers</strong> (outliers can be excluded from statistical reports and plots)</li>
+<li>Reassign samples between comparison groups in bulk</li>
+<li>Remove empty files or delete unwanted samples</li>
+<li>Import <strong>Additional sample metadata</strong> from a CSV or Excel table (such as total protein concentration or albumin concentration for <a href="../advanced/abs_concentrations/">Absolute Quantification</a>)</li>
+<li>Run pipeline steps (ion coverage, preferred selection, protein mapping, LFQ) for an individual sample</li>
+</ul>
+<p><a class="glightbox" href="../img/manage_samples_view.png" data-type="image" data-width="auto" data-height="auto" data-description="Manage Samples view — filter, inspect, reassign, and bulk-edit samples and their associated files." data-desc-position="bottom"><img alt="manage samples view" data-description="Manage Samples view — filter, inspect, reassign, and bulk-edit samples and their associated files." src="../img/manage_samples_view.png" /></a></p>
+<p>Once your spectra and identifications are imported, proceed to the <a href="../peptides_tab/">Peptides tab</a> to configure parameters and run peptide-level calculations.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../../lfq/" class="md-footer__link md-footer__link--prev" aria-label="Previous: LFQ Methods">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                LFQ Methods
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../peptides_tab/" class="md-footer__link md-footer__link--next" aria-label="Next: Processing Identifications">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Processing Identifications
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.footer", "navigation.sections", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  <script id="init-glightbox">const lightbox = GLightbox({"touchNavigation": true, "loop": false, "zoomable": true, "draggable": true, "openEffect": "zoom", "closeEffect": "zoom", "slideEffect": "slide"});
+document$.subscribe(() => { lightbox.reload() });
+</script></body>
+</html>

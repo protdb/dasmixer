@@ -1,0 +1,2281 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../abs_concentrations/">
+      
+      
+        <link rel="next" href="../../../developer/architecture/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../img/favicon.ico">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Command-Line Interface (CLI) - DASMixer Guide</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+   <link href="../../../assets/stylesheets/glightbox.min.css" rel="stylesheet"/><style>
+    html.glightbox-open { overflow: initial; height: 100%; }
+    .gslide-title { margin-top: 0px; user-select: text; }
+    .gslide-desc { color: #666; user-select: text; }
+    .gslide-image img { background: white; }
+    .gscrollbar-fixer { padding-right: 15px; }
+    .gdesc-inner { font-size: 0.75rem; }
+    body[data-md-color-scheme="slate"] .gdesc-inner { background: var(--md-default-bg-color);}
+    body[data-md-color-scheme="slate"] .gslide-title { color: var(--md-default-fg-color);}
+    body[data-md-color-scheme="slate"] .gslide-desc { color: var(--md-default-fg-color);}</style> <script src="../../../assets/javascripts/glightbox.min.js"></script></head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#command-line-interface-cli" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../.." title="DASMixer Guide" class="md-header__button md-logo" aria-label="DASMixer Guide" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            DASMixer Guide
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Command-Line Interface (CLI)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../.." title="DASMixer Guide" class="md-nav__button md-logo" aria-label="DASMixer Guide" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    DASMixer Guide
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core Concepts & Formulas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../lfq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LFQ Methods
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../project_sample/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Project & Samples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../peptides_tab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Processing Identifications
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../peptides_table/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Viewing Identification Data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../proteins_tab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Working with Proteins
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reports/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reports
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plots_tab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Saved Plots
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../export_tab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Export & Project Merge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration & Plugins
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../system_menus/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    System Menus (File & Options)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_10" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3_10" id="__nav_3_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Advanced Topics
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_10_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Advanced Topics
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MaxQuant/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MaxQuant Project Import
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../pride_import/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PRIDE Dataset Import
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ptm_configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PTM Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../abs_concentrations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Absolute Concentrations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Command-Line Interface (CLI)
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Command-Line Interface (CLI)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview-and-installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview and Installation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Overview and Installation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#command-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Command Structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-creating-and-configuring-a-project" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Creating and Configuring a Project
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Creating and Configuring a Project">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#create-a-new-project" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Create a new project
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#view-or-modify-project-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        View or modify project settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-managing-comparison-groups-subset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Managing Comparison Groups (subset)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-managing-identification-tools-tool" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Managing Identification Tools (tool)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-importing-data-import" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Importing Data (import)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Importing Data (import)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#import-mgf-spectra" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Import MGF Spectra
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#import-identifications" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Import Identifications
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#import-a-fasta-protein-database" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Import a FASTA Protein Database
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#import-a-maxquant-or-pride-dataset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Import a MaxQuant or PRIDE Dataset
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-running-calculations-calculate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Running Calculations (calculate)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Running Calculations (calculate)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#full-peptide-pipeline-calculate-peptides" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Full Peptide Pipeline (calculate peptides)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#individual-calculation-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Individual Calculation Steps
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-merging-projects-import-project" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Merging Projects (import-project)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Merging Projects (import-project)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#merge-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Merge Options
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-database-maintenance-checkpoint-vacuum-update-ptm-list" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Database Maintenance (checkpoint, vacuum, update-ptm-list)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. Database Maintenance (checkpoint, vacuum, update-ptm-list)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#flush-wal-journal-checkpoint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Flush WAL journal (checkpoint)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#compact-project-file-vacuum" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Compact project file (vacuum)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#refresh-ptm-configuration-files-update-ptm-list" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Refresh PTM configuration files (update-ptm-list)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developer Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Developer Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_1" id="__nav_4_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API & Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API & Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../developer/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Modules & Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../developer/core_api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core Library API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../developer/project_structure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Project File Structure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_2" id="__nav_4_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Examples
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../developer/example_pipeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Running an Automated Pipeline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../developer/example_plots/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Generating Spectrum Plots
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_3" id="__nav_4_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plugin Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Plugin Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../developer/custom_importers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Identification Importers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../developer/custom_reports/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Reports
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview-and-installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview and Installation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Overview and Installation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#command-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Command Structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-creating-and-configuring-a-project" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Creating and Configuring a Project
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Creating and Configuring a Project">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#create-a-new-project" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Create a new project
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#view-or-modify-project-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        View or modify project settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-managing-comparison-groups-subset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Managing Comparison Groups (subset)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-managing-identification-tools-tool" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Managing Identification Tools (tool)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-importing-data-import" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Importing Data (import)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Importing Data (import)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#import-mgf-spectra" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Import MGF Spectra
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#import-identifications" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Import Identifications
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#import-a-fasta-protein-database" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Import a FASTA Protein Database
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#import-a-maxquant-or-pride-dataset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Import a MaxQuant or PRIDE Dataset
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-running-calculations-calculate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Running Calculations (calculate)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Running Calculations (calculate)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#full-peptide-pipeline-calculate-peptides" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Full Peptide Pipeline (calculate peptides)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#individual-calculation-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Individual Calculation Steps
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-merging-projects-import-project" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Merging Projects (import-project)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Merging Projects (import-project)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#merge-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Merge Options
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-database-maintenance-checkpoint-vacuum-update-ptm-list" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Database Maintenance (checkpoint, vacuum, update-ptm-list)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. Database Maintenance (checkpoint, vacuum, update-ptm-list)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#flush-wal-journal-checkpoint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Flush WAL journal (checkpoint)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#compact-project-file-vacuum" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Compact project file (vacuum)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#refresh-ptm-configuration-files-update-ptm-list" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Refresh PTM configuration files (update-ptm-list)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="command-line-interface-cli">Command-Line Interface (CLI)</h1>
+<p>In addition to the graphical desktop application, DASMixer provides a full-featured command-line interface: <strong><code>dasmixer-cli</code></strong>.</p>
+<p>The CLI allows you to automate project creation, batch imports, peptide and protein calculations, project merging, and database maintenance in shell scripts, HPC cluster jobs, or Snakemake/Nextflow workflows without requiring a graphical display.</p>
+<hr />
+<h2 id="overview-and-installation">Overview and Installation</h2>
+<p>If you installed the full <code>dasmixer</code> package (or the Windows installer), <code>dasmixer-cli</code> is already available in your environment. On headless Linux servers where GUI libraries are not needed, you can install the lightweight CLI package alone:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip<span class="w"> </span>install<span class="w"> </span>dasmixer-cli
+</code></pre></div>
+<p>Check the installed version and view available subcommands at any time:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>dasmixer-cli<span class="w"> </span>--version
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>dasmixer-cli<span class="w"> </span>--help
+</code></pre></div>
+<h3 id="command-structure">Command Structure</h3>
+<p><code>dasmixer-cli</code> commands are grouped by domain:</p>
+<table>
+<thead>
+<tr>
+<th>Command / Group</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>create</code> / <code>configure</code></td>
+<td>Create a new <code>.dasmix</code> project or view/modify project settings</td>
+</tr>
+<tr>
+<td><code>subset</code></td>
+<td>Add, list, or delete comparison groups (subsets)</td>
+</tr>
+<tr>
+<td><code>tool</code></td>
+<td>Add, list, or configure identification tools</td>
+</tr>
+<tr>
+<td><code>import</code></td>
+<td>Import MGF spectra, identification files, FASTA databases, MaxQuant projects, or PRIDE datasets</td>
+</tr>
+<tr>
+<td><code>calculate</code></td>
+<td>Run ion coverage, preferred selection, protein mapping, protein inference, and LFQ</td>
+</tr>
+<tr>
+<td><code>import-project</code></td>
+<td>Merge another <code>.dasmix</code> project into a target project</td>
+</tr>
+<tr>
+<td><code>checkpoint</code> / <code>vacuum</code></td>
+<td>Flush SQLite WAL journals and compact project file size</td>
+</tr>
+<tr>
+<td><code>update-ptm-list</code></td>
+<td>Initialize or update the PTM configuration CSV files</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="1-creating-and-configuring-a-project">1. Creating and Configuring a Project</h2>
+<h3 id="create-a-new-project">Create a new project</h3>
+<p>Creates a new <code>.dasmix</code> file initialized with a default <code>Control</code> comparison group:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>dasmixer-cli<span class="w"> </span>create<span class="w"> </span>/path/to/study.dasmix
+</code></pre></div>
+<h3 id="view-or-modify-project-settings">View or modify project settings</h3>
+<p>List all stored settings in <code>project_settings</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>dasmixer-cli<span class="w"> </span>configure<span class="w"> </span>/path/to/study.dasmix<span class="w"> </span>--list
+</code></pre></div>
+<p>Set a specific project setting key:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>dasmixer-cli<span class="w"> </span>configure<span class="w"> </span>/path/to/study.dasmix<span class="w"> </span>--key<span class="w"> </span>ion_ppm_threshold<span class="w"> </span>--value<span class="w"> </span><span class="m">15</span>
+</code></pre></div>
+<hr />
+<h2 id="2-managing-comparison-groups-subset">2. Managing Comparison Groups (<code>subset</code>)</h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Add a new comparison group</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>dasmixer-cli<span class="w"> </span>subset<span class="w"> </span>add<span class="w"> </span>/path/to/study.dasmix<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span>--name<span class="w"> </span><span class="s2">&quot;Treatment&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span>--details<span class="w"> </span><span class="s2">&quot;Drug-treated cohort&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span>--color<span class="w"> </span><span class="s2">&quot;#EF4444&quot;</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="c1"># List all comparison groups</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>dasmixer-cli<span class="w"> </span>subset<span class="w"> </span>list<span class="w"> </span>/path/to/study.dasmix
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="c1"># Delete an empty comparison group</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>dasmixer-cli<span class="w"> </span>subset<span class="w"> </span>delete<span class="w"> </span>/path/to/study.dasmix<span class="w"> </span>--name<span class="w"> </span><span class="s2">&quot;OldGroup&quot;</span>
+</code></pre></div>
+<hr />
+<h2 id="3-managing-identification-tools-tool">3. Managing Identification Tools (<code>tool</code>)</h2>
+<p>Register each search engine or <em>de novo</em> tool before importing its identification files:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Add a De Novo tool</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>dasmixer-cli<span class="w"> </span>tool<span class="w"> </span>add<span class="w"> </span>/path/to/study.dasmix<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span>--name<span class="w"> </span><span class="s2">&quot;PowerNovo2&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span>--parser<span class="w"> </span><span class="s2">&quot;PowerNovo2&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span>--type<span class="w"> </span><span class="s2">&quot;De Novo&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">    </span>--color<span class="w"> </span><span class="s2">&quot;#10B981&quot;</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="c1"># Add a Library search tool</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>dasmixer-cli<span class="w"> </span>tool<span class="w"> </span>add<span class="w"> </span>/path/to/study.dasmix<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">    </span>--name<span class="w"> </span><span class="s2">&quot;MaxQuant&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">    </span>--parser<span class="w"> </span><span class="s2">&quot;MaxQuant&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="w">    </span>--type<span class="w"> </span><span class="s2">&quot;Library&quot;</span>
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>
+<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="c1"># List registered tools</span>
+<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a>dasmixer-cli<span class="w"> </span>tool<span class="w"> </span>list<span class="w"> </span>/path/to/study.dasmix
+<a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a>
+<a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a><span class="c1"># View tool-specific settings (thresholds, PTM rules, etc.)</span>
+<a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a>dasmixer-cli<span class="w"> </span>tool<span class="w"> </span>param-list<span class="w"> </span>/path/to/study.dasmix<span class="w"> </span>--name<span class="w"> </span><span class="s2">&quot;PowerNovo2&quot;</span>
+<a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a>
+<a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a><span class="c1"># Update a tool setting</span>
+<a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a>dasmixer-cli<span class="w"> </span>tool<span class="w"> </span>configure<span class="w"> </span>/path/to/study.dasmix<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-22" name="__codelineno-6-22" href="#__codelineno-6-22"></a><span class="w">    </span>--name<span class="w"> </span><span class="s2">&quot;PowerNovo2&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-23" name="__codelineno-6-23" href="#__codelineno-6-23"></a><span class="w">    </span>--key<span class="w"> </span>max_ppm<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-24" name="__codelineno-6-24" href="#__codelineno-6-24"></a><span class="w">    </span>--value<span class="w"> </span><span class="m">30</span>
+</code></pre></div>
+<p>Supported built-in <code>--parser</code> names for identifications:
+<code>PowerNovo2</code>, <code>MaxQuant</code>, <code>PLGS</code>, <code>PeptideShaker XLS</code>, <code>mzTab</code>, <code>CasaNovo</code>, <code>Pi-PrimeNovo</code>.</p>
+<hr />
+<h2 id="4-importing-data-import">4. Importing Data (<code>import</code>)</h2>
+<h3 id="import-mgf-spectra">Import MGF Spectra</h3>
+<p>Import a single MGF file into a sample:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>dasmixer-cli<span class="w"> </span>import<span class="w"> </span>mgf-file<span class="w"> </span>/path/to/study.dasmix<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span>--file<span class="w"> </span>/data/spectra/S01.mgf<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span>--sample-id<span class="w"> </span><span class="s2">&quot;S01&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span>--group<span class="w"> </span><span class="s2">&quot;Control&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">    </span>--parser<span class="w"> </span><span class="s2">&quot;MGF&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span>--on-duplicates<span class="w"> </span>skip
+</code></pre></div>
+<p>Batch-import MGF files from a directory using glob and <code>{id}</code> patterns:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>dasmixer-cli<span class="w"> </span>import<span class="w"> </span>mgf-pattern<span class="w"> </span>/path/to/study.dasmix<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span>--folder<span class="w"> </span>/data/spectra/<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span>--pattern<span class="w"> </span><span class="s2">&quot;*.mgf&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span>--id-pattern<span class="w"> </span><span class="s2">&quot;{}_{id}_DDA.mgf&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">    </span>--group<span class="w"> </span><span class="s2">&quot;Treatment&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">    </span>--parser<span class="w"> </span><span class="s2">&quot;MGF&quot;</span>
+</code></pre></div>
+<h3 id="import-identifications">Import Identifications</h3>
+<p>Import a single identification file for a sample and tool:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>dasmixer-cli<span class="w"> </span>import<span class="w"> </span>ident-file<span class="w"> </span>/path/to/study.dasmix<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">    </span>--file<span class="w"> </span>/data/pn2/S01_denovo.csv<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">    </span>--sample-id<span class="w"> </span><span class="s2">&quot;S01&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">    </span>--tool<span class="w"> </span><span class="s2">&quot;PowerNovo2&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">    </span>--parser<span class="w"> </span><span class="s2">&quot;PowerNovo2&quot;</span>
+</code></pre></div>
+<p>Batch-import identification files by pattern:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>dasmixer-cli<span class="w"> </span>import<span class="w"> </span>ident-pattern<span class="w"> </span>/path/to/study.dasmix<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">    </span>--folder<span class="w"> </span>/data/pn2/<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">    </span>--pattern<span class="w"> </span><span class="s2">&quot;*_denovo.csv&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">    </span>--id-pattern<span class="w"> </span><span class="s2">&quot;{id}_denovo.csv&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">    </span>--tool<span class="w"> </span><span class="s2">&quot;PowerNovo2&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">    </span>--parser<span class="w"> </span><span class="s2">&quot;PowerNovo2&quot;</span>
+</code></pre></div>
+<p>If the identification files contain protein IDs (e.g., <code>PLGS</code> or <code>MaxQuant</code>), add <code>--collect-proteins</code> (and <code>--is-uniprot-proteins</code> if accessions are UniProt IDs).</p>
+<h3 id="import-a-fasta-protein-database">Import a FASTA Protein Database</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>dasmixer-cli<span class="w"> </span>import<span class="w"> </span>fasta<span class="w"> </span>/path/to/study.dasmix<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">    </span>--file<span class="w"> </span>/data/uniprot_human.fasta
+</code></pre></div>
+<h3 id="import-a-maxquant-or-pride-dataset">Import a MaxQuant or PRIDE Dataset</h3>
+<p>Full one-command imports are also available for MaxQuant (<code>mqpar.xml</code>) and PRIDE (<code>PXD...</code>):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># MaxQuant project import</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>dasmixer-cli<span class="w"> </span>import<span class="w"> </span>maxquant<span class="w"> </span>/path/to/study.dasmix<span class="w"> </span>/data/mq/mqpar.xml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">    </span>--subset-name<span class="w"> </span><span class="s2">&quot;MaxQuant_Cohort&quot;</span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="c1"># PRIDE dataset import</span>
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>dasmixer-cli<span class="w"> </span>import<span class="w"> </span>pride<span class="w"> </span>/path/to/study.dasmix<span class="w"> </span>PXD012345<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="w">    </span>--subset-name<span class="w"> </span><span class="s2">&quot;PRIDE_Cohort&quot;</span>
+</code></pre></div>
+<p>See <a href="../MaxQuant/#cli-import">MaxQuant Import</a> and <a href="../pride_import/#cli-import">PRIDE Dataset Import</a> for all available flags.</p>
+<hr />
+<h2 id="5-running-calculations-calculate">5. Running Calculations (<code>calculate</code>)</h2>
+<p>You can run the entire peptide pipeline in one command or execute each calculation stage individually.</p>
+<h3 id="full-peptide-pipeline-calculate-peptides">Full Peptide Pipeline (<code>calculate peptides</code>)</h3>
+<p>Runs ion coverage calculation, BLAST protein mapping, and preferred identification selection sequentially:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>dasmixer-cli<span class="w"> </span>calculate<span class="w"> </span>peptides<span class="w"> </span>/path/to/study.dasmix<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">    </span>--fasta<span class="w"> </span>/data/uniprot_human.fasta<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">    </span>--criterion<span class="w"> </span>intensity
+</code></pre></div>
+<h3 id="individual-calculation-steps">Individual Calculation Steps</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># 1. Calculate ion coverage and PPM refinement</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>dasmixer-cli<span class="w"> </span>calculate<span class="w"> </span>ion-coverage<span class="w"> </span>/path/to/study.dasmix<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">    </span>--tolerance<span class="w"> </span><span class="m">20</span>.0<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">    </span>--ions<span class="w"> </span><span class="s2">&quot;b,y&quot;</span>
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>
+<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="c1"># 2. Map peptides to proteins (BLAST via npysearch)</span>
+<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a>dasmixer-cli<span class="w"> </span>calculate<span class="w"> </span>peptide-match<span class="w"> </span>/path/to/study.dasmix<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="w">    </span>--fasta<span class="w"> </span>/data/uniprot_human.fasta
+<a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a>
+<a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a><span class="c1"># 3. Select preferred identifications per spectrum</span>
+<a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a>dasmixer-cli<span class="w"> </span>calculate<span class="w"> </span>preferred<span class="w"> </span>/path/to/study.dasmix<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-12" name="__codelineno-14-12" href="#__codelineno-14-12"></a><span class="w">    </span>--criterion<span class="w"> </span>intensity
+<a id="__codelineno-14-13" name="__codelineno-14-13" href="#__codelineno-14-13"></a>
+<a id="__codelineno-14-14" name="__codelineno-14-14" href="#__codelineno-14-14"></a><span class="c1"># 4. Compute protein identifications per sample</span>
+<a id="__codelineno-14-15" name="__codelineno-14-15" href="#__codelineno-14-15"></a>dasmixer-cli<span class="w"> </span>calculate<span class="w"> </span>protein-idents<span class="w"> </span>/path/to/study.dasmix<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-16" name="__codelineno-14-16" href="#__codelineno-14-16"></a><span class="w">    </span>--min-peptides<span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-17" name="__codelineno-14-17" href="#__codelineno-14-17"></a><span class="w">    </span>--min-unique<span class="w"> </span><span class="m">1</span>
+<a id="__codelineno-14-18" name="__codelineno-14-18" href="#__codelineno-14-18"></a>
+<a id="__codelineno-14-19" name="__codelineno-14-19" href="#__codelineno-14-19"></a><span class="c1"># 5. Calculate Label-Free Quantification (LFQ)</span>
+<a id="__codelineno-14-20" name="__codelineno-14-20" href="#__codelineno-14-20"></a>dasmixer-cli<span class="w"> </span>calculate<span class="w"> </span>lfq<span class="w"> </span>/path/to/study.dasmix<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-21" name="__codelineno-14-21" href="#__codelineno-14-21"></a><span class="w">    </span>--empai<span class="w"> </span>--ibaq<span class="w"> </span>--nsaf<span class="w"> </span>--top3<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-22" name="__codelineno-14-22" href="#__codelineno-14-22"></a><span class="w">    </span>--enzyme<span class="w"> </span>trypsin
+</code></pre></div>
+<p>All <code>calculate</code> subcommands also accept <code>--sample-id &lt;ID&gt;</code> if you want to restrict computation to a single sample.</p>
+<hr />
+<h2 id="6-merging-projects-import-project">6. Merging Projects (<code>import-project</code>)</h2>
+<p>Combines all data from a <code>SOURCE</code> <code>.dasmix</code> project into a <code>TARGET</code> <code>.dasmix</code> project in a single atomic transaction:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>dasmixer-cli<span class="w"> </span>import-project<span class="w"> </span>/path/to/target.dasmix<span class="w"> </span>/path/to/source.dasmix<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">    </span>--tool-match<span class="w"> </span>parser<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">    </span>--conflict-suffix<span class="w"> </span><span class="s2">&quot;_1&quot;</span>
+</code></pre></div>
+<h3 id="merge-options">Merge Options</h3>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--tool-match</code></td>
+<td><code>parser</code></td>
+<td>How to match tools between projects: <code>parser</code> (match by parser type), <code>name</code> (match by display name), or <code>none</code> (keep separate with suffix)</td>
+</tr>
+<tr>
+<td><code>--no-subset-match</code></td>
+<td>off</td>
+<td>Do not merge comparison groups with identical names; insert source groups with <code>--conflict-suffix</code></td>
+</tr>
+<tr>
+<td><code>--no-sample-match</code></td>
+<td>off</td>
+<td>Do not merge samples with identical names; insert source samples with <code>--conflict-suffix</code></td>
+</tr>
+<tr>
+<td><code>--update-settings</code></td>
+<td>off</td>
+<td>Overwrite target <code>project_settings</code> with values from the source project</td>
+</tr>
+<tr>
+<td><code>--conflict-suffix</code></td>
+<td><code>"_1"</code></td>
+<td>Suffix appended to duplicate names when not merging</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="7-database-maintenance-checkpoint-vacuum-update-ptm-list">7. Database Maintenance (<code>checkpoint</code>, <code>vacuum</code>, <code>update-ptm-list</code>)</h2>
+<p>Because DASMixer projects use SQLite in Write-Ahead Logging (<strong>WAL</strong>) mode, temporary <code>.dasmix-wal</code> and <code>.dasmix-shm</code> files may exist alongside an open project.</p>
+<h3 id="flush-wal-journal-checkpoint">Flush WAL journal (<code>checkpoint</code>)</h3>
+<p>Before copying or sharing a project file that may not have been cleanly closed, flush all WAL changes into the main <code>.dasmix</code> file:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>dasmixer-cli<span class="w"> </span>checkpoint<span class="w"> </span>/path/to/study.dasmix
+</code></pre></div>
+<h3 id="compact-project-file-vacuum">Compact project file (<code>vacuum</code>)</h3>
+<p>If you have deleted large numbers of spectra, samples, or identifications, run <code>vacuum</code> to reclaim unused disk space inside the <code>.dasmix</code> database:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>dasmixer-cli<span class="w"> </span>vacuum<span class="w"> </span>/path/to/study.dasmix
+</code></pre></div>
+<h3 id="refresh-ptm-configuration-files-update-ptm-list">Refresh PTM configuration files (<code>update-ptm-list</code>)</h3>
+<p>Regenerates or updates the user PTM configuration CSV files (<code>all_ptm_config.csv</code> and <code>import_ptm_renames.csv</code> — see <a href="../ptm_configuration/">PTM Configuration</a>):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>dasmixer-cli<span class="w"> </span>update-ptm-list
+</code></pre></div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../abs_concentrations/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Absolute Concentrations">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Absolute Concentrations
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../../../developer/architecture/" class="md-footer__link md-footer__link--next" aria-label="Next: Modules &amp; Architecture">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Modules & Architecture
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.footer", "navigation.sections", "content.code.copy"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../../javascripts/mathjax.js"></script>
+      
+        <script src="https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  <script id="init-glightbox">const lightbox = GLightbox({"touchNavigation": true, "loop": false, "zoomable": true, "draggable": true, "openEffect": "zoom", "closeEffect": "zoom", "slideEffect": "slide"});
+document$.subscribe(() => { lightbox.reload() });
+</script></body>
+</html>

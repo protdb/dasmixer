@@ -1,0 +1,1953 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../peptides_tab/">
+      
+      
+        <link rel="next" href="../proteins_tab/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../img/favicon.ico">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Viewing Identification Data - DASMixer Guide</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+   <link href="../../assets/stylesheets/glightbox.min.css" rel="stylesheet"/><style>
+    html.glightbox-open { overflow: initial; height: 100%; }
+    .gslide-title { margin-top: 0px; user-select: text; }
+    .gslide-desc { color: #666; user-select: text; }
+    .gslide-image img { background: white; }
+    .gscrollbar-fixer { padding-right: 15px; }
+    .gdesc-inner { font-size: 0.75rem; }
+    body[data-md-color-scheme="slate"] .gdesc-inner { background: var(--md-default-bg-color);}
+    body[data-md-color-scheme="slate"] .gslide-title { color: var(--md-default-fg-color);}
+    body[data-md-color-scheme="slate"] .gslide-desc { color: var(--md-default-fg-color);}</style> <script src="../../assets/javascripts/glightbox.min.js"></script></head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#viewing-identification-data" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="DASMixer Guide" class="md-header__button md-logo" aria-label="DASMixer Guide" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            DASMixer Guide
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Viewing Identification Data
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="DASMixer Guide" class="md-nav__button md-logo" aria-label="DASMixer Guide" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    DASMixer Guide
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core Concepts & Formulas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../lfq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LFQ Methods
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../project_sample/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Project & Samples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../peptides_tab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Processing Identifications
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Viewing Identification Data
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Viewing Identification Data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#filtering-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Filtering Data
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Filtering Data">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#quick-drill-down-links" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Drill-Down Links
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#customizing-visible-columns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Customizing Visible Columns
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pagination-and-table-export" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pagination and Table Export
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Pagination and Table Export">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#exporting-filtered-table-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exporting Filtered Table Data
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#useful-filtering-scenarios" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Useful Filtering Scenarios
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Useful Filtering Scenarios">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-find-high-confidence-peptides-that-do-not-map-to-the-reference-proteome" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Find high-confidence peptides that do not map to the reference proteome
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-find-all-phosphorylated-peptides" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Find all phosphorylated peptides
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-inspect-candidate-amino-acid-substitutions-for-a-specific-protein" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Inspect candidate amino acid substitutions for a specific protein
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#viewing-fragmentation-spectra" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Viewing Fragmentation Spectra
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Viewing Fragmentation Spectra">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#interactive-plot-viewer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interactive Plot Viewer
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuring-the-spectrum-plot" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuring the Spectrum Plot
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quality-control-checklist-before-moving-on" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quality Control Checklist Before Moving On
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../proteins_tab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Working with Proteins
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reports/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reports
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../plots_tab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Saved Plots
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../export_tab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Export & Project Merge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration & Plugins
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../system_menus/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    System Menus (File & Options)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_10" id="__nav_3_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Advanced Topics
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Advanced Topics
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../advanced/MaxQuant/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MaxQuant Project Import
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../advanced/pride_import/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PRIDE Dataset Import
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../advanced/ptm_configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PTM Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../advanced/abs_concentrations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Absolute Concentrations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../advanced/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Command-Line Interface (CLI)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developer Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Developer Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_1" id="__nav_4_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API & Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API & Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Modules & Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/core_api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core Library API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/project_structure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Project File Structure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_2" id="__nav_4_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Examples
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/example_pipeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Running an Automated Pipeline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/example_plots/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Generating Spectrum Plots
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_3" id="__nav_4_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plugin Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Plugin Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/custom_importers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Identification Importers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/custom_reports/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Reports
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#filtering-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Filtering Data
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Filtering Data">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#quick-drill-down-links" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Drill-Down Links
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#customizing-visible-columns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Customizing Visible Columns
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pagination-and-table-export" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pagination and Table Export
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Pagination and Table Export">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#exporting-filtered-table-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exporting Filtered Table Data
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#useful-filtering-scenarios" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Useful Filtering Scenarios
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Useful Filtering Scenarios">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-find-high-confidence-peptides-that-do-not-map-to-the-reference-proteome" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Find high-confidence peptides that do not map to the reference proteome
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-find-all-phosphorylated-peptides" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Find all phosphorylated peptides
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-inspect-candidate-amino-acid-substitutions-for-a-specific-protein" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Inspect candidate amino acid substitutions for a specific protein
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#viewing-fragmentation-spectra" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Viewing Fragmentation Spectra
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Viewing Fragmentation Spectra">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#interactive-plot-viewer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interactive Plot Viewer
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuring-the-spectrum-plot" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuring the Spectrum Plot
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quality-control-checklist-before-moving-on" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quality Control Checklist Before Moving On
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="viewing-identification-data">Viewing Identification Data</h1>
+<p>Detailed information about every spectrum, peptide identification, and protein match is available in the <strong>Search and view identifications</strong> section at the bottom of the <strong>Peptides</strong> tab:</p>
+<p><a class="glightbox" href="../img/peptides_table_collapsed.png" data-type="image" data-width="auto" data-height="auto" data-description="The Search and view identifications section with all four panels collapsed." data-desc-position="bottom"><img alt="Collapsed peptides table" data-description="The Search and view identifications section with all four panels collapsed." src="../img/peptides_table_collapsed.png" /></a></p>
+<p>This area is organized into four collapsible panels:</p>
+<ul>
+<li><strong>Peptide identifications:</strong><ul>
+<li><strong>Filters</strong> — query criteria to narrow down rows</li>
+<li><strong>Data</strong> — paginated table of spectra, PSMs, and protein matches</li>
+</ul>
+</li>
+<li><strong>Ion match plot:</strong><ul>
+<li><strong>Plot settings</strong> — display options for the MS/MS spectrum viewer</li>
+<li><strong>Plot preview</strong> — annotated fragmentation spectrum plot</li>
+</ul>
+</li>
+</ul>
+<p>Click any panel header to expand or collapse it. The expanded <strong>Filters</strong> and <strong>Data</strong> panels are shown below:</p>
+<p><a class="glightbox" href="../img/peptides_table_expanded.png" data-type="image" data-width="auto" data-height="auto" data-description="The Filters and Data panels expanded, showing the peptide identification table with pagination controls." data-desc-position="bottom"><img alt="Expanded peptide data" data-description="The Filters and Data panels expanded, showing the peptide identification table with pagination controls." src="../img/peptides_table_expanded.png" /></a></p>
+<h2 id="filtering-data">Filtering Data</h2>
+<p>You can filter the identifications table using any combination of the following fields:</p>
+<ul>
+<li><strong>Identification ID</strong> — internal identification primary key in the DASMixer project</li>
+<li><strong>Sample</strong> — filter by a specific sample</li>
+<li><strong>Spectre Seq #</strong> — sequential spectrum index (<code>seq_no</code>) within the MGF file</li>
+<li><strong>Spectre Scans</strong> — scan number (<code>scans</code>) reported in the MGF file</li>
+<li><strong>Spectrum ID</strong> — internal spectrum primary key (<code>spectre_id</code>) in the project database</li>
+<li><strong>Preferred</strong> — <code>All</code> (show all rows), <code>Yes</code> (only preferred identifications), or <code>No</code> (only non-preferred identifications)</li>
+<li><strong>Tool</strong> — filter by identification tool</li>
+<li><strong>Max PPM</strong> — maximum absolute precursor PPM error</li>
+<li><strong>Sequence contains / Canonical sequence contains</strong> — substring search within the ProForma sequence (including PTMs) or unmodified canonical sequence</li>
+<li><strong>Min Quality</strong> — minimum backbone cleavage <a href="../../concepts/#quality">Quality</a> score</li>
+<li><strong>Max FDR</strong> — maximum per-PSM False Discovery Rate</li>
+<li><strong>Protein ID</strong> — exact or partial protein accession (e.g., <code>P02768</code>)</li>
+<li><strong>Gene</strong> — gene symbol (e.g., <code>ALB</code>)</li>
+<li><strong>Protein identified</strong> — <code>Yes</code> (mapped to a protein) or <code>No</code> (unmapped)</li>
+<li><strong>Sequence identified</strong> — whether the spectrum has any identification assigned</li>
+<li><strong>Has PTM</strong> — whether the peptide sequence carries post-translational modifications</li>
+<li><strong>Has AA substitution</strong> — whether the match is flagged as a candidate amino acid substitution</li>
+</ul>
+<p>After entering your filter criteria, click <strong>Apply filters</strong> to refresh the table. You should also click <strong>Apply filters</strong> after running calculations on the Peptides tab to load the newly computed results into the table.</p>
+<h3 id="quick-drill-down-links">Quick Drill-Down Links</h3>
+<p>Several columns in the table — <strong>Spectrum ID</strong>, <strong>Scans</strong>, <strong>ID</strong>, and <strong>Protein</strong> — are rendered as blue underlined hyperlinks. Clicking any value in these columns automatically populates the corresponding filter field and refreshes the table, making it easy to inspect all identifications competing for a single spectrum or all peptides mapped to a specific protein.</p>
+<h2 id="customizing-visible-columns">Customizing Visible Columns</h2>
+<p>To keep the table readable, some columns are hidden by default. Click the gear icon (<strong>⚙️</strong>) in the top-right corner of the table header to open the column selector dialog, where you can check or uncheck individual fields:</p>
+<p><a class="glightbox" href="../img/peptides_table_fields.png" data-type="image" data-width="auto" data-height="auto" data-description="Column selector dialog — toggle visibility of individual table columns." data-desc-position="bottom"><img alt="Peptides table column selector" data-description="Column selector dialog — toggle visibility of individual table columns." src="../img/peptides_table_fields.png" /></a></p>
+<h2 id="pagination-and-table-export">Pagination and Table Export</h2>
+<p>Beneath the data table, a control bar provides pagination and export tools:</p>
+<p><a class="glightbox" href="../img/peptides_table_controls.png" data-type="image" data-width="auto" data-height="auto" data-description="Pagination bar and export controls: row counter, Export button, rows-per-page selector, and page navigation arrows." data-desc-position="bottom"><img alt="Peptide table controls" data-description="Pagination bar and export controls: row counter, Export button, rows-per-page selector, and page navigation arrows." src="../img/peptides_table_controls.png" /></a></p>
+<ul>
+<li><strong>Row counter:</strong> Displays <code>Showing 1–20 of XXXXX rows...</code>, indicating the total number of records matching the active filters.</li>
+<li><strong>Export:</strong> Exports <strong>all</strong> rows matching the current filters (not just the visible page) to a file.</li>
+<li><strong>Rows per page:</strong> Adjusts how many rows are displayed per page.</li>
+<li><strong>Page navigation arrows:</strong> Step forward or backward through the filtered dataset.</li>
+</ul>
+<h3 id="exporting-filtered-table-data">Exporting Filtered Table Data</h3>
+<p>Clicking <strong>Export</strong> opens the table export dialog:</p>
+<p><a class="glightbox" href="../img/export_dialog.png" data-type="image" data-width="auto" data-height="auto" data-description="Table export dialog — choose CSV or XLSX format and toggle technical database column headers." data-desc-position="bottom"><img alt="Table export dialog" data-description="Table export dialog — choose CSV or XLSX format and toggle technical database column headers." src="../img/export_dialog.png" /></a></p>
+<ul>
+<li><strong>Format:</strong> Choose between <strong>CSV</strong> (comma-separated values) and <strong>XLSX</strong> (Microsoft Excel workbook).</li>
+<li><strong>Technical headers:</strong> When checked, exported columns use internal database field names (e.g., <code>protein_id</code>, <code>intensity_coverage</code>) instead of human-readable display labels (<code>Protein ID</code>, <code>Intensity Coverage, %</code>).</li>
+</ul>
+<blockquote>
+<p><strong>Tip:</strong>
+When exporting data for manuscript supplementary tables or manual inspection in Excel, select <strong>XLSX</strong> and leave <strong>Technical headers</strong> unchecked.</p>
+<p>When exporting data for downstream scripts (Python, R), select <strong>CSV</strong> and check <strong>Technical headers</strong>.</p>
+<p>Note that exporting hundreds of thousands of rows from a large project may take a moment to query and write to disk.</p>
+</blockquote>
+<h2 id="useful-filtering-scenarios">Useful Filtering Scenarios</h2>
+<p>Combining filters allows you to quickly answer common biological and quality-control questions:</p>
+<h3 id="1-find-high-confidence-peptides-that-do-not-map-to-the-reference-proteome">1. Find high-confidence peptides that do not map to the reference proteome</h3>
+<ul>
+<li>Set <strong>Preferred</strong> to <code>Yes</code> and <strong>Protein identified</strong> to <code>No</code>.</li>
+<li>These records may represent unannotated proteoforms, contaminants, or endogenous peptides absent from your FASTA file.</li>
+</ul>
+<h3 id="2-find-all-phosphorylated-peptides">2. Find all phosphorylated peptides</h3>
+<ul>
+<li>Type <code>Phospho</code> into the <strong>Sequence contains</strong> field and click <strong>Apply filters</strong>.</li>
+</ul>
+<h3 id="3-inspect-candidate-amino-acid-substitutions-for-a-specific-protein">3. Inspect candidate amino acid substitutions for a specific protein</h3>
+<ul>
+<li>Enter the target accession or symbol in <strong>Protein ID</strong> or <strong>Gene</strong>, and set <strong>Has AA substitution</strong> to <code>Yes</code>.</li>
+</ul>
+<h2 id="viewing-fragmentation-spectra">Viewing Fragmentation Spectra</h2>
+<p>In the rightmost column of every table row, click the plot icon (<strong>📈</strong>) to generate an annotated MS/MS fragmentation plot for that spectrum.</p>
+<p>While the figure is being rendered, a loading indicator appears in the <strong>Plot preview</strong> panel:</p>
+<p><a class="glightbox" href="../img/peptide_plot_preview.png" data-type="image" data-width="auto" data-height="auto" data-description="Plot preview panel showing a loading indicator while the spectrum figure is being rendered." data-desc-position="bottom"><img alt="Peptide plot loading preview" data-description="Plot preview panel showing a loading indicator while the spectrum figure is being rendered." src="../img/peptide_plot_preview.png" /></a></p>
+<p>Once ready, the annotated spectrum is displayed directly below the table:</p>
+<p><a class="glightbox" href="../img/peptide_plot_displayed.png" data-type="image" data-width="auto" data-height="auto" data-description="Annotated MS/MS fragmentation plot with b- and y-ion series highlighted in colour and peak labels." data-desc-position="bottom"><img alt="Peptide plot displayed" data-description="Annotated MS/MS fragmentation plot with b- and y-ion series highlighted in colour and peak labels." src="../img/peptide_plot_displayed.png" /></a></p>
+<p>Matched fragment ion series (<em>b</em>, <em>y</em>, etc.) are highlighted in distinct colors with peak labels (<code>b3</code>, <code>y7-H2O</code>, etc.), while unmatched experimental peaks are drawn in gray. If multiple identifications exist for the selected spectrum, DASMixer stacks subplots vertically — one panel per identification — so you can visually compare how competing sequences explain the same spectrum. Preferred identifications are marked with a star (<code>★</code>).</p>
+<blockquote>
+<p><strong>Plot sizing tip:</strong> The inline preview image is scaled to fit your current DASMixer window width. To generate a wider image, maximize the application window and click the plot icon (or <strong>Apply settings</strong>) again. You can also change the global <strong>Plot aspect ratio</strong> in <a href="../configuration/">Settings</a>.</p>
+</blockquote>
+<p>Above the rendered figure, four action buttons let you work with the plot:</p>
+<ul>
+<li><strong>Copy</strong> — copies the high-resolution PNG image directly to your system clipboard. <em>(Note: On Linux, clipboard support requires <code>xclip</code> or <code>wl-clipboard</code> to be installed).</em></li>
+<li><strong>Save to project</strong> — stores the plot inside the <code>.dasmix</code> project so you can view or batch-export it later from the <a href="../plots_tab/">Plots tab</a>.</li>
+<li><strong>Export</strong> — saves the figure to disk as a vector <strong>SVG</strong> or raster <strong>PNG</strong> file.</li>
+<li><strong>Interactive</strong> — opens the plot in a dedicated interactive window where you can zoom, pan, and hover over individual peaks.</li>
+</ul>
+<blockquote>
+<p><strong>Publication tip:</strong> Export figures in <strong>SVG</strong> format when preparing manuscripts. Vector graphics scale to any resolution without pixelation and can be edited directly in Inkscape or Adobe Illustrator, or converted to high-DPI TIFF/PNG files.</p>
+</blockquote>
+<h3 id="interactive-plot-viewer">Interactive Plot Viewer</h3>
+<p>Clicking <strong>Interactive</strong> opens the Plotly figure in a standalone viewer:</p>
+<p><a class="glightbox" href="../img/peptide_plot_interactive.png" data-type="image" data-width="auto" data-height="auto" data-description="Interactive Plotly viewer window — zoom, pan, and hover over individual fragment peaks." data-desc-position="bottom"><img alt="Interactive peptide plot" data-description="Interactive Plotly viewer window — zoom, pan, and hover over individual fragment peaks." src="../img/peptide_plot_interactive.png" /></a></p>
+<blockquote>
+<p><strong>Troubleshooting the Interactive Viewer:</strong></p>
+<p>If the standalone interactive window fails to open on your system, go to <strong>Options → Settings</strong>, change <strong>Plot and report view mode</strong> from <code>Window (pywebview)</code> to <code>Browser (default)</code>, and restart DASMixer.</p>
+<p><strong>Linux Snap browser note:</strong> If your default web browser is installed as a Snap package (common on Ubuntu), it cannot read files inside hidden directories such as <code>~/.cache</code> (as well as /tmp directory). If the browser shows a <em>File not found</em> or <em>Access denied</em> error, open <strong>Options → Settings</strong> and change the <strong>Temporary files directory</strong> to a non-hidden path inside your home folder (e.g., <code>~/dasmixer_tmp</code>).</p>
+</blockquote>
+<h2 id="configuring-the-spectrum-plot">Configuring the Spectrum Plot</h2>
+<p>Between the data table and the plot preview lies the collapsible <strong>Plot settings</strong> panel:</p>
+<p><a class="glightbox" href="../img/peptide_plot_settings.png" data-type="image" data-width="auto" data-height="auto" data-description="Plot settings panel: toggle title, protein mapping sequences, and subplot header fields." data-desc-position="bottom"><img alt="Peptide plot settings" data-description="Plot settings panel: toggle title, protein mapping sequences, and subplot header fields." src="../img/peptide_plot_settings.png" /></a></p>
+<p>Here you can customize:</p>
+<ul>
+<li><strong>Show title</strong> — toggle the main figure header showing scan number, precursor mass, and retention time.</li>
+<li><strong>Show protein mapping sequences</strong> — add extra subplot panels for database <code>matched_sequence</code> alignments alongside the original identifications (especially informative when inspecting <em>de novo</em> corrections or amino acid substitutions).</li>
+<li><strong>Subplot title fields</strong> — choose which metrics (score, PPM, coverage, quality, etc.) are displayed in each identification's subplot header.</li>
+</ul>
+<p>After changing any option, click <strong>Apply settings</strong> to redraw the current plot.</p>
+<blockquote>
+<p><strong>Note:</strong> Changing fragment matching parameters in the top <strong>Ion match settings</strong> panel will also immediately affect how peaks are annotated when you redraw a plot, even before you re-run the batch <strong>Calculate ion coverage</strong> action.</p>
+</blockquote>
+<h2 id="quality-control-checklist-before-moving-on">Quality Control Checklist Before Moving On</h2>
+<p>While it is impractical to manually inspect thousands of MS/MS spectra, reviewing a representative sample of both <strong>preferred</strong> and <strong>non-preferred</strong> identifications is an essential quality-control step:</p>
+<ol>
+<li>Verify that identifications marked as <strong>Preferred</strong> show convincing backbone ion series and low noise.</li>
+<li>Check that identifications rejected as <strong>Non-preferred</strong> genuinely lack sufficient fragment support.</li>
+<li>Confirm that the total number of preferred identifications across your samples and tools is sufficient for downstream protein inference.</li>
+</ol>
+<p>If the filtering appears too strict or too permissive, adjust the <strong>Preferred settings</strong> on the tool cards and click <strong>Select preferred</strong> — this takes only a few seconds. Once you are satisfied with the peptide-level results, proceed to the <a href="../proteins_tab/">Proteins tab</a>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../peptides_tab/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Processing Identifications">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Processing Identifications
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../proteins_tab/" class="md-footer__link md-footer__link--next" aria-label="Next: Working with Proteins">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Working with Proteins
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.footer", "navigation.sections", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  <script id="init-glightbox">const lightbox = GLightbox({"touchNavigation": true, "loop": false, "zoomable": true, "draggable": true, "openEffect": "zoom", "closeEffect": "zoom", "slideEffect": "slide"});
+document$.subscribe(() => { lightbox.reload() });
+</script></body>
+</html>

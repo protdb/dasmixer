@@ -1,0 +1,2318 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../architecture/">
+      
+      
+        <link rel="next" href="../project_structure/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../img/favicon.ico">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Core Library API - DASMixer Guide</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+   <link href="../../assets/stylesheets/glightbox.min.css" rel="stylesheet"/><style>
+    html.glightbox-open { overflow: initial; height: 100%; }
+    .gslide-title { margin-top: 0px; user-select: text; }
+    .gslide-desc { color: #666; user-select: text; }
+    .gslide-image img { background: white; }
+    .gscrollbar-fixer { padding-right: 15px; }
+    .gdesc-inner { font-size: 0.75rem; }
+    body[data-md-color-scheme="slate"] .gdesc-inner { background: var(--md-default-bg-color);}
+    body[data-md-color-scheme="slate"] .gslide-title { color: var(--md-default-fg-color);}
+    body[data-md-color-scheme="slate"] .gslide-desc { color: var(--md-default-fg-color);}</style> <script src="../../assets/javascripts/glightbox.min.js"></script></head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#core-library-api-dasmixer-core" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="DASMixer Guide" class="md-header__button md-logo" aria-label="DASMixer Guide" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            DASMixer Guide
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Core Library API
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="DASMixer Guide" class="md-nav__button md-logo" aria-label="DASMixer Guide" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    DASMixer Guide
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core Concepts & Formulas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../lfq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LFQ Methods
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user/project_sample/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Project & Samples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user/peptides_tab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Processing Identifications
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user/peptides_table/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Viewing Identification Data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user/proteins_tab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Working with Proteins
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user/reports/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reports
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user/plots_tab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Saved Plots
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user/export_tab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Export & Project Merge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration & Plugins
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user/system_menus/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    System Menus (File & Options)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_10" id="__nav_3_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Advanced Topics
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Advanced Topics
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user/advanced/MaxQuant/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MaxQuant Project Import
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user/advanced/pride_import/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PRIDE Dataset Import
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user/advanced/ptm_configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PTM Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user/advanced/abs_concentrations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Absolute Concentrations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user/advanced/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Command-Line Interface (CLI)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developer Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Developer Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_1" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4_1" id="__nav_4_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API & Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_1_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API & Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Modules & Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core Library API
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core Library API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#project-class-dasmixerapiprojectprojectproject" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Project Class (dasmixer.api.project.project.Project)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Project Class (dasmixer.api.project.project.Project)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#lifecycle-and-context-manager" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lifecycle and Context Manager
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#subsets-subsetmixin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Subsets (SubsetMixin)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tools-toolmixin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tools (ToolMixin)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#samples-samplemixin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Samples (SampleMixin)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#spectra-spectramixin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Spectra (SpectraMixin)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#identifications-identificationmixin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Identifications (IdentificationMixin)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#peptide-matches-joined-queries-peptidemixin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Peptide Matches &amp; Joined Queries (PeptideMixin)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#proteins-quantification-proteinmixin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Proteins &amp; Quantification (ProteinMixin)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#project-merge-importprojectmixin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Project Merge (ImportProjectMixin)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#raw-sql-querymixin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Raw SQL (QueryMixin)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-transfer-objects-dasmixerapiprojectdataclasses" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Transfer Objects (dasmixer.api.project.dataclasses)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#calculations-api-dasmixerapicalculations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Calculations API (dasmixer.api.calculations)
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../project_structure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Project File Structure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_2" id="__nav_4_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Examples
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../example_pipeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Running an Automated Pipeline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../example_plots/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Generating Spectrum Plots
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_3" id="__nav_4_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plugin Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Plugin Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../custom_importers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Identification Importers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../custom_reports/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Reports
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#project-class-dasmixerapiprojectprojectproject" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Project Class (dasmixer.api.project.project.Project)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Project Class (dasmixer.api.project.project.Project)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#lifecycle-and-context-manager" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lifecycle and Context Manager
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#subsets-subsetmixin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Subsets (SubsetMixin)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tools-toolmixin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tools (ToolMixin)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#samples-samplemixin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Samples (SampleMixin)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#spectra-spectramixin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Spectra (SpectraMixin)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#identifications-identificationmixin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Identifications (IdentificationMixin)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#peptide-matches-joined-queries-peptidemixin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Peptide Matches &amp; Joined Queries (PeptideMixin)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#proteins-quantification-proteinmixin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Proteins &amp; Quantification (ProteinMixin)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#project-merge-importprojectmixin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Project Merge (ImportProjectMixin)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#raw-sql-querymixin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Raw SQL (QueryMixin)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-transfer-objects-dasmixerapiprojectdataclasses" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Transfer Objects (dasmixer.api.project.dataclasses)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#calculations-api-dasmixerapicalculations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Calculations API (dasmixer.api.calculations)
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="core-library-api-dasmixer-core">Core Library API (<code>dasmixer-core</code>)</h1>
+<p><code>dasmixer-core</code> provides an asynchronous Python API for managing <code>.dasmix</code> projects, parsing input files, running analytical calculations, and generating reports.</p>
+<hr />
+<h2 id="project-class-dasmixerapiprojectprojectproject">Project Class (<code>dasmixer.api.project.project.Project</code>)</h2>
+<p><code>Project</code> is the central data access object. It is implemented as a composition of domain-specific mixins and uses <strong>aiosqlite</strong> with WAL mode enabled. All public methods are <code>async</code>.</p>
+<h3 id="lifecycle-and-context-manager">Lifecycle and Context Manager</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">dasmixer.api.project.project</span><span class="w"> </span><span class="kn">import</span> <span class="n">Project</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1"># Open or create a project using the async context manager (recommended)</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="k">async</span> <span class="k">with</span> <span class="n">Project</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="s2">&quot;study.dasmix&quot;</span><span class="p">,</span> <span class="n">create_if_not_exists</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="k">as</span> <span class="n">project</span><span class="p">:</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">samples</span> <span class="o">=</span> <span class="k">await</span> <span class="n">project</span><span class="o">.</span><span class="n">get_samples</span><span class="p">()</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="c1"># Automatically saves and closes on exit</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Signature</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>initialize()</code></td>
+<td><code>() -&gt; None</code></td>
+<td>Opens connection, configures WAL, creates schema, runs migrations</td>
+</tr>
+<tr>
+<td><code>save(checkpoint=False)</code></td>
+<td><code>(bool) -&gt; None</code></td>
+<td>Updates <code>modified_at</code> and commits transaction (optionally checkpoints WAL)</td>
+</tr>
+<tr>
+<td><code>save_as(path)</code></td>
+<td><code>(Path \| str) -&gt; None</code></td>
+<td>Copies project to a new path and reopens connection</td>
+</tr>
+<tr>
+<td><code>vacuum()</code></td>
+<td><code>() -&gt; None</code></td>
+<td>Rebuilds SQLite database file to reclaim unused disk space</td>
+</tr>
+<tr>
+<td><code>close()</code></td>
+<td><code>() -&gt; None</code></td>
+<td>Commits and closes database connection</td>
+</tr>
+<tr>
+<td><code>get_metadata()</code></td>
+<td><code>() -&gt; dict</code></td>
+<td>Returns project metadata (<code>version</code>, <code>created_at</code>, <code>modified_at</code>)</td>
+</tr>
+<tr>
+<td><code>set_setting(key, value)</code></td>
+<td><code>(str, str) -&gt; None</code></td>
+<td>Upserts a key-value pair in <code>project_settings</code></td>
+</tr>
+<tr>
+<td><code>get_setting(key, default=None)</code></td>
+<td><code>(str, Any) -&gt; str \| None</code></td>
+<td>Reads a setting from <code>project_settings</code></td>
+</tr>
+<tr>
+<td><code>get_all_settings()</code></td>
+<td><code>() -&gt; dict[str, str]</code></td>
+<td>Returns all settings as a dictionary</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="subsets-subsetmixin">Subsets (<code>SubsetMixin</code>)</h3>
+<p>Manages comparison groups used for differential analysis.</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Signature</th>
+<th>Returns</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>add_subset</code></td>
+<td><code>(name, details=None, display_color=None)</code></td>
+<td><code>Subset</code></td>
+<td>Raises <code>ValueError</code> if name exists</td>
+</tr>
+<tr>
+<td><code>get_subsets</code></td>
+<td><code>()</code></td>
+<td><code>list[Subset]</code></td>
+<td>Ordered by name</td>
+</tr>
+<tr>
+<td><code>get_subset</code></td>
+<td><code>(subset_id: int)</code></td>
+<td><code>Subset \| None</code></td>
+<td>Lookup by ID</td>
+</tr>
+<tr>
+<td><code>update_subset</code></td>
+<td><code>(subset: Subset)</code></td>
+<td><code>None</code></td>
+<td>Updates name, details, color</td>
+</tr>
+<tr>
+<td><code>delete_subset</code></td>
+<td><code>(subset_id: int)</code></td>
+<td><code>None</code></td>
+<td>Raises <code>ValueError</code> if samples belong to this subset</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="tools-toolmixin">Tools (<code>ToolMixin</code>)</h3>
+<p>Manages identification search engines registered in the project.</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Signature</th>
+<th>Returns</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>add_tool</code></td>
+<td><code>(name, type, parser, settings=None, display_color=None)</code></td>
+<td><code>Tool</code></td>
+<td><code>type</code>: <code>"Library"</code> or <code>"De Novo"</code>; <code>parser</code>: registered parser name</td>
+</tr>
+<tr>
+<td><code>get_tools</code></td>
+<td><code>()</code></td>
+<td><code>list[Tool]</code></td>
+<td>Ordered by name</td>
+</tr>
+<tr>
+<td><code>get_tool</code></td>
+<td><code>(tool_id: int)</code></td>
+<td><code>Tool \| None</code></td>
+<td>Lookup by ID</td>
+</tr>
+<tr>
+<td><code>update_tool</code></td>
+<td><code>(tool: Tool)</code></td>
+<td><code>None</code></td>
+<td>Updates tool metadata and JSON settings</td>
+</tr>
+<tr>
+<td><code>delete_tool</code></td>
+<td><code>(tool_id: int)</code></td>
+<td><code>None</code></td>
+<td>Cascades or raises if identifications exist</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="samples-samplemixin">Samples (<code>SampleMixin</code>)</h3>
+<p>Manages biological samples and their status statistics.</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Signature</th>
+<th>Returns</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>add_sample</code></td>
+<td><code>(name, subset_id=None, additions=None, outlier=False)</code></td>
+<td><code>Sample</code></td>
+<td><code>additions</code> is a <code>dict</code> stored as JSON</td>
+</tr>
+<tr>
+<td><code>get_samples</code></td>
+<td><code>(subset_id: int \| None = None)</code></td>
+<td><code>list[Sample]</code></td>
+<td>Includes computed <code>subset_name</code> and <code>spectra_files_count</code></td>
+</tr>
+<tr>
+<td><code>get_sample</code></td>
+<td><code>(sample_id: int)</code></td>
+<td><code>Sample \| None</code></td>
+<td>Lookup by ID</td>
+</tr>
+<tr>
+<td><code>get_sample_by_name</code></td>
+<td><code>(name: str)</code></td>
+<td><code>Sample \| None</code></td>
+<td>Lookup by unique name</td>
+</tr>
+<tr>
+<td><code>update_sample</code></td>
+<td><code>(sample: Sample)</code></td>
+<td><code>None</code></td>
+<td>Updates subset, additions, or outlier flag</td>
+</tr>
+<tr>
+<td><code>delete_sample</code></td>
+<td><code>(sample_id: int)</code></td>
+<td><code>None</code></td>
+<td>Cascades to spectra files and identifications</td>
+</tr>
+<tr>
+<td><code>get_sample_stats</code></td>
+<td><code>(sample_id: int)</code></td>
+<td><code>dict</code></td>
+<td>Live stats for a single sample</td>
+</tr>
+<tr>
+<td><code>get_all_samples_stats</code></td>
+<td><code>()</code></td>
+<td><code>dict[int, dict]</code></td>
+<td>Fresh aggregated stats for all samples</td>
+</tr>
+<tr>
+<td><code>get_subset_sample_counts</code></td>
+<td><code>(exclude_outliers=True, subsets=None)</code></td>
+<td><code>dict[str, int]</code></td>
+<td>Sample counts per subset name</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="spectra-spectramixin">Spectra (<code>SpectraMixin</code>)</h3>
+<p>Manages spectral files and individual MS/MS spectra.</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Signature</th>
+<th>Returns</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>add_spectra_file</code></td>
+<td><code>(sample_id: int, format: str, path: str)</code></td>
+<td><code>int</code></td>
+<td>Returns <code>spectre_file.id</code></td>
+</tr>
+<tr>
+<td><code>get_spectra_files</code></td>
+<td><code>(sample_id: int \| None = None)</code></td>
+<td><code>pd.DataFrame</code></td>
+<td>Columns: <code>id, sample_id, format, path, sample_name</code></td>
+</tr>
+<tr>
+<td><code>delete_spectra_file</code></td>
+<td><code>(spectra_file_id: int)</code></td>
+<td><code>None</code></td>
+<td>Cascades to spectra and identifications</td>
+</tr>
+<tr>
+<td><code>add_spectra_batch</code></td>
+<td><code>(spectra_file_id: int, spectra_df: pd.DataFrame)</code></td>
+<td><code>None</code></td>
+<td>Compresses <code>mz_array</code> and <code>intensity_array</code> into BLOBs</td>
+</tr>
+<tr>
+<td><code>get_spectra</code></td>
+<td><code>(spectra_file_id=None, sample_id=None, limit=None, offset=None)</code></td>
+<td><code>pd.DataFrame</code></td>
+<td>Metadata only (no binary arrays)</td>
+</tr>
+<tr>
+<td><code>get_spectrum_full</code></td>
+<td><code>(spectrum_id: int)</code></td>
+<td><code>dict</code></td>
+<td>Includes decompressed NumPy arrays</td>
+</tr>
+<tr>
+<td><code>get_spectra_idlist</code></td>
+<td><code>(spectra_file_id: int, by="seq_no")</code></td>
+<td><code>list[dict]</code></td>
+<td>Maps <code>seq_no</code>, <code>scans</code>, or <code>title</code> to <code>spectre_id</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="identifications-identificationmixin">Identifications (<code>IdentificationMixin</code>)</h3>
+<p>Manages identification files and peptide-spectrum matches (PSMs).</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Signature</th>
+<th>Returns</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>add_identification_file</code></td>
+<td><code>(spectra_file_id: int, tool_id: int, file_path: str)</code></td>
+<td><code>int</code></td>
+<td>Returns <code>identification_file.id</code></td>
+</tr>
+<tr>
+<td><code>add_identifications_batch</code></td>
+<td><code>(identifications_df: pd.DataFrame)</code></td>
+<td><code>None</code></td>
+<td>Batch insert of PSM records</td>
+</tr>
+<tr>
+<td><code>get_identifications</code></td>
+<td><code>(spectra_file_id=None, tool_id=None, sample_id=None, only_prefered=False, ...)</code></td>
+<td><code>pd.DataFrame</code></td>
+<td>Joined with spectrum, tool, and sample metadata</td>
+</tr>
+<tr>
+<td><code>get_identifications_with_spectra_batch</code></td>
+<td><code>(tool_id, offset, limit, only_missing=False, spectra_file_ids=None)</code></td>
+<td><code>list[IdentificationWithSpectrum]</code></td>
+<td>Used by the ion coverage worker pool</td>
+</tr>
+<tr>
+<td><code>put_identification_data_batch</code></td>
+<td><code>(data_rows: list[dict])</code></td>
+<td><code>None</code></td>
+<td>Batch update of PPM, coverage, quality, LCRR, etc. (does <strong>not</strong> auto-save)</td>
+</tr>
+<tr>
+<td><code>set_preferred_identification</code></td>
+<td><code>(spectre_id: int, identification_id: int)</code></td>
+<td><code>None</code></td>
+<td>Marks one identification as preferred for a spectrum</td>
+</tr>
+<tr>
+<td><code>set_preferred_identifications_for_file</code></td>
+<td><code>(spectra_file_id: int, preferred_ids: list[int])</code></td>
+<td><code>None</code></td>
+<td>Bulk update of preferred flags for a spectra file</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="peptide-matches-joined-queries-peptidemixin">Peptide Matches &amp; Joined Queries (<code>PeptideMixin</code>)</h3>
+<p>Manages links between identifications and protein sequences, and provides the main joined peptide query.</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Signature</th>
+<th>Returns</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>add_peptide_matches_batch</code></td>
+<td><code>(matches_df: pd.DataFrame)</code></td>
+<td><code>None</code></td>
+<td>Batch insert into <code>peptide_match</code> (does <strong>not</strong> auto-save)</td>
+</tr>
+<tr>
+<td><code>clear_peptide_matches</code></td>
+<td><code>()</code></td>
+<td><code>None</code></td>
+<td>Deletes all peptide matches</td>
+</tr>
+<tr>
+<td><code>clear_peptide_matches_for_sample</code></td>
+<td><code>(sample_id: int)</code></td>
+<td><code>None</code></td>
+<td>Deletes matches for one sample</td>
+</tr>
+<tr>
+<td><code>get_joined_peptide_data</code></td>
+<td><code>(**filters)</code></td>
+<td><code>pd.DataFrame</code></td>
+<td>Full joined view (<code>spectre</code> + <code>identification</code> + <code>peptide_match</code> + <code>protein</code> + <code>sample</code> + <code>subset</code>)</td>
+</tr>
+<tr>
+<td><code>count_joined_peptide_data</code></td>
+<td><code>(**filters)</code></td>
+<td><code>int</code></td>
+<td>Row count for <code>get_joined_peptide_data</code></td>
+</tr>
+</tbody>
+</table>
+<p>Common filters for <code>get_joined_peptide_data</code>:
+<code>is_preferred</code> (<code>bool</code>), <code>sequence_identified</code> (<code>bool</code>), <code>protein_identified</code> (<code>bool</code>), <code>sample</code> (<code>str</code>), <code>sample_id</code> (<code>int</code>), <code>subset</code> (<code>str</code>), <code>tool</code> (<code>str</code>), <code>protein_id</code> (<code>str</code>), <code>gene</code> (<code>str</code>), <code>sequence</code> (<code>str</code>), <code>canonical_sequence</code> (<code>str</code>), <code>max_ppm</code> (<code>float</code>), <code>min_score</code> (<code>float</code>), <code>limit</code> (<code>int</code>), <code>offset</code> (<code>int</code>).</p>
+<hr />
+<h3 id="proteins-quantification-proteinmixin">Proteins &amp; Quantification (<code>ProteinMixin</code>)</h3>
+<p>Manages the protein sequence database, sample-level protein identifications, and LFQ results.</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Signature</th>
+<th>Returns</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>add_proteins_batch</code></td>
+<td><code>(proteins_df: pd.DataFrame)</code></td>
+<td><code>None</code></td>
+<td><code>INSERT OR REPLACE</code> into <code>protein</code></td>
+</tr>
+<tr>
+<td><code>get_protein</code></td>
+<td><code>(protein_id: str)</code></td>
+<td><code>Protein \| None</code></td>
+<td>Includes deserialized <code>uniprot_data</code> if present</td>
+</tr>
+<tr>
+<td><code>get_proteins</code></td>
+<td><code>(is_uniprot: bool \| None = None)</code></td>
+<td><code>pd.DataFrame</code></td>
+<td>Returns protein table rows</td>
+</tr>
+<tr>
+<td><code>get_protein_db_to_search</code></td>
+<td><code>(null_sequence: bool = False)</code></td>
+<td><code>dict[str, str]</code></td>
+<td><code>{protein_id: sequence}</code> map for BLAST search</td>
+</tr>
+<tr>
+<td><code>add_protein_identifications_batch</code></td>
+<td><code>(df: pd.DataFrame)</code></td>
+<td><code>None</code></td>
+<td>Inserts into <code>protein_identification_result</code></td>
+</tr>
+<tr>
+<td><code>clear_protein_identifications</code></td>
+<td><code>()</code></td>
+<td><code>None</code></td>
+<td>Clears all protein identification results</td>
+</tr>
+<tr>
+<td><code>add_protein_quantifications_batch</code></td>
+<td><code>(df: pd.DataFrame)</code></td>
+<td><code>None</code></td>
+<td>Inserts into <code>protein_quantification_result</code></td>
+</tr>
+<tr>
+<td><code>get_protein_results_joined</code></td>
+<td><code>(**filters)</code></td>
+<td><code>pd.DataFrame</code></td>
+<td>Protein results with pivoted LFQ columns (<code>EmPAI</code>, <code>iBAQ</code>, <code>NSAF</code>, <code>Top3</code>)</td>
+</tr>
+<tr>
+<td><code>get_protein_quantification_data</code></td>
+<td><code>(method=None, subsets=None, protein_id=None, exclude_outliers=True)</code></td>
+<td><code>pd.DataFrame</code></td>
+<td>Long-format quantification table used by reports</td>
+</tr>
+<tr>
+<td><code>get_protein_statistics</code></td>
+<td><code>(**filters)</code></td>
+<td><code>pd.DataFrame</code></td>
+<td>Cross-sample aggregated protein statistics</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="project-merge-importprojectmixin">Project Merge (<code>ImportProjectMixin</code>)</h3>
+<p>Merges all data from another <code>.dasmix</code> project (with matching <code>PROJECT_VERSION</code>) into the current project inside a single transaction:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">await</span> <span class="n">project</span><span class="o">.</span><span class="n">import_project</span><span class="p">(</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    <span class="n">source_path</span><span class="o">=</span><span class="s2">&quot;other_project.dasmix&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="n">tool_match</span><span class="o">=</span><span class="s2">&quot;parser&quot;</span><span class="p">,</span>          <span class="c1"># &quot;parser&quot;, &quot;name&quot;, or None</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="n">subset_match</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>            <span class="c1"># merge subsets with identical names</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="n">sample_match</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>            <span class="c1"># merge samples with identical names</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="n">project_settings_match</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="c1"># False = keep target settings; True = overwrite</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>    <span class="n">conflict_suffix</span><span class="o">=</span><span class="s2">&quot;_1&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="p">)</span>
+</code></pre></div>
+<hr />
+<h3 id="raw-sql-querymixin">Raw SQL (<code>QueryMixin</code>)</h3>
+<p>For custom analytical queries (e.g., inside custom report plugins):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">rows</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="k">await</span> <span class="n">project</span><span class="o">.</span><span class="n">execute_query</span><span class="p">(</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="s2">&quot;SELECT id, name FROM sample WHERE subset_id = ?&quot;</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,)</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="p">)</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">=</span> <span class="k">await</span> <span class="n">project</span><span class="o">.</span><span class="n">execute_query_df</span><span class="p">(</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="s2">&quot;SELECT * FROM protein_identification_result WHERE peptide_count &gt;= ?&quot;</span><span class="p">,</span> <span class="p">(</span><span class="mi">2</span><span class="p">,)</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="p">)</span>
+</code></pre></div>
+<hr />
+<h2 id="data-transfer-objects-dasmixerapiprojectdataclasses">Data Transfer Objects (<code>dasmixer.api.project.dataclasses</code>)</h2>
+<p>All DTOs implement <code>.to_dict()</code> and <code>Class.from_dict(dict)</code>:</p>
+<ul>
+<li><strong><code>Subset</code></strong>: <code>id, name, details, display_color</code></li>
+<li><strong><code>Tool</code></strong>: <code>id, name, type ("Library" | "De Novo"), parser, settings (dict), display_color</code></li>
+<li><strong><code>Sample</code></strong>: <code>id, name, subset_id, additions (dict), outlier (bool), subset_name, spectra_files_count</code></li>
+<li><strong><code>Protein</code></strong>: <code>id, is_uniprot, fasta_name, sequence, gene, name, taxon_id, organism_name, uniprot_data</code></li>
+<li><strong><code>IdentificationWithSpectrum</code></strong>: <code>id, spectre_id, pepmass, mz_array, intensity_array, tool_id, sequence, canonical_sequence, charge, peaks_count, ppm</code></li>
+</ul>
+<hr />
+<h2 id="calculations-api-dasmixerapicalculations">Calculations API (<code>dasmixer.api.calculations</code>)</h2>
+<ul>
+<li><strong>Ion Matching (<code>spectra.ion_match</code>)</strong>:<ul>
+<li><code>IonMatchParameters(ions=['b', 'y'], tolerance=20.0, mode='largest', water_loss=False, ammonia_loss=False, charges=[1, 2])</code></li>
+<li><code>match_predictions(params, mz, intensity, charges, sequence) -&gt; MatchResult</code></li>
+</ul>
+</li>
+<li><strong>Batch Identification Processing (<code>spectra.identification_processor</code>)</strong>:<ul>
+<li><code>process_identifications_batch(batch, params_dict, fragment_charges, target_ppm, ...)</code> — computes PPM,SeqFixer PTM/charge/isotope corrections, intensity coverage, quality, LCRR, and unconfirmed PTMs across worker processes.</li>
+</ul>
+</li>
+<li><strong>Spectrum Plotting (<code>spectra.plot_flow</code>)</strong>:<ul>
+<li><code>make_full_spectrum_plot(params, mz, intensity, charges, sequences, headers, spectrum_info) -&gt; go.Figure</code></li>
+</ul>
+</li>
+<li><strong>Preferred Identification Selection (<code>peptides.matching</code>)</strong>:<ul>
+<li><code>calculate_preferred_identifications_for_file(project, spectra_file_id, criterion, tool_settings) -&gt; list[int]</code></li>
+</ul>
+</li>
+<li><strong>Protein Mapping (<code>peptides.protein_map</code>)</strong>:<ul>
+<li><code>await map_proteins(project, tool_settings, ion_params, fragment_charges, seqfixer_params, batch_size=5000, progress_callback=...)</code></li>
+</ul>
+</li>
+<li><strong>Protein Identifications (<code>proteins.map_identifications</code>)</strong>:<ul>
+<li><code>find_protein_identifications(joined_data, sequences_db, min_peptides=2, min_uq_evidence=1)</code> — async generator yielding <code>(result_df, sample_id)</code>.</li>
+</ul>
+</li>
+<li><strong>Label-Free Quantification (<code>proteins.lfq</code>)</strong>:<ul>
+<li><code>await calculate_lfq(project, sample_id, methods=['emPAI', 'iBAQ', 'NSAF', 'Top3'], ...)</code></li>
+</ul>
+</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../architecture/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Modules &amp; Architecture">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Modules & Architecture
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../project_structure/" class="md-footer__link md-footer__link--next" aria-label="Next: Project File Structure">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Project File Structure
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.footer", "navigation.sections", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  <script id="init-glightbox">const lightbox = GLightbox({"touchNavigation": true, "loop": false, "zoomable": true, "draggable": true, "openEffect": "zoom", "closeEffect": "zoom", "slideEffect": "slide"});
+document$.subscribe(() => { lightbox.reload() });
+</script></body>
+</html>

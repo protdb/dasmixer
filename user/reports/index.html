@@ -1,0 +1,1923 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../proteins_tab/">
+      
+      
+        <link rel="next" href="../plots_tab/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../img/favicon.ico">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Reports - DASMixer Guide</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+   <link href="../../assets/stylesheets/glightbox.min.css" rel="stylesheet"/><style>
+    html.glightbox-open { overflow: initial; height: 100%; }
+    .gslide-title { margin-top: 0px; user-select: text; }
+    .gslide-desc { color: #666; user-select: text; }
+    .gslide-image img { background: white; }
+    .gscrollbar-fixer { padding-right: 15px; }
+    .gdesc-inner { font-size: 0.75rem; }
+    body[data-md-color-scheme="slate"] .gdesc-inner { background: var(--md-default-bg-color);}
+    body[data-md-color-scheme="slate"] .gslide-title { color: var(--md-default-fg-color);}
+    body[data-md-color-scheme="slate"] .gslide-desc { color: var(--md-default-fg-color);}</style> <script src="../../assets/javascripts/glightbox.min.js"></script></head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#reports" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="DASMixer Guide" class="md-header__button md-logo" aria-label="DASMixer Guide" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            DASMixer Guide
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Reports
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="DASMixer Guide" class="md-nav__button md-logo" aria-label="DASMixer Guide" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    DASMixer Guide
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core Concepts & Formulas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../lfq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LFQ Methods
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../project_sample/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Project & Samples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../peptides_tab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Processing Identifications
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../peptides_table/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Viewing Identification Data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../proteins_tab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Working with Proteins
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reports
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reports
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#global-report-settings-and-batch-actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Global Report Settings and Batch Actions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#common-controls-on-each-report-card" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common Controls on Each Report Card
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#built-in-reports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Built-in Reports
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Built-in Reports">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-basic-statistics-medianreport" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Basic Statistics (MedianReport)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-pca-roc-auc-pcareport" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. PCA &amp; ROC-AUC (PCAReport)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#3-volcano-report-independent-volcanoreport" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Volcano Report (Independent) (VolcanoReport)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-tool-match-toolmatchreport" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Tool Match (ToolMatchReport)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-upset-plot-upsetreport" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. UpSet Plot (UpsetReport)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#exporting-reports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exporting Reports
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../plots_tab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Saved Plots
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../export_tab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Export & Project Merge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration & Plugins
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../system_menus/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    System Menus (File & Options)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_10" id="__nav_3_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Advanced Topics
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Advanced Topics
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../advanced/MaxQuant/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MaxQuant Project Import
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../advanced/pride_import/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PRIDE Dataset Import
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../advanced/ptm_configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PTM Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../advanced/abs_concentrations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Absolute Concentrations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../advanced/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Command-Line Interface (CLI)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developer Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Developer Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_1" id="__nav_4_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API & Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API & Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Modules & Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/core_api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core Library API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/project_structure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Project File Structure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_2" id="__nav_4_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Examples
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/example_pipeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Running an Automated Pipeline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/example_plots/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Generating Spectrum Plots
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_3" id="__nav_4_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plugin Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Plugin Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/custom_importers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Identification Importers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/custom_reports/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Reports
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#global-report-settings-and-batch-actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Global Report Settings and Batch Actions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#common-controls-on-each-report-card" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common Controls on Each Report Card
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#built-in-reports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Built-in Reports
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Built-in Reports">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-basic-statistics-medianreport" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Basic Statistics (MedianReport)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-pca-roc-auc-pcareport" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. PCA &amp; ROC-AUC (PCAReport)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#3-volcano-report-independent-volcanoreport" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Volcano Report (Independent) (VolcanoReport)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-tool-match-toolmatchreport" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Tool Match (ToolMatchReport)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-upset-plot-upsetreport" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. UpSet Plot (UpsetReport)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#exporting-reports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exporting Reports
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="reports">Reports</h1>
+<p>The <strong>Reports</strong> tab generates project-wide statistical analyses, cross-tool comparisons, and differential expression visualizations. Each report produces a combination of interactive <strong>Plotly figures</strong> and structured <strong>summary/detail tables</strong> that are saved directly inside your <code>.dasmix</code> project file.</p>
+<p>Reporting in DASMixer is modular and extensible — in addition to the built-in reports described below, you can install or write custom report plugins (see <a href="../../developer/custom_reports/">Creating Custom Reports</a>).</p>
+<p><a class="glightbox" href="../reports%20interface.png" data-type="image" data-width="auto" data-height="auto" data-description="Reports tab — report list with per-card controls and global settings panel." data-desc-position="bottom"><img alt="Reports tab" data-description="Reports tab — report list with per-card controls and global settings panel." src="../reports%20interface.png" /></a></p>
+<h2 id="global-report-settings-and-batch-actions">Global Report Settings and Batch Actions</h2>
+<p>At the top of the <strong>Reports</strong> tab, the <strong>Report Settings</strong> panel controls default figure dimensions and font styling applied when generating any report:</p>
+<ul>
+<li><strong>Plot Font Size</strong> (default: <code>12</code>) — base font size for axis labels, legends, and annotations</li>
+<li><strong>Plot Width</strong> (default: <code>1100</code> px) — width of generated figures</li>
+<li><strong>Plot Height</strong> (default: <code>600</code> px) — height of generated figures</li>
+<li><strong>Save</strong> — saves these styling parameters to the project</li>
+<li><strong>Generate Selected</strong> — runs all reports that have their <strong>Generate with all</strong> checkbox enabled</li>
+<li><strong>Export All</strong> — exports the most recently generated run of every checked report to a chosen folder</li>
+</ul>
+<blockquote>
+<p><strong>Note:</strong> Global plot settings are baked into figures at the moment of generation. Changing font size or dimensions will take effect the next time you click <strong>Generate</strong>.</p>
+</blockquote>
+<h2 id="common-controls-on-each-report-card">Common Controls on Each Report Card</h2>
+<p>Every report in the list is presented on its own card with a unified set of controls:</p>
+<ul>
+<li><strong>Generate with all</strong> (checkbox) — includes this report in batch generation/export actions.</li>
+<li><strong>Parameters</strong> — opens a dialog with report-specific settings (subsets to include, LFQ method, statistical tests, thresholds, etc.).</li>
+<li><strong>Name format</strong> — a customizable template used to name the generated report run. You can use <code>{date}</code> (formatted as <code>YYMMDD</code>), <code>{time}</code> (<code>HH:MM</code>), and any parameter field name from the report (for example, <code>{subsets} {lfq} {date} {time}</code>).</li>
+<li><strong>Generate</strong> — runs the report calculation and saves the resulting plots, tables, and a snapshot of current project/tool settings into the database.</li>
+<li><strong>Saved Reports</strong> (dropdown) — lists all previously generated runs of this report stored in the project.</li>
+<li><strong>View</strong> — opens the selected report run in the interactive <strong>Report Viewer</strong> window (or your default web browser, depending on your <a href="../configuration/">Settings</a>).</li>
+<li><strong>Export</strong> — exports the selected report run to disk.</li>
+</ul>
+<h2 id="built-in-reports">Built-in Reports</h2>
+<p>Out of the box, DASMixer includes five analytical reports:</p>
+<h3 id="1-basic-statistics-medianreport">1. Basic Statistics (<code>MedianReport</code>)</h3>
+<p>Computes comprehensive descriptive statistics of protein abundances across samples and comparison groups.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><strong>Subsets:</strong> Which comparison groups to include (leave all unchecked or select all to include every group).</li>
+<li><strong>LFQ:</strong> Quantification method (<code>emPAI</code>, <code>iBAQ</code>, <code>NSAF</code>, or <code>Top3</code>) and value type (<code>rel_value</code>, <code>abs_value_gl</code>, or <code>abs_value_mol</code>).</li>
+<li><strong>Include outliers:</strong> Whether to include samples marked as outliers (<code>False</code> by default).</li>
+</ul>
+<p><strong>Output:</strong></p>
+<ul>
+<li><strong>Basic statistics table:</strong> One row per identified protein with multi-level columns showing:<ul>
+<li>Global occurrence (<code>Total samples</code>, <code>% of all samples</code>)</li>
+<li>Per-subset metrics: <code>Samples</code>, <code>% of total samples</code>, <code>% of subset_samples</code>, <code>Mean</code>, <code>Median</code>, <code>STD</code> (standard deviation), <code>Min</code>, <code>Max</code>, <code>Variance</code>, <code>CV</code> (coefficient of variation), <code>Skew</code>, and <code>Kurtosis</code>.</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p><strong>Note:</strong> This table is marked as a large background table (<code>show_in_ui=False</code>), so it is exported directly to Excel (<code>.xlsx</code>) rather than rendered inline in the HTML preview.</p>
+</blockquote>
+<hr />
+<h3 id="2-pca-roc-auc-pcareport">2. PCA &amp; ROC-AUC (<code>PCAReport</code>)</h3>
+<p>Performs Principal Component Analysis (PCA) and Receiver Operating Characteristic (ROC / AUC) analysis on protein quantification profiles to evaluate how well your comparison groups separate.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><strong>Subsets:</strong> Comparison groups to include in the analysis.</li>
+<li><strong>Group by:</strong><ul>
+<li><code>Sample</code> (default) — each point on the PCA scatter plot is a <strong>sample</strong>, positioned by its protein abundance profile and colored by comparison group.</li>
+<li><code>Protein</code> — each point is a <code>(protein, subset)</code> pair, built from replicate measurements sorted in descending order, allowing you to inspect protein-level clustering across conditions.</li>
+</ul>
+</li>
+<li><strong>LFQ:</strong> Quantification algorithm and value type to analyze.</li>
+<li><strong>Show labels:</strong> Display sample names (or gene/protein labels) next to scatter points.</li>
+<li><strong>Top N proteins:</strong> In <code>Protein</code> mode, restrict the analysis to the <span class="arithmatex">\(N\)</span> proteins with the highest variance across samples (default: <code>100</code>; set <code>0</code> to use all proteins).</li>
+<li><strong>Include outliers:</strong> Whether to include samples marked as outliers.</li>
+</ul>
+<p><strong>Output:</strong></p>
+<ul>
+<li><strong>Plots:</strong><ul>
+<li><strong>PCA scatter plot:</strong> 2D projection onto <code>PC1</code> and <code>PC2</code> with percentage of variance explained on each axis.</li>
+<li><strong>ROC / AUC curve:</strong> One-vs-rest ROC curves computed along <code>PC1</code> for each comparison group, displaying the Area Under the Curve (AUC).</li>
+</ul>
+</li>
+<li><strong>Tables:</strong><ul>
+<li><strong>PCA Components</strong> <em>(shown in preview)</em>: Explained variance (%) and cumulative variance (%) for up to the first 10 principal components.</li>
+<li><strong>AUC by Subset</strong> <em>(shown in preview)</em>: One-vs-rest AUC scores per comparison group.</li>
+<li><strong>Sample PC Scores / Protein PC Scores</strong> <em>(exported to Excel)</em>: Complete table of principal component coordinates.</li>
+</ul>
+</li>
+</ul>
+<h2 id="_1"><a class="glightbox" href="../img/pca_auroc_report.png" data-type="image" data-width="auto" data-height="auto" data-description="PCA scatter plot and ROC/AUC curve generated by the PCA &amp; ROC-AUC report." data-desc-position="bottom"><img alt="PCA &amp; ROC-AUC report example" data-description="PCA scatter plot and ROC/AUC curve generated by the PCA &amp; ROC-AUC report." src="../img/pca_auroc_report.png" /></a></h2>
+<h3 id="3-volcano-report-independent-volcanoreport">3. Volcano Report (Independent) (<code>VolcanoReport</code>)</h3>
+<p>Performs differential expression analysis between a <strong>Control</strong> group and one or more <strong>Experimental</strong> comparison groups for independent samples, computing fold changes and multiple-testing-corrected <span class="arithmatex">\(p\)</span>-values.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><strong>Control subset:</strong> The reference comparison group (denominator for Fold Change).</li>
+<li><strong>Experimental subsets:</strong> One or more comparison groups to compare against the control group.</li>
+<li><strong>LFQ:</strong> Quantification algorithm and value type to test.</li>
+<li><strong>Statistical method:</strong> Two-sample test to compute raw <span class="arithmatex">\(p\)</span>-values:<ul>
+<li><code>Mann-Whitney</code> (non-parametric Mann–Whitney <span class="arithmatex">\(U\)</span> test, default)</li>
+<li><code>T-test</code> (independent two-sample Student's <span class="arithmatex">\(t\)</span>-test)</li>
+</ul>
+</li>
+<li><strong>FDR / Multiple testing correction (<code>fdc</code>):</strong><ul>
+<li><code>BH</code> — Benjamini–Hochberg False Discovery Rate (default)</li>
+<li><code>BY</code> — Benjamini–Yekutieli FDR</li>
+<li><code>Bonferroni</code> — Bonferroni family-wise error rate correction</li>
+</ul>
+</li>
+<li><strong>Percent of samples to calculate:</strong> Minimum percentage of samples within a group in which a protein must be quantified to be included in statistical testing (default: <code>20%</code>).</li>
+<li><strong>FC threshold:</strong> Fold Change cutoff for significance lines and Proteins of Interest filtering (default: <code>1.5</code>, drawn at <span class="arithmatex">\(\pm\log_2(\text{FC})\)</span>).</li>
+<li><strong>P-value threshold:</strong> Corrected <span class="arithmatex">\(p\)</span>-value cutoff for statistical significance (default: <code>0.05</code>, drawn at <span class="arithmatex">\(-\log_{10}(p)\)</span>).</li>
+<li><strong>Include outliers:</strong> Whether to include outlier samples.</li>
+</ul>
+<p><strong>Output:</strong></p>
+<ul>
+<li><strong>Plots:</strong><ul>
+<li><strong>Volcano Plot:</strong> Interactive scatter plot with <span class="arithmatex">\(\log_2(\text{Fold Change})\)</span> on the X-axis and <span class="arithmatex">\(-\log_{10}(\text{adjusted } p\text{-value})\)</span> on the Y-axis, colored by experimental group, with dashed threshold lines. Hovering over any point reveals the protein ID, fold change, and <span class="arithmatex">\(p\)</span>-value.</li>
+</ul>
+</li>
+<li><strong>Tables (exported to Excel):</strong><ul>
+<li><strong>FC table:</strong> Complete results for all tested proteins across all experimental subsets (corrected <span class="arithmatex">\(p\)</span>-value, uncorrected <span class="arithmatex">\(p\)</span>-value, linear FC, <span class="arithmatex">\(\log_2\text{FC}\)</span>, sample counts, and sample percentages).</li>
+<li><strong>POI (Proteins of Interest):</strong> Filtered subset of proteins that pass both the <span class="arithmatex">\(p\)</span>-value threshold (<code>min_pval &lt;= p_threshold</code>) and Fold Change threshold (<code>max_fc &gt;= log2(fc_threshold)</code>).</li>
+</ul>
+</li>
+</ul>
+<p><a class="glightbox" href="../img/volcano_plot_preview.png" data-type="image" data-width="auto" data-height="auto" data-description="Volcano plot showing log₂(Fold Change) vs. −log₁₀(p-value), with dashed significance thresholds." data-desc-position="bottom"><img alt="Volcano plot preview" data-description="Volcano plot showing log₂(Fold Change) vs. −log₁₀(p-value), with dashed significance thresholds." src="../img/volcano_plot_preview.png" /></a></p>
+<hr />
+<h3 id="4-tool-match-toolmatchreport">4. Tool Match (<code>ToolMatchReport</code>)</h3>
+<p>Compares peptide and protein identifications between any two tools in the project, illustrating how much each tool contributes to the final set of preferred identifications.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><strong>Tool 1 / Tool 2:</strong> Select the two identification tools to compare (for example, a database search engine like <code>MaxQuant</code> vs. a <em>de novo</em> engine like <code>PowerNovo2</code>).</li>
+</ul>
+<p><strong>Output:</strong></p>
+<ul>
+<li><strong>Plots:</strong><ul>
+<li><strong>Occurrence charts:</strong> Side-by-side pie charts showing the breakdown of <strong>Peptide identifications</strong> and <strong>Protein identifications</strong> attributed exclusively to <strong>Tool 1</strong>, exclusively to <strong>Tool 2</strong>, or agreed upon by <strong>Both</strong> tools (highlighted in yellow).</li>
+</ul>
+</li>
+<li><strong>Tables:</strong><ul>
+<li><strong>Peptide counts &amp; Protein counts</strong> <em>(shown in preview)</em>: Summary counts of unique/shared peptides and proteins per tool.</li>
+<li><strong>Peptides &amp; Proteins</strong> <em>(exported to Excel)</em>: Detailed side-by-side comparison tables listing every spectrum/peptide and protein with metrics from both tools.</li>
+</ul>
+</li>
+</ul>
+<hr />
+<h3 id="5-upset-plot-upsetreport">5. UpSet Plot (<code>UpsetReport</code>)</h3>
+<p>Visualizes the overlap and exclusive intersections of identified proteins across comparison groups — an informative alternative to Venn diagrams when comparing two or more groups.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><strong>Subsets:</strong> Which comparison groups to include in the intersection analysis.</li>
+<li><strong>Min proteins:</strong> Minimum number of proteins required in an intersection for that bar to be drawn on the UpSet plot (default: <code>1</code>). Intersections with fewer proteins are hidden from the chart to keep it uncluttered, but remain listed in the summary table.</li>
+</ul>
+<p><strong>Output:</strong></p>
+<ul>
+<li><strong>Plots:</strong><ul>
+<li><strong>UpSet Plot:</strong> A two-panel figure showing the number of proteins in each exclusive intersection (top bar chart) and a dot-matrix indicating which comparison groups participate in each intersection (bottom panel, with sample counts <span class="arithmatex">\(N\)</span> shown next to each group name).</li>
+</ul>
+</li>
+<li><strong>Tables (shown in preview and exported):</strong><ul>
+<li><strong>Intersection Summary:</strong> Number of proteins in every group combination, sorted from largest to smallest.</li>
+<li><strong>Proteins by Intersection:</strong> Complete mapping of which <code>protein_id</code> belongs to which exclusive group intersection (allowing you to immediately extract group-specific proteins).</li>
+</ul>
+</li>
+</ul>
+<hr />
+<h2 id="exporting-reports">Exporting Reports</h2>
+<p>Clicking <strong>Export</strong> on a report card (or <strong>Export All</strong> at the top of the tab) opens the report export dialog:</p>
+<p><a class="glightbox" href="../img/export%20settings.png" data-type="image" data-width="auto" data-height="auto" data-description="Report export dialog — choose HTML, DOCX, and/or XLSX output formats." data-desc-position="bottom"><img alt="Report export settings" data-description="Report export dialog — choose HTML, DOCX, and/or XLSX output formats." src="../img/export%20settings.png" /></a></p>
+<p>Every generated report stores a complete, self-contained snapshot of your analysis:</p>
+<ul>
+<li><strong>Report parameters</strong> — the exact options used to generate that run</li>
+<li><strong>Project and tool parameters</strong> — ion matching settings, protein detection rules, LFQ parameters, and per-tool quality thresholds active at the moment of generation</li>
+<li><strong>Interactive plots</strong> — Plotly figures</li>
+<li><strong>Small summary tables</strong> — displayed directly inside the report preview and documents (<code>show_in_ui=True</code>)</li>
+<li><strong>Large detail tables</strong> — comprehensive data tables designed for spreadsheet analysis (<code>show_in_ui=False</code>)</li>
+</ul>
+<p>You can export a report in up to three formats simultaneously:</p>
+<table>
+<thead>
+<tr>
+<th>Format</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>HTML</strong></td>
+<td>A standalone, interactive web page embedding Plotly.js, all interactive charts, small summary tables, and collapsible parameter snapshots. Can be opened in any modern browser.</td>
+</tr>
+<tr>
+<td><strong>DOCX</strong></td>
+<td>A Microsoft Word document containing static high-resolution PNG renderings of all plots, summary tables, and recorded parameters — ready to paste or adapt into a manuscript.</td>
+</tr>
+<tr>
+<td><strong>XLSX</strong></td>
+<td>A Microsoft Excel workbook containing one sheet per table. You can choose between <strong>All tables</strong> (both summary and large detail tables) or <strong>Large tables only</strong> (only full data tables that are omitted from the HTML/DOCX document).</td>
+</tr>
+</tbody>
+</table>
+<p>Exported files are named automatically using the pattern <code>{Report Name}_{Display Name}.{ext}</code> (with filesystem-unsafe characters such as <code>:</code> replaced by <code>-</code>).</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../proteins_tab/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Working with Proteins">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Working with Proteins
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../plots_tab/" class="md-footer__link md-footer__link--next" aria-label="Next: Saved Plots">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Saved Plots
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.footer", "navigation.sections", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  <script id="init-glightbox">const lightbox = GLightbox({"touchNavigation": true, "loop": false, "zoomable": true, "draggable": true, "openEffect": "zoom", "closeEffect": "zoom", "slideEffect": "slide"});
+document$.subscribe(() => { lightbox.reload() });
+</script></body>
+</html>

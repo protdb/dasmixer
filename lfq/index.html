@@ -1,0 +1,2140 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../concepts/">
+      
+      
+        <link rel="next" href="../user/project_sample/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../img/favicon.ico">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>LFQ Methods - DASMixer Guide</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+   <link href="../assets/stylesheets/glightbox.min.css" rel="stylesheet"/><style>
+    html.glightbox-open { overflow: initial; height: 100%; }
+    .gslide-title { margin-top: 0px; user-select: text; }
+    .gslide-desc { color: #666; user-select: text; }
+    .gslide-image img { background: white; }
+    .gscrollbar-fixer { padding-right: 15px; }
+    .gdesc-inner { font-size: 0.75rem; }
+    body[data-md-color-scheme="slate"] .gdesc-inner { background: var(--md-default-bg-color);}
+    body[data-md-color-scheme="slate"] .gslide-title { color: var(--md-default-fg-color);}
+    body[data-md-color-scheme="slate"] .gslide-desc { color: var(--md-default-fg-color);}</style> <script src="../assets/javascripts/glightbox.min.js"></script></head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#label-free-quantification-lfq" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="DASMixer Guide" class="md-header__button md-logo" aria-label="DASMixer Guide" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            DASMixer Guide
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              LFQ Methods
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="DASMixer Guide" class="md-nav__button md-logo" aria-label="DASMixer Guide" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    DASMixer Guide
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core Concepts & Formulas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LFQ Methods
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LFQ Methods
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#terminology" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Terminology
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quantification-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quantification Methods
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Quantification Methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#empai-exponentially-modified-protein-abundance-index" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        emPAI — Exponentially Modified Protein Abundance Index
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nsaf-normalized-spectral-abundance-factor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NSAF — Normalized Spectral Abundance Factor
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ibaq-intensity-based-absolute-quantification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        iBAQ — Intensity-Based Absolute Quantification
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#top3-mean-of-top-3-peptide-intensities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Top3 — Mean of Top 3 Peptide Intensities
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#normalization-relative-quantification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Normalization (Relative Quantification)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#absolute-quantification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Absolute Quantification
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Absolute Quantification">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#total-protein-concentration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Total Protein Concentration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reference-protein-internal-standard" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reference Protein (Internal Standard)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#combined-approach" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Combined Approach
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#conversion-to-molar-concentrations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Conversion to Molar Concentrations
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#digestion-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Digestion Parameters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Requirements
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#running-lfq-in-dasmixer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Running LFQ in DASMixer
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user/project_sample/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Project & Samples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user/peptides_tab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Processing Identifications
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user/peptides_table/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Viewing Identification Data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user/proteins_tab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Working with Proteins
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user/reports/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reports
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user/plots_tab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Saved Plots
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user/export_tab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Export & Project Merge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration & Plugins
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user/system_menus/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    System Menus (File & Options)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_10" id="__nav_3_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Advanced Topics
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Advanced Topics
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user/advanced/MaxQuant/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MaxQuant Project Import
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user/advanced/pride_import/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PRIDE Dataset Import
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user/advanced/ptm_configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PTM Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user/advanced/abs_concentrations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Absolute Concentrations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user/advanced/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Command-Line Interface (CLI)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developer Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Developer Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_1" id="__nav_4_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API & Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API & Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Modules & Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/core_api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core Library API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/project_structure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Project File Structure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_2" id="__nav_4_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Examples
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/example_pipeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Running an Automated Pipeline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/example_plots/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Generating Spectrum Plots
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_3" id="__nav_4_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plugin Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Plugin Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/custom_importers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Identification Importers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/custom_reports/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Reports
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#terminology" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Terminology
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quantification-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quantification Methods
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Quantification Methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#empai-exponentially-modified-protein-abundance-index" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        emPAI — Exponentially Modified Protein Abundance Index
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nsaf-normalized-spectral-abundance-factor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NSAF — Normalized Spectral Abundance Factor
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ibaq-intensity-based-absolute-quantification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        iBAQ — Intensity-Based Absolute Quantification
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#top3-mean-of-top-3-peptide-intensities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Top3 — Mean of Top 3 Peptide Intensities
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#normalization-relative-quantification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Normalization (Relative Quantification)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#absolute-quantification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Absolute Quantification
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Absolute Quantification">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#total-protein-concentration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Total Protein Concentration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reference-protein-internal-standard" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reference Protein (Internal Standard)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#combined-approach" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Combined Approach
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#conversion-to-molar-concentrations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Conversion to Molar Concentrations
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#digestion-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Digestion Parameters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Requirements
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#running-lfq-in-dasmixer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Running LFQ in DASMixer
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="label-free-quantification-lfq">Label-Free Quantification (LFQ)</h1>
+<h2 id="overview">Overview</h2>
+<p>DASMixer implements four label-free quantification methods at the protein level:
+<strong>emPAI</strong>, <strong>NSAF</strong>, <strong>iBAQ</strong>, and <strong>Top3</strong>. Each method estimates protein abundance from
+peptide-level data (spectral counts or intensities) without requiring isotopic labels.</p>
+<p>LFQ results are calculated <strong>per sample</strong> and stored in the project. Both relative
+(normalized) and, optionally, absolute concentrations can be obtained.</p>
+<hr />
+<h2 id="terminology">Terminology</h2>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Definition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>PSM</strong></td>
+<td>Peptide-Spectrum Match — one identification of a peptide from one spectrum</td>
+</tr>
+<tr>
+<td><strong>SpC</strong></td>
+<td>Spectral Count — total number of PSMs assigned to a protein</td>
+</tr>
+<tr>
+<td><strong><span class="arithmatex">\(N_{\text{obs}}\)</span></strong></td>
+<td>Number of unique (distinct) observed peptide sequences for a protein</td>
+</tr>
+<tr>
+<td><strong><span class="arithmatex">\(N_{\text{observ}}\)</span></strong></td>
+<td>Number of theoretically observable peptides — obtained by <em>in silico</em> digestion of the protein sequence and filtering by length, mass, and missed cleavages</td>
+</tr>
+<tr>
+<td><strong>Preferred identification</strong></td>
+<td>The best identification per spectrum, selected across all tools</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="quantification-methods">Quantification Methods</h2>
+<h3 id="empai-exponentially-modified-protein-abundance-index">emPAI — Exponentially Modified Protein Abundance Index</h3>
+<p>emPAI estimates protein abundance based on the ratio of observed to observable peptides.
+It was introduced by Ishihama et al. (2005) and is widely used in shotgun proteomics.</p>
+<p><strong>Formula:</strong></p>
+<div class="arithmatex">\[\text{emPAI} = 10^{\,N_{\text{obs}} / N_{\text{observ}}} - 1\]</div>
+<p>where the base <span class="arithmatex">\(10\)</span> is the default; alternative bases (e.g., <span class="arithmatex">\(e\)</span>) can be selected.</p>
+<p>Key properties:</p>
+<ul>
+<li>Uses <strong>only unique</strong> peptide sequences (duplicates are removed before counting <span class="arithmatex">\(N_{\text{obs}}\)</span>).</li>
+<li><span class="arithmatex">\(N_{\text{observ}}\)</span> is determined by <em>in silico</em> digestion of the protein with the chosen enzyme (default: trypsin, no missed cleavages), followed by peptide length filtering (default: 7–30 amino acids).</li>
+<li>The output is a <strong>non-normalized</strong> index — higher emPAI means higher abundance.</li>
+<li>The protein abundance (mol%) is estimated as:</li>
+</ul>
+<div class="arithmatex">\[\text{Protein content (mol\%)} = \frac{\text{emPAI}_i}{\sum_j \text{emPAI}_j} \times 100\%\]</div>
+<p>DASMixer performs this normalization automatically and reports it as the relative value.</p>
+<hr />
+<h3 id="nsaf-normalized-spectral-abundance-factor">NSAF — Normalized Spectral Abundance Factor</h3>
+<p>NSAF normalizes spectral counts by protein length and across all proteins in the sample.
+The underlying assumption is that larger proteins tend to generate more PSMs, so the count
+must be adjusted by protein size.</p>
+<p><strong>Step 1: SAF (Spectral Abundance Factor)</strong></p>
+<div class="arithmatex">\[\text{SAF}_i = \frac{\text{SpC}_i}{L_i}\]</div>
+<p>where <span class="arithmatex">\(\text{SpC}_i\)</span> is the total PSM count for protein <span class="arithmatex">\(i\)</span>, and <span class="arithmatex">\(L_i\)</span> is its sequence
+length in amino acid residues.</p>
+<p><strong>Step 2: NSAF (Normalized SAF)</strong></p>
+<div class="arithmatex">\[\text{NSAF}_i = \frac{\text{SAF}_i}{\sum_j \text{SAF}_j}\]</div>
+<p>The sum of all NSAF values in a sample equals 1. NSAF is the <strong>relative value</strong> reported
+by DASMixer.</p>
+<p>Key properties:</p>
+<ul>
+<li>NSAF uses <strong>spectral counts</strong>, not intensities — it does not require intensity data.</li>
+<li>Normalization by protein length corrects for the bias that longer proteins generate
+  more peptides and therefore more PSMs.</li>
+<li>Works well for comparing protein abundances <strong>within a sample</strong>.</li>
+</ul>
+<hr />
+<h3 id="ibaq-intensity-based-absolute-quantification">iBAQ — Intensity-Based Absolute Quantification</h3>
+<p>iBAQ normalizes the total peptide intensity by the number of theoretically observable
+peptides. It was introduced by Schwanhäusser et al. (2011).</p>
+<p><strong>Formula:</strong></p>
+<div class="arithmatex">\[\text{iBAQ}_i = \frac{\sum_k I_{i,k}}{N_{\text{observ}, i}}\]</div>
+<p>where <span class="arithmatex">\(\sum_k I_{i,k}\)</span> is the sum of intensities of <strong>all</strong> observed peptides assigned
+to protein <span class="arithmatex">\(i\)</span> (including duplicates), and <span class="arithmatex">\(N_{\text{observ}, i}\)</span> is the number of
+theoretically observable peptides.</p>
+<p>Key properties:</p>
+<ul>
+<li>Uses <strong>all</strong> peptide intensities — duplicates are included.</li>
+<li>Peptides with missing intensity (NaN) are excluded from the sum.</li>
+<li><span class="arithmatex">\(N_{\text{observ}}\)</span> is the same value used for emPAI (depends on digestion and
+  filtering parameters).</li>
+<li>Raw iBAQ is then normalized across proteins: <span class="arithmatex">\(\text{iBAQ}_{i,\text{norm}} = \text{iBAQ}_i / \sum_j \text{iBAQ}_j\)</span>.</li>
+</ul>
+<hr />
+<h3 id="top3-mean-of-top-3-peptide-intensities">Top3 — Mean of Top 3 Peptide Intensities</h3>
+<p>Top3 approximates protein abundance as the arithmetic mean of intensities of the three
+most intense peptides assigned to the protein.</p>
+<p><strong>Formula:</strong></p>
+<div class="arithmatex">\[\text{Top3}_i = \frac{I_{i,(1)} + I_{i,(2)} + I_{i,(3)}}{3}\]</div>
+<p>where <span class="arithmatex">\(I_{i,(1)}, I_{i,(2)}, I_{i,(3)}\)</span> are the three highest peptide intensities for
+protein <span class="arithmatex">\(i\)</span>, sorted in descending order.</p>
+<p>Key properties:</p>
+<ul>
+<li>Requires <strong>at least 3 peptides</strong> with intensity data. Proteins with fewer peptides
+  receive no Top3 value.</li>
+<li>Simple and robust — does not require theoretical digestion or sequence information.</li>
+<li>Relies solely on MS1 intensity data.</li>
+<li>Raw Top3 is then normalized across proteins: <span class="arithmatex">\(\text{Top3}_{i,\text{norm}} = \text{Top3}_i / \sum_j \text{Top3}_j\)</span>.</li>
+</ul>
+<hr />
+<h2 id="normalization-relative-quantification">Normalization (Relative Quantification)</h2>
+<p>For emPAI, iBAQ, and Top3, raw values are normalized so that they sum to 1 across all
+proteins in the sample:</p>
+<div class="arithmatex">\[v_{i,\text{norm}} = \frac{v_i}{\sum_j v_j}\]</div>
+<p>This normalization produces <strong>relative abundance</strong> values, suitable for comparing protein
+levels <strong>within a single sample</strong>. NSAF is already normalized by definition (sum of SAF
+is 1).</p>
+<hr />
+<h2 id="absolute-quantification">Absolute Quantification</h2>
+<p>If a known protein concentration is available, DASMixer can convert relative values into
+absolute concentrations. Two approaches are supported:</p>
+<h3 id="total-protein-concentration">Total Protein Concentration</h3>
+<p>When the total protein concentration <span class="arithmatex">\(C_{\text{total}}\)</span> is known (e.g., from a Bradford
+or BCA assay, in g/L):</p>
+<div class="arithmatex">\[C_{i,\text{mass}} = v_{i,\text{norm}} \times C_{\text{total}}\]</div>
+<h3 id="reference-protein-internal-standard">Reference Protein (Internal Standard)</h3>
+<p>When the concentration of a specific reference protein <span class="arithmatex">\(C_{\text{ref}}\)</span> is known:</p>
+<div class="arithmatex">\[C_{i,\text{mass}} = C_{\text{ref}} \times \frac{v_{i,\text{norm}}}{v_{\text{ref},\text{norm}}}\]</div>
+<p>The reference protein is auto-detected by its UniProt accession (default: <strong>P02768</strong>,
+serum albumin), or can be specified manually.</p>
+<h3 id="combined-approach">Combined Approach</h3>
+<p>When both <span class="arithmatex">\(C_{\text{total}}\)</span> and <span class="arithmatex">\(C_{\text{ref}}\)</span> are known, DASMixer combines them with
+a weighting factor <span class="arithmatex">\(\alpha\)</span> (default <span class="arithmatex">\(0.5\)</span>):</p>
+<div class="arithmatex">\[C_{i,\text{mass}} = \alpha \cdot C_{i,\text{mass}}^{\text{ref}} + (1 - \alpha) \cdot C_{i,\text{mass}}^{\text{total}}\]</div>
+<h3 id="conversion-to-molar-concentrations">Conversion to Molar Concentrations</h3>
+<p>Mass concentrations (g/L) can be converted to molar units (mol/L):</p>
+<div class="arithmatex">\[C_{i,\text{molar}} = \frac{C_{i,\text{mass}}}{\text{MW}_i \times 1000}\]</div>
+<p>where <span class="arithmatex">\(\text{MW}_i\)</span> is the molecular weight of protein <span class="arithmatex">\(i\)</span> in kDa (approximated as
+<span class="arithmatex">\(0.11 \times \text{length}\)</span>, i.e. average amino acid residue mass of 110 Da).</p>
+<hr />
+<h2 id="digestion-parameters">Digestion Parameters</h2>
+<p>The calculation of <span class="arithmatex">\(N_{\text{observ}}\)</span> (used by emPAI and iBAQ) depends on <em>in silico</em>
+digestion parameters:</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Enzyme</td>
+<td>Trypsin</td>
+<td>Cleavage specificity for <em>in silico</em> digestion</td>
+</tr>
+<tr>
+<td>Min peptide length</td>
+<td>7</td>
+<td>Minimum amino acid residues in theoretical peptides</td>
+</tr>
+<tr>
+<td>Max peptide length</td>
+<td>30</td>
+<td>Maximum amino acid residues in theoretical peptides</td>
+</tr>
+<tr>
+<td>Missed cleavages</td>
+<td>2</td>
+<td>Maximum allowed missed cleavage sites</td>
+</tr>
+</tbody>
+</table>
+<p>These parameters control which theoretical peptides are considered "observable" and
+directly affect emPAI and iBAQ values. Stricter filtering (tighter length range, fewer
+missed cleavages) reduces <span class="arithmatex">\(N_{\text{observ}}\)</span> and increases the abundance index.</p>
+<hr />
+<h2 id="data-requirements">Data Requirements</h2>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Requires FASTA</th>
+<th>Requires intensities</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>emPAI</strong></td>
+<td>Yes</td>
+<td>No</td>
+<td>Needs protein sequence for <em>in silico</em> digestion</td>
+</tr>
+<tr>
+<td><strong>NSAF</strong></td>
+<td>Yes</td>
+<td>No</td>
+<td>Uses PSM counts and sequence length only</td>
+</tr>
+<tr>
+<td><strong>iBAQ</strong></td>
+<td>Yes</td>
+<td><strong>Yes</strong></td>
+<td>Needs both sequence and MS1 intensities</td>
+</tr>
+<tr>
+<td><strong>Top3</strong></td>
+<td>No</td>
+<td><strong>Yes</strong></td>
+<td>Needs at least 3 peptide intensities</td>
+</tr>
+</tbody>
+</table>
+<p>Only peptides from <strong>preferred identifications</strong> mapped to proteins are used.
+If intensity data is missing, iBAQ and Top3 will return no value for affected proteins.</p>
+<hr />
+<h2 id="running-lfq-in-dasmixer">Running LFQ in DASMixer</h2>
+<p>LFQ is calculated via the <strong>Proteins tab</strong> in the GUI after:
+1. Spectra and identifications have been imported
+2. Preferred identifications have been selected
+3. A FASTA database has been imported and protein mapping has been performed
+4. Protein identification results have been computed</p>
+<p>Select a sample, choose one or more LFQ methods, configure digestion parameters,
+and optionally enable absolute quantification by providing concentration values.
+The results are stored in the <code>protein_quantification_result</code> table and can be
+exported as CSV.</p>
+<hr />
+<h2 id="references">References</h2>
+<ol>
+<li>
+<p>Ishihama, Y., et al. (2005). Exponentially Modified Protein Abundance Index (emPAI)
+   for Estimation of Absolute Protein Amount in Proteomics by the Number of Sequenced
+   Peptides per Protein. <em>Molecular &amp; Cellular Proteomics</em>, 4(9), 1265–1272.
+   <a href="https://doi.org/10.1074/mcp.M500061-MCP200">DOI: 10.1074/mcp.M500061-MCP200</a></p>
+</li>
+<li>
+<p>Zybailov, B., et al. (2006). Statistical Analysis of Membrane Proteome Expression
+   Changes in <em>Saccharomyces cerevisiae</em>. <em>Journal of Proteome Research</em>, 5(9),
+   2339–2347.
+   <a href="https://doi.org/10.1021/pr060161n">DOI: 10.1021/pr060161n</a></p>
+</li>
+<li>
+<p>Schwanhäusser, B., et al. (2011). Global quantification of mammalian gene expression
+   control. <em>Nature</em>, 473, 337–342.
+   <a href="https://doi.org/10.1038/nature10098">DOI: 10.1038/nature10098</a></p>
+</li>
+<li>
+<p>Silva, J. C., et al. (2006). Absolute Quantification of Proteins by LCMSE.
+   <em>Molecular &amp; Cellular Proteomics</em>, 5(1), 144–156.
+   <a href="https://doi.org/10.1074/mcp.M500230-MCP200">DOI: 10.1074/mcp.M500230-MCP200</a></p>
+</li>
+</ol>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../concepts/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Core Concepts &amp; Formulas">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Core Concepts & Formulas
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../user/project_sample/" class="md-footer__link md-footer__link--next" aria-label="Next: Project &amp; Samples">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Project & Samples
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.footer", "navigation.sections", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../javascripts/mathjax.js"></script>
+      
+        <script src="https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  <script id="init-glightbox">const lightbox = GLightbox({"touchNavigation": true, "loop": false, "zoomable": true, "draggable": true, "openEffect": "zoom", "closeEffect": "zoom", "slideEffect": "slide"});
+document$.subscribe(() => { lightbox.reload() });
+</script></body>
+</html>

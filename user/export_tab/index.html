@@ -1,0 +1,1903 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../plots_tab/">
+      
+      
+        <link rel="next" href="../configuration/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../img/favicon.ico">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Data Export & Project Merge - DASMixer Guide</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+   <link href="../../assets/stylesheets/glightbox.min.css" rel="stylesheet"/><style>
+    html.glightbox-open { overflow: initial; height: 100%; }
+    .gslide-title { margin-top: 0px; user-select: text; }
+    .gslide-desc { color: #666; user-select: text; }
+    .gslide-image img { background: white; }
+    .gscrollbar-fixer { padding-right: 15px; }
+    .gdesc-inner { font-size: 0.75rem; }
+    body[data-md-color-scheme="slate"] .gdesc-inner { background: var(--md-default-bg-color);}
+    body[data-md-color-scheme="slate"] .gslide-title { color: var(--md-default-fg-color);}
+    body[data-md-color-scheme="slate"] .gslide-desc { color: var(--md-default-fg-color);}</style> <script src="../../assets/javascripts/glightbox.min.js"></script></head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#data-export-export-tab" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="DASMixer Guide" class="md-header__button md-logo" aria-label="DASMixer Guide" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            DASMixer Guide
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Data Export & Project Merge
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="DASMixer Guide" class="md-nav__button md-logo" aria-label="DASMixer Guide" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    DASMixer Guide
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core Concepts & Formulas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../lfq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LFQ Methods
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../project_sample/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Project & Samples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../peptides_tab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Processing Identifications
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../peptides_table/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Viewing Identification Data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../proteins_tab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Working with Proteins
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reports/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reports
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../plots_tab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Saved Plots
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Export & Project Merge
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Export & Project Merge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-joined-data-export" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Joined Data Export
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Joined Data Export">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#available-data-sections" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Available Data Sections
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Options
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-system-data-export" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. System Data Export
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. System Data Export">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#available-tables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Available Tables
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-mgf-export" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. MGF Export
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. MGF Export">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#filtering-and-selection-controls" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Filtering and Selection Controls
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#header-and-annotation-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Header and Annotation Options
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#output-organization-and-compression" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Output Organization and Compression
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-mztab-export" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. mzTab Export
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. mzTab Export">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#controls" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Controls
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#importing-merging-another-dasmixer-project" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Importing / Merging Another DASMixer Project
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration & Plugins
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../system_menus/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    System Menus (File & Options)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_10" id="__nav_3_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Advanced Topics
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Advanced Topics
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../advanced/MaxQuant/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MaxQuant Project Import
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../advanced/pride_import/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PRIDE Dataset Import
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../advanced/ptm_configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PTM Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../advanced/abs_concentrations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Absolute Concentrations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../advanced/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Command-Line Interface (CLI)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developer Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Developer Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_1" id="__nav_4_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API & Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API & Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Modules & Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/core_api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core Library API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/project_structure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Project File Structure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_2" id="__nav_4_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Examples
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/example_pipeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Running an Automated Pipeline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/example_plots/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Generating Spectrum Plots
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_3" id="__nav_4_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plugin Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Plugin Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/custom_importers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Identification Importers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/custom_reports/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Reports
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-joined-data-export" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Joined Data Export
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Joined Data Export">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#available-data-sections" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Available Data Sections
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Options
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-system-data-export" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. System Data Export
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. System Data Export">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#available-tables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Available Tables
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-mgf-export" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. MGF Export
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. MGF Export">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#filtering-and-selection-controls" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Filtering and Selection Controls
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#header-and-annotation-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Header and Annotation Options
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#output-organization-and-compression" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Output Organization and Compression
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-mztab-export" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. mzTab Export
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. mzTab Export">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#controls" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Controls
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#importing-merging-another-dasmixer-project" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Importing / Merging Another DASMixer Project
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="data-export-export-tab">Data Export (Export Tab)</h1>
+<p>The <strong>Export</strong> tab provides centralized tools for exporting project data in standard tabular and proteomics formats. Unlike the quick table exports on the Peptides and Proteins tabs (which export only the currently filtered view), the <strong>Export</strong> tab lets you export complete datasets, raw database tables, filtered MGF peak lists, and standardized <strong>mzTab</strong> files.</p>
+<p>The tab is organized into four independent sections:</p>
+<hr />
+<h2 id="1-joined-data-export">1. Joined Data Export</h2>
+<p>Exports high-level, human-friendly analytical views that combine information across multiple database tables: ideal for spreadsheet analysis, custom R/Python scripts, or supplementary publication tables. Format repeats table export in Peptides and Proteins tabs without filtering.</p>
+<p><a class="glightbox" href="../img/export_joined.png" data-type="image" data-width="auto" data-height="auto" data-description="Joined Data Export section — select analytical views, choose format, and export." data-desc-position="bottom"><img alt="Joined Data Export" data-description="Joined Data Export section — select analytical views, choose format, and export." src="../img/export_joined.png" /></a></p>
+<h3 id="available-data-sections">Available Data Sections</h3>
+<p>You can select any combination of the following four datasets:</p>
+<ul>
+<li><strong>Sample details</strong> — summary statistics for every sample in the project (comparison group, outlier status, spectra counts, identification counts, preferred counts, and identified protein counts).</li>
+<li><strong>Identifications</strong> — the complete joined peptide view combining spectrum metadata (<code>seq_no</code>, <code>scans</code>, <code>rt</code>, <code>pepmass</code>, <code>charge</code>), identification metrics (<code>tool</code>, <code>sequence</code>, <code>canonical_sequence</code>, <code>ppm</code>, <code>score</code>, <code>quality</code>, <code>lcrr</code>, <code>intensity_coverage</code>, <code>is_preferred</code>), and protein match results (<code>protein_id</code>, <code>gene</code>, <code>matched_sequence</code>, <code>identity</code>, <code>unique_evidence</code>, <code>substitution</code>).</li>
+<li><strong>Protein identifications</strong> — sample-level protein results (<code>sample</code>, <code>subset</code>, <code>protein_id</code>, <code>gene</code>, <code>peptide_count</code>, <code>unique_evidence_count</code>, <code>coverage_percent</code>, <code>intensity_sum</code>) joined with pivoted LFQ columns (<code>emPAI</code>, <code>iBAQ</code>, <code>NSAF</code>, <code>Top3</code>).</li>
+<li><strong>Protein statistics</strong> — project-wide aggregated statistics per unique protein (total samples and comparison groups in which each protein was detected).</li>
+</ul>
+<h3 id="options">Options</h3>
+<ul>
+<li><strong>Format:</strong> Choose <strong>XLSX</strong> (Microsoft Excel) or <strong>CSV</strong>.</li>
+<li><strong>One file per sample:</strong> When checked, the <strong>Identifications</strong> and <strong>Protein identifications</strong> exports are split into separate files per sample rather than written as a single combined table.</li>
+</ul>
+<p>Click <strong>Export</strong> and choose an output directory. Files are saved with a timestamp suffix.</p>
+<hr />
+<h2 id="2-system-data-export">2. System Data Export</h2>
+<p>Exports raw internal SQLite database tables directly to <strong>CSV</strong> files using asynchronous streaming. This is primarily intended for debugging, archiving raw relational records, or external database ingestion.</p>
+<p><a class="glightbox" href="../img/system_data_export.png" data-type="image" data-width="auto" data-height="auto" data-description="System Data Export section — export raw SQLite tables to CSV." data-desc-position="bottom"><img alt="System Data Export section" data-description="System Data Export section — export raw SQLite tables to CSV." src="../img/system_data_export.png" /></a></p>
+<h3 id="available-tables">Available Tables</h3>
+<p>Use <strong>Select All</strong> / <strong>Deselect All</strong> or toggle individual tables:</p>
+<ul>
+<li><code>Samples</code>, <code>Subsets</code>, <code>Tools</code></li>
+<li><code>Spectre file</code>, <code>Spectra metadata</code></li>
+<li><code>Identification file</code>, <code>Identification</code>, <code>Peptide match</code></li>
+<li><code>Protein identifications</code>, <code>Protein quantifications</code></li>
+<li><code>Project settings</code></li>
+</ul>
+<blockquote>
+<p><strong>Technical details:</strong> Binary BLOB columns (such as raw <span class="arithmatex">\(m/z\)</span> and intensity arrays, pickled UniProt records, and serialized report figures) are automatically excluded so the CSV files remain lightweight. JSON columns (such as tool <code>settings</code>, sample <code>additions</code>, and spectrum <code>all_params</code>) are automatically flattened into separate columns prefixed with <code>{column_name}.{key}</code>.</p>
+</blockquote>
+<p>Click <strong>Export (CSV)</strong> and select a destination folder. Each selected table is written to <code>{table}_{timestamp}.csv</code>.</p>
+<hr />
+<h2 id="3-mgf-export">3. MGF Export</h2>
+<p>Reconstructs and exports MS/MS spectra from the project database back into <code>.mgf</code> (Mascot Generic Format) files, with rich filtering, header customization, merging, and compression options.</p>
+<p>This is especially useful when you want to:</p>
+<ul>
+<li>Export only high-confidence preferred spectra for spectral library building or training dataset</li>
+<li>Export specific spectra, e.g. with specific PTM</li>
+<li>Annotate MGF headers with corrected precursor charges, isotope offsets, or identified <code>SEQ=</code> tags</li>
+</ul>
+<p><a class="glightbox" href="../img/export_mgf.png" data-type="image" data-width="auto" data-height="auto" data-description="MGF Export section — filter spectra by sample and identification, customise headers, and configure output organisation." data-desc-position="bottom"><img alt="MGF Export section" data-description="MGF Export section — filter spectra by sample and identification, customise headers, and configure output organisation." src="../img/export_mgf.png" /></a></p>
+<h3 id="filtering-and-selection-controls">Filtering and Selection Controls</h3>
+<ul>
+<li><strong>Select Samples…:</strong> Choose which samples to include in the export (should be selected by user).</li>
+<li><strong>By identification:</strong><ul>
+<li><strong>All</strong> — export all spectra in the selected samples.</li>
+<li><strong>All preferred</strong> — export only spectra that have a preferred identification.</li>
+<li><strong>Preferred by tool</strong> — export only spectra where the preferred identification came from a specific <strong>Tool</strong> (selected from the dropdown).</li>
+</ul>
+</li>
+<li><strong>Sequence contains:</strong> Optional substring filter; when filled, only spectra whose identification sequence contains the specified substring are exported.</li>
+</ul>
+<h3 id="header-and-annotation-options">Header and Annotation Options</h3>
+<ul>
+<li><strong>Replace SCANS with Spectre ID:</strong> Writes DASMixer's internal <code>spectre.id</code> into the MGF <code>SCANS=</code> header field.</li>
+<li><strong>Write offset from identification:</strong> Includes the calculated precursor isotope offset in the spectrum metadata.</li>
+<li><strong>Write spectra charge from identification:</strong> Uses the SeqFixer-corrected precursor charge (<code>override_charge</code>) in the MGF <code>CHARGE=</code> field when available.</li>
+<li><strong>Write SEQ from identification:</strong> Writes the identified peptide sequence into the MGF <code>SEQ=</code> header field. When enabled, a dropdown lets you choose between the <strong>Canonical</strong> sequence (unmodified amino acids) or the <strong>Modified</strong> ProForma sequence.</li>
+</ul>
+<h3 id="output-organization-and-compression">Output Organization and Compression</h3>
+<ul>
+<li><strong>Merge MGF:</strong><ul>
+<li><strong>One file</strong> — combine all exported spectra into a single MGF file.</li>
+<li><strong>By sample</strong> (default) — create one MGF file per sample.</li>
+<li><strong>By spectre file</strong> — create one MGF file per original imported spectra file.</li>
+</ul>
+</li>
+<li><strong>Compression:</strong><ul>
+<li><strong>None</strong> — plain <code>.mgf</code> text files</li>
+<li><strong>Gzip</strong> — compress each MGF file as <code>.mgf.gz</code></li>
+<li><strong>Zip all</strong> — package all exported MGF files into a single <code>.zip</code> archive</li>
+<li><strong>Zip each</strong> — compress each exported MGF file into its own <code>.zip</code> archive</li>
+</ul>
+</li>
+<li><strong>Add timestamp to file name:</strong> Appends a timestamp to exported filenames to prevent overwriting previous exports.</li>
+<li><strong>File Suffix:</strong> Optional custom suffix added to the output filenames.</li>
+</ul>
+<hr />
+<h2 id="4-mztab-export">4. mzTab Export</h2>
+<p>Exports project results in the standardized HUPO-PSI <strong>mzTab 1.0</strong> format, suitable for repository submissions (such as PRIDE) or downstream tools that consume mzTab files.</p>
+<p><a class="glightbox" href="../img/export_mztab.png" data-type="image" data-width="auto" data-height="auto" data-description="mzTab Export section — title, description, sample selection, and LFQ method." data-desc-position="bottom"><img alt="mzTab Export" data-description="mzTab Export section — title, description, sample selection, and LFQ method." src="../img/export_mztab.png" /></a></p>
+<h3 id="controls">Controls</h3>
+<ul>
+<li><strong>Title:</strong> Descriptive title for the mzTab metadata header (saved in project settings).</li>
+<li><strong>Description:</strong> Experiment description for the mzTab metadata header (saved in project settings).</li>
+<li><strong>Select Samples…:</strong> Choose which samples to include in the mzTab file.</li>
+<li><strong>LFQ Method:</strong> Select which quantification algorithm (<code>emPAI</code>, <code>iBAQ</code>, <code>NSAF</code>, or <code>Top3</code>) to report in the mzTab protein abundance columns.</li>
+</ul>
+<p>Click <strong>Export</strong> and choose the target <code>.mzTab</code> filename in the Save File dialog.</p>
+<hr />
+<h2 id="importing-merging-another-dasmixer-project">Importing / Merging Another DASMixer Project</h2>
+<p>In addition to exporting data, you can merge all data from another <code>.dasmix</code> project into your currently open project (for example, when combining batches processed on different workstations).</p>
+<blockquote>
+<p><strong>Note:</strong> Both projects must have the same internal <code>PROJECT_VERSION</code> schema. If one project was created with an older version of DASMixer, simply open and save it in the current version first to upgrade its schema automatically.</p>
+</blockquote>
+<p>You can merge projects directly from the GUI via <strong>File → Merge Project…</strong> (see <a href="../system_menus/#6-merge-project">System Menus — Merge Project</a>), via the <a href="../advanced/cli/#6-merging-projects-import-project">Command-Line Interface</a> (<code>dasmixer-cli import-project</code>), or programmatically via the Python API, with full control over how duplicate comparison groups, tools, and samples are matched or renamed.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../plots_tab/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Saved Plots">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Saved Plots
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../configuration/" class="md-footer__link md-footer__link--next" aria-label="Next: Configuration &amp; Plugins">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Configuration & Plugins
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.footer", "navigation.sections", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  <script id="init-glightbox">const lightbox = GLightbox({"touchNavigation": true, "loop": false, "zoomable": true, "draggable": true, "openEffect": "zoom", "closeEffect": "zoom", "slideEffect": "slide"});
+document$.subscribe(() => { lightbox.reload() });
+</script></body>
+</html>
