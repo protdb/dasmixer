@@ -1,27 +1,46 @@
-site_name: DASMixer guide
+site_name: DASMixer Guide
 
 theme:
   name: material
   favicon: img/favicon.ico
   features:
     - navigation.footer
+    - navigation.sections
+    - content.code.copy
 
 nav:
   - Home: index.md
-  - User guide:
-    - Install: installation.md
-    - Create project and import data: user/project_sample.md
-    - Work with peptides and identifications: user/peptides_tab.md
-    - Preview peptide data: user/peptides_table.md
-    - Work with proteins: user/proteins_tab.md
-    - Reports: user/reports.md
-    - advanced:
-        - MaxQuant project import: user/advanced/MaxQuant.md
-        - PTM Configuration: user/advanced/ptm_configuration.md
-        - Absolute concentrations settings: user/advanced/abs_concentrations.md
-  - Concepts and algorithms:
-    - Concepts: concepts.md
+  - Getting Started:
+    - Installation: installation.md
+    - Core Concepts & Formulas: concepts.md
     - LFQ Methods: lfq.md
+  - User Guide:
+    - Project & Samples: user/project_sample.md
+    - Processing Identifications: user/peptides_tab.md
+    - Viewing Identification Data: user/peptides_table.md
+    - Working with Proteins: user/proteins_tab.md
+    - Reports: user/reports.md
+    - Saved Plots: user/plots_tab.md
+    - Data Export & Project Merge: user/export_tab.md
+    - Configuration & Plugins: user/configuration.md
+    - System Menus (File & Options): user/system_menus.md
+    - Advanced Topics:
+      - MaxQuant Project Import: user/advanced/MaxQuant.md
+      - PRIDE Dataset Import: user/advanced/pride_import.md
+      - PTM Configuration: user/advanced/ptm_configuration.md
+      - Absolute Concentrations: user/advanced/abs_concentrations.md
+      - Command-Line Interface (CLI): user/advanced/cli.md
+  - Developer Guide:
+    - API & Architecture:
+      - Modules & Architecture: developer/architecture.md
+      - Core Library API: developer/core_api.md
+      - Project File Structure: developer/project_structure.md
+    - Examples:
+      - Running an Automated Pipeline: developer/example_pipeline.md
+      - Generating Spectrum Plots: developer/example_plots.md
+    - Plugin Development:
+      - Custom Identification Importers: developer/custom_importers.md
+      - Custom Reports: developer/custom_reports.md
   - Roadmap: roadmap.md
 
 markdown_extensions:
@@ -32,6 +51,11 @@ markdown_extensions:
   - toc:
       toc_depth: 3
   - attr_list
+  - admonition
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
   - pymdownx.superfences:
       custom_fences:
         - name: mermaid

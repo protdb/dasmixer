@@ -1,322 +1,190 @@
-# User Guide — Creating Custom Reports
+# Creating Custom Reports
 
 ## Overview
 
-DASMixer reports are Python modules that produce analytical outputs (plots and tables)
-from project data. Custom reports can be added as **plugins** (`.py` files placed in
-`{app_dir}/plugins/reports/`) or developed directly in the source tree.
+DASMixer reports are Python modules that produce analytical outputs (interactive Plotly plots and Pandas tables) from project data. Custom reports can be installed as **plugins** (`.py` files or `.zip` packages placed in `{app_dir}/plugins/reports/` or installed via **Options → Plugins**) or developed directly in the source tree.
 
-Since v0.7.4a1, each report consists of up to four files:
+Each report consists of up to four components (which can live in a multi-file package or a single `.py` file):
 
-| File | Purpose |
-|------|---------|
-| `params.py` | Typed parameter dataclass |
-| `form.py` | GUI parameter form (optional — only needed when `dasmixer-gui` is installed) |
-| `report.py` | Report logic — `BaseReport` subclass |
-| `__init__.py` | Re-exports the report class |
-
-A report **can also be a single `.py` file** (see § Single-file Report below).
+| Component | Purpose |
+|---|---|
+| `params.py` | Typed parameter dataclass inheriting from `ReportParams` |
+| `form.py` | GUI parameter form (optional — only loaded when `dasmixer-gui` is installed) |
+| `report.py` | Report calculation and plotting logic — `BaseReport` subclass |
+| `__init__.py` | Re-exports the report class (for multi-file packages) |
 
 ---
 
-## Quick Start — Minimal Report
+## Single-File Report Plugin (Quick Start)
 
-### Step 1: `params.py`
-
-Define a dataclass for report parameters. Minimum: `name_template`.
-
-```python
-# my_report/params.py
-from dataclasses import dataclass, field
-from dasmixer.api.reporting.report_params import ReportParams
-
-
-@dataclass
-class MyReportParams(ReportParams):
-    threshold: float = 0.5
-    show_details: bool = True
-    name_template: str = field(default="{date} {time}")
-```
-
-**Rules:**
-- Always inherit from `ReportParams`
-- Always include `name_template: str = field(default="{date} {time}")`
-- Use `field(default=...)` for mutable types (`list`, `tuple`, etc.)
-- Type hints are mandatory (`int`, `float`, `bool`, `str`, `list[str]`, `tuple[str, str]`)
-
-### Step 2: `form.py` (GUI only)
-
-Define a form class extending the GUI `ReportForm`. This file is imported only when
-`dasmixer-gui` is installed — it must import directly from `dasmixer.gui.components.report_form`.
-
-```python
-# my_report/form.py
-from dasmixer.gui.components.report_form import (
-    ReportForm, FloatSelector, BoolSelector,
-)
-from .params import MyReportParams
-
-
-class MyReportForm(ReportForm):
-    params_class = MyReportParams
-    threshold = FloatSelector(default=0.5, label="Threshold")
-    show_details = BoolSelector(default=True, label="Show details")
-```
-
-Available selectors:
-
-| Selector | Type | Example |
-|----------|------|---------|
-| `IntSelector(default=..., label=...)` | `int` | `IntSelector(default=10)` |
-| `FloatSelector(default=..., label=...)` | `float` | `FloatSelector(default=1.5)` |
-| `BoolSelector(default=..., label=...)` | `bool` | `BoolSelector(default=True)` |
-| `StringSelector(default=..., label=...)` | `str` | `StringSelector(default="")` |
-| `EnumSelector(values=[...], default=..., label=...)` | `str` | `EnumSelector(["A","B"])` |
-| `SubsetSelector(default=..., label=...)` | `str` | Pick one comparison group |
-| `MultiSubsetSelector(default=[], label=...)` | `list[str]` | Checkbox per group |
-| `ToolSelector(default=..., label=...)` | `str` | Pick one tool by name |
-| `LFQSelector(default_method=..., default_value_type=..., label=...)` | `tuple[str,str]` | `("emPAI", "rel_value")` |
-
-**Important:** Do NOT declare a `name_template` selector in your form — it is rendered
-automatically as a text field on the report card itself, not inside the parameter dialog.
-
-### Step 3: `report.py`
-
-Implement the report logic by subclassing `BaseReport`.
-
-```python
-# my_report/report.py
-from __future__ import annotations
-
-import pandas as pd
-import plotly.graph_objects as go
-from dasmixer.api.reporting._icons import Icons
-from dasmixer.api.reporting.base import BaseReport
-from dasmixer.api.reporting.registry import registry
-
-from .params import MyReportParams
-
-# Import the GUI form — only when dasmixer-gui is installed
-try:
-    from .form import MyReportForm
-    _parameters = MyReportForm
-except ImportError:
-    _parameters = None
-
-
-class MyReport(BaseReport):
-    """My custom report."""
-
-    name = "My Custom Report"
-    description = "An example custom report with configurable threshold"
-    icon = Icons.REPORT
-
-    params_class = MyReportParams
-    parameters = _parameters
-    name_template = "{date} {time}"
-
-    async def _generate_impl(
-        self, params: MyReportParams
-    ) -> tuple[list[tuple[str, go.Figure]], list[tuple[str, pd.DataFrame, bool]]]:
-        # Access typed parameters directly
-        threshold = params.threshold
-        show_details = params.show_details
-
-        # 1. Fetch data from project
-        samples = await self.project.get_samples()
-        df = pd.DataFrame([{'name': s.name, 'id': s.id} for s in samples])
-
-        # 2. Create plots
-        fig = go.Figure(data=[go.Bar(x=df['name'], y=df['id'])])
-        fig.update_layout(title=f"My Report (threshold={threshold})")
-
-        # 3. Return (plots, tables)
-        plots = [("Sample Chart", fig)]
-        tables = []
-        if show_details:
-            tables.append(("Samples", df, True))  # show_in_ui=True
-
-        return plots, tables
-
-
-# Auto-register
-registry.register(MyReport)
-```
-
-**Key points:**
-- `_generate_impl(self, params: MyReportParams)` — receive your typed dataclass
-- `params.threshold` — access fields as attributes (not dict)
-- Return `(list[plots], list[tables])` where each plot is `(name, go.Figure)` and each table is `(name, pd.DataFrame, show_in_ui)`
-- `show_in_ui=True` — table visible in preview; `False` — «background» table (large, export-only)
-- Always call `registry.register(MyReport)` at module level
-
-### Step 4: `__init__.py`
-
-```python
-# my_report/__init__.py
-from .report import MyReport
-__all__ = ["MyReport"]
-```
-
----
-
-## Single-file Report (Plugin)
-
-For a plugin (one `.py` file in `{app_dir}/plugins/reports/`), put everything in one file:
+For a standalone plugin file in `{app_dir}/plugins/reports/`, place all components in one `.py` file and call `registry.register()` at the bottom:
 
 ```python
 # my_plugin_report.py
+from __future__ import annotations
+
 from dataclasses import dataclass, field
+import pandas as pd
+import plotly.graph_objects as go
+
 from dasmixer.api.reporting.report_params import ReportParams
 from dasmixer.api.reporting.base import BaseReport
 from dasmixer.api.reporting.registry import registry
 from dasmixer.api.reporting._icons import Icons
 
 
-# --- Params ---
+# 1. Typed Parameters Dataclass
 @dataclass
 class MyPluginParams(ReportParams):
     threshold: float = 0.5
+    show_details: bool = True
     name_template: str = field(default="{date} {time}")
 
 
-# --- GUI form (optional) ---
+# 2. Optional GUI Form (guarded for headless / CLI compatibility)
 try:
-    from dasmixer.gui.components.report_form import ReportForm, FloatSelector
+    from dasmixer.gui.components.report_form import (
+        ReportForm,
+        FloatSelector,
+        BoolSelector,
+    )
 
     class MyPluginForm(ReportForm):
         params_class = MyPluginParams
-        threshold = FloatSelector(default=0.5)
+        threshold = FloatSelector(default=0.5, label="Threshold")
+        show_details = BoolSelector(default=True, label="Show details")
 
     _parameters = MyPluginForm
 except ImportError:
     _parameters = None
 
 
-# --- Report ---
+# 3. Report Implementation
 class MyPluginReport(BaseReport):
-    name = "My Plugin Report"
-    description = "Single-file plugin report"
+    name = "My Custom Report"
+    description = "An example custom report with configurable threshold"
     icon = Icons.REPORT
     params_class = MyPluginParams
     parameters = _parameters
-    name_template = "{date} {time}"
+    name_template = "{threshold} {date} {time}"
 
-    async def _generate_impl(self, params: MyPluginParams):
-        import pandas as pd
-        import plotly.graph_objects as go
+    async def _generate_impl(
+        self, params: MyPluginParams
+    ) -> tuple[list[tuple[str, go.Figure]], list[tuple[str, pd.DataFrame, bool]]]:
+        threshold = params.threshold
+        show_details = params.show_details
 
-        data = await self.project.get_samples()
-        df = pd.DataFrame([{'name': s.name} for s in data])
-        fig = go.Figure(data=[go.Bar(x=df['name'], y=[1]*len(df))])
+        # Fetch data from the project
+        samples = await self.project.get_samples()
+        df = pd.DataFrame([{"Sample": s.name, "ID": s.id} for s in samples])
 
-        return [("Chart", fig)], [("Table", df, True)]
+        # Build Plotly figure
+        fig = go.Figure(data=[go.Bar(x=df["Sample"], y=df["ID"])])
+        fig.update_layout(
+            title=f"My Report (threshold={threshold})",
+            template="plotly_white",
+        )
+
+        plots = [("Sample Chart", fig)]
+        tables = []
+        if show_details:
+            # Tuple format: (table_title, dataframe, show_in_ui)
+            tables.append(("Samples Summary", df, True))
+
+        return plots, tables
 
 
+# 4. Auto-register with DASMixer
 registry.register(MyPluginReport)
 ```
 
-The plugin loader (`dasmixer.api.plugin_loader`) executes this file as a module.
-The `registry.register()` call at module level triggers auto-discovery — no further
-wiring is needed.
-
 ---
 
-## Working with Project Data
+## Step-by-Step Reference
 
-Your report has full access to the `Project` API via `self.project`:
+### 1. Defining Parameters (`ReportParams`)
+
+Always inherit from `ReportParams` and include `name_template: str = field(default="{date} {time}")`:
+
+- Use `field(default_factory=list)` for mutable defaults (`list[str]`).
+- Standard supported field types: `int`, `float`, `bool`, `str`, `list[str]`, `tuple[str, str]`.
+
+### 2. Building the GUI Form (`ReportForm`)
+
+Available GUI selector controls from `dasmixer.gui.components.report_form`:
+
+| Selector | Python Type | Description |
+|---|---|---|
+| `IntSelector(default=..., label=...)` | `int` | Integer input field |
+| `FloatSelector(default=..., label=...)` | `float` | Floating-point input field |
+| `BoolSelector(default=..., label=...)` | `bool` | Checkbox |
+| `StringSelector(default=..., label=...)` | `str` | Text input field |
+| `EnumSelector(values=[...], default=..., label=...)` | `str` | Dropdown with fixed options |
+| `SubsetSelector(default=..., label=...)` | `str` | Dropdown populated with project subsets |
+| `MultiSubsetSelector(default=[], label=...)` | `list[str]` | Checkboxes for selecting multiple subsets |
+| `ToolSelector(default=..., label=...)` | `str` | Dropdown populated with project tools |
+| `LFQSelector(default_method=..., default_value_type=..., label=...)` | `tuple[str, str]` | Combined LFQ method and measure selector, e.g., `("emPAI", "rel_value")` |
+
+> **Important:** Do **not** declare a `name_template` selector inside `ReportForm` — DASMixer renders the **Name format** field directly on the report card in the Reports tab.
+
+### 3. Implementing `_generate_impl`
+
+`_generate_impl(self, params)` must be an `async` method returning `(plots, tables)`:
+
+- **`plots`**: `list[tuple[str, go.Figure]]` — list of `(plot_title, plotly_figure)` pairs. DASMixer automatically applies the user's global plot font size, width, and height settings to each figure after `_generate_impl` returns.
+- **`tables`**: `list[tuple[str, pd.DataFrame, bool]]` — list of `(table_title, dataframe, show_in_ui)` tuples:
+  - `show_in_ui = True`: Displayed in the interactive HTML report preview, DOCX export, and XLSX export. Use this for compact summary tables.
+  - `show_in_ui = False`: Hidden from the HTML/DOCX report text to keep it readable, but exported as a sheet in the XLSX workbook. Use this for full protein/peptide data matrices.
+
+### 4. Querying Project Data (`self.project`)
+
+Inside `_generate_impl`, `self.project` gives you full async access to the `Project` API:
 
 ```python
-# Fetch data
+# Metadata & entities
 samples = await self.project.get_samples()
 subsets = await self.project.get_subsets()
 tools = await self.project.get_tools()
 
-# Quantification data
-df = await self.project.get_protein_quantification_data(
+# Long-format protein quantification data
+quant_df = await self.project.get_protein_quantification_data(
     method="emPAI",
     subsets=["Control", "Treatment"],
+    exclude_outliers=True,
 )
 
-# Raw SQL
-rows = await self.project.execute_query("SELECT ...")
-df = await self.project.execute_query_df("SELECT ...")
+# Joined peptide-level data
+peptides_df = await self.project.get_joined_peptide_data(
+    is_preferred=True,
+    protein_identified=True,
+)
 
-# Settings
-value = await self.project.get_setting("lfq_enzyme", "trypsin")
+# Custom SQL query returning a DataFrame
+custom_df = await self.project.execute_query_df(
+    "SELECT protein_id, COUNT(*) AS n FROM peptide_match GROUP BY protein_id"
+)
 ```
 
 ---
 
-## Icon Reference
+## Icons (`dasmixer.api.reporting._icons.Icons`)
 
-Use `Icons` from `dasmixer.api.reporting._icons` (works without flet installed):
+Always import `Icons` from `dasmixer.api.reporting._icons` rather than `flet` so your report works when `dasmixer-gui` is not installed:
 
-```python
-from dasmixer.api.reporting._icons import Icons
-
-class MyReport(BaseReport):
-    icon = Icons.AREA_CHART       # or Icons.BAR_CHART, Icons.SCATTER_PLOT,
-                                  # Icons.PIE_CHART, Icons.VOLCANO,
-                                  # Icons.INSERT_CHART_ROUNDED, Icons.REPORT
-```
-
----
-
-## Name Template
-
-The report display name is computed from `name_template` using `str.format()`:
-
-| Placeholder | Meaning | Example |
-|-------------|---------|---------|
-| `{date}` | Current date (YYMMDD) | `260930` |
-| `{time}` | Current time (HH:MM) | `14:05` |
-| `{field}` | Any field from your params dataclass | `{threshold}` → `0.5` |
-
-Default: `"{date} {time}"` → `"260930 14:05"`
-
-The template is taken from `params.name_template` (user-editable on the card),
-falling back to the class-level `name_template`.
+- `Icons.REPORT`
+- `Icons.AREA_CHART`
+- `Icons.BAR_CHART`
+- `Icons.SCATTER_PLOT`
+- `Icons.PIE_CHART`
+- `Icons.VOLCANO`
+- `Icons.INSERT_CHART_ROUNDED`
 
 ---
 
-## Export File Naming
+## Name Templates
 
-Exported files are named: `{report_name}_{display_name}.{ext}`
+The display name of each generated report run is formatted using `params.name_template`:
 
-Example for `Volcano Report (independent)` with display name `260930 14:05`:
-- `Volcano Report (independent)_260930 14-05.html`
-
-Characters illegal in NTFS (`:`, `\`, `/`, `*`, `?`, `"`, `<`, `>`, `|`) are
-replaced: `:` → `-`, others → `_`.
-
----
-
-## Installing Custom Reports
-
-**As a plugin (recommended):**
-1. Place your `.py` file in `{app_dir}/plugins/reports/`
-2. Restart DASMixer
-3. The report appears in the Reports tab automatically
-
-App directory location:
-- **Windows:** `%APPDATA%/dasmixer/plugins/reports/`
-- **Linux:** `~/.config/dasmixer/plugins/reports/`
-
-**In the source tree (development):**
-1. Create a package under `dasmixer-core/src/dasmixer/reports/<name>/`
-2. Add `from .<name> import <YourReport>` to `dasmixer/reports/__init__.py`
-3. Rebuild / reinstall the package
-
----
-
-## Debugging Tips
-
-- Check the log (`AppData/dasmixer/dasmixer.log` or console output)
-- Wrap `_generate_impl` body in `try/except` and log exceptions:
-  ```python
-  from dasmixer.utils.logger import logger
-  logger.exception("MyReport failed")
-  ```
-- If your report doesn't appear, verify `registry.register()` is called at module level
-- Use `await self.project.execute_query_df("SELECT ...")` to verify your SQL queries
+- `{date}` — current date (`YYMMDD`)
+- `{time}` — current time (`HH:MM`)
+- `{<field_name>}` — any attribute from your `ReportParams` dataclass (e.g., `{threshold}`, `{subsets}`, `{lfq}`)

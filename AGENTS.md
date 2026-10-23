@@ -560,3 +560,43 @@ Config file: `{app_dir}/config.json`.
 | `dasmixer-gui/src/dasmixer/gui/reports/forms.py` | GUI report forms + monkey-patch |
 | `dasmixer-gui/src/dasmixer/gui/components/report_form.py` | GUI ReportForm (flet-based) |
 | `docs/project/MASTER_SPEC_NEW.md` | Full current project specification |
+| `guide/mkdocs.yml` | MkDocs configuration and navigation for the User & Developer Guide |
+| `guide/docs/` | Markdown sources for the User & Developer Guide |
+
+---
+
+## Documentation Guide (`guide/`)
+
+The official user and external developer manual is built with **MkDocs** (`mkdocs-material` theme) and lives in `guide/`:
+
+```
+guide/
+├── mkdocs.yml               # Site config, plugins (glightbox), mathjax, navigation
+└── docs/
+    ├── index.md             # Landing page and overview TOC
+    ├── installation.md      # Installation instructions
+    ├── concepts.md          # Core terminology and formulas
+    ├── lfq.md               # Label-free quantification methods
+    ├── roadmap.md           # Development roadmap (Mermaid timeline)
+    ├── user/                # End-user GUI & workflow documentation
+    │   ├── project_sample.md, peptides_tab.md, peptides_table.md,
+    │   ├── proteins_tab.md, reports.md, plots_tab.md,
+    │   ├── export_tab.md, configuration.md, system_menus.md
+    │   └── advanced/        # MaxQuant.md, pride_import.md, ptm_configuration.md,
+    │                        # abs_concentrations.md, cli.md
+    └── developer/           # External developer & plugin author documentation
+        ├── architecture.md, core_api.md, project_file.md,
+        ├── examples_workflow.md, examples_plots.md,
+        ├── custom_importers.md, custom_reports.md
+```
+
+### Rules for Working with the Guide
+
+1. **Audience:**
+   - `user/` is written for **domain scientists (proteomics researchers)** who are not programmers. Keep tone clear, practical, and accessible — neither overly casual nor dryly academic.
+   - `developer/` is written for **external Python developers** embedding `dasmixer-core` in scripts/pipelines or writing plugins (`IdentificationParser`, `BaseReport`), not internal DASMixer core maintainers.
+2. **Internal vs. Guide Docs:**
+   - Do **not** move or delete working developer docs in `docs/project/` (`spec`, `changes`, `review`) or `docs/obsolete/`. Those remain in `docs/`.
+3. **Language:** All guide content in `guide/docs/` must be in **English**.
+4. **Synchronization:** Always verify UI controls, parameters, CLI flags, and API signatures against the actual codebase before documenting them.
+5. **Verification:** After editing `guide/`, run `poetry run mkdocs build --strict` inside `guide/` to verify there are no broken links or syntax errors.

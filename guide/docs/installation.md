@@ -1,34 +1,43 @@
-# DASMixer installation
+# DASMixer Installation
 
 ## Windows
 
-You can get the latest release from [**GitHub Releases**](https://github.com/protdb/dasmixer/releases/latest).
+You can download the latest standalone installer from [**GitHub Releases**](https://github.com/protdb/dasmixer/releases/latest).
 
-Under the changelog in files section find the DASMixerX.X.X-setup.exe as shown below:
+Under the release changelog in the **Assets** section, find and download `DASMixerX.X.X-setup.exe` as shown below:
 
-![windows download example](img/win_download.png)
+![Windows download example](img/win_download.png){data-description="GitHub Releases page — locate the DASMixer installer .exe file in the Assets section."}
 
-Follow the installation steps. DASMixer will be available to run as common desktop application and will be accessible via Start menu.
+Follow the installation wizard steps. Once installed, DASMixer will be available as a standard desktop application and accessible from the Windows Start menu.
 
-DASmixer project files .dasmix will also be associated with DASmixer app.
+DASMixer project files (`.dasmix`) will also be automatically associated with the DASMixer application.
 
-## Install as python package (other systems)
+## Install as a Python Package (Linux, macOS, and Windows)
 
-DASMixer can be installed as python package from PyPi repository:
+DASMixer can be installed directly from the PyPI repository using `pip`:
 
 ```shell
 pip install dasmixer
 ```
 
-Alternatively, you can install CLI-mode only:
+Alternatively, if you only need the command-line interface or wish to use the core library on a headless server, you can install the CLI or core packages separately:
 
 ```shell
+# CLI and core library (no GUI dependencies)
 pip install dasmixer-cli
+
+# Core library only (for scripting and embedding)
+pip install dasmixer-core
 ```
 
-### Use Conda environment
+> **Optional PRIDE support:** To enable direct dataset imports from the PRIDE archive, install the `pride` extra:
+> ```shell
+> pip install "dasmixer-core[pride]"
+> ```
 
-DASMixer cannot be installed via Conda, but you can use COnda to create isolated environment. **Recommended** in older systems as DASmixer works best on Python 3.14
+### Using a Conda Environment
+
+While DASMixer is not distributed through Conda channels directly, you can use Conda (or Mamba) to create an isolated Python environment before installing via `pip`. This is **recommended** on Linux systems or older OS distributions, as DASMixer works best on Python 3.11–3.14:
 
 ```shell
 conda create -n dasmixer python=3.14 -y
@@ -36,4 +45,4 @@ conda activate dasmixer
 pip install dasmixer
 ```
 
-Pip installation can encounter some problems with dependency build. It can be easily solved using google search for missing system packages like libraries and compilers.
+If `pip` encounters issues building native dependencies from source, check the error output for missing system development headers or compilers (such as `gcc` or `python3-dev`) and install them via your system package manager.

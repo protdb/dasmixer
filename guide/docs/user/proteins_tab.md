@@ -1,84 +1,92 @@
-# Working with proteins
+# Working with Proteins (Proteins Tab)
 
-Proteins tab contain three settings/processing blocks and table view, very similar to [one on the peptides tab](peptides_table.md)
+The **Proteins** tab provides controls for protein inference, metadata enrichment from UniProtKB, and Label-Free Quantification (LFQ), followed by interactive tables and protein abundance plots similar to those on the [Peptides tab](peptides_table.md).
 
-![img.png](img/proteins_tab_head.png)
+![Proteins tab header](img/proteins_tab_head.png){data-description="Proteins tab header — Protein Detection, LFQ, and UniProt enrichment configuration cards."}
 
-## Controls
+## Controls and Settings
 
-- Protein detection block
-  - Minimum peptides: minimum of preferred identifications mapped to a protein in the sample to trust its existence in this sample.
-  - Minimum unique peptides: minimum of preferred identifications in the sample that corresponds only to the given protein
-  - "Calculate protein identifications" button: starts the protein identification process
-- Label-free quantification
-  - Methods: select [label-free quantification methods](../lfq.md) to calculate. Currently, DASMixer supports four methods:
-    - emPAI
-    - iBAQ
-    - NSAF
-    - Top3
-  - emPAI base value: configure base value for emPAI. Most common is 10, but there is researches assuming other values as better.
-  - Enzyme, min/max peptide length, max cleavage sites: emPAI and iBAQ relies on "detectable peptides number" as a variable, so to calculate these parameters, DASMixer should perform in silico digestion of the protein sequence in conditions close to experimental
-  - Abs concentrations/set references: refer to [Absolute concentrations](advanced/abs_concentrations.md)
-  - "Calculate LFQ" button: runs LFQ calculations based on given settings
-- Enrich protein metadata from UniprotKB:
-  - overwrite names from fasta: overwrite protein names
-  - Force update: overwrite protein data with UniProt metadata
-  - Enrich protein data from UniProt
+The top of the **Proteins** tab is divided into three configuration and action cards:
 
-## Processing order
+### 1. Protein Detection
 
-It is strictly recommended to follow the next order of calculations:
+- **Minimum peptides:** The minimum number of distinct preferred peptide identifications mapped to a protein in a sample required to consider that protein present (default: `2`).
+- **Minimum unique peptides:** The minimum number of preferred identifications in a sample that map *exclusively* to this protein (default: `1`).
+- **Calculate protein identifications:** Aggregates preferred peptide matches per sample and builds the list of identified proteins along with peptide counts, unique evidence counts, sequence coverage, and summed peptide intensities.
 
-0. Make sure there are enough preferred identifications
-1. Run "Calculate protein identifications"
-2. Run "Enrich protein metadata from UniProtKB" (especially if you imported protein identifications from search engine and did not import protein database)
-3. Run "Calculate LFQ".
+### 2. Label-Free Quantification (LFQ)
 
+- **Methods:** Select one or more [LFQ algorithms](../lfq.md) to compute for each sample:
+  - **emPAI** (Exponentially Modified Protein Abundance Index)
+  - **iBAQ** (Intensity-Based Absolute Quantification)
+  - **NSAF** (Normalized Spectral Abundance Factor)
+  - **Top3** (Mean intensity of the top 3 most intense peptides)
+- **emPAI base value:** The exponential base used in the emPAI formula (default: `10.0`).
+- **Enzyme, Min/Max peptide length, Max cleavage sites:** Because **emPAI** and **iBAQ** normalize by the number of theoretically observable peptides ($N_{\text{observ}}$), DASMixer performs an *in silico* enzymatic digestion of each protein sequence. Set these parameters to match your experimental sample preparation (default: `Trypsin`, length `7–30` AA, max `2` missed cleavages).
+- **Abs. concentrations / Set references:** Enable conversion of relative LFQ values into absolute mass ($\text{g/L}$) and molar ($\text{mol/L}$) concentrations using total protein or internal standard references. See [Absolute Concentrations Settings](advanced/abs_concentrations.md) for a step-by-step configuration guide.
+- **Calculate LFQ:** Runs the selected quantification algorithms across all samples.
 
-## Important notes
+### 3. Enrich Protein Metadata from UniProtKB
 
-1. Keep in mind that protein identifications are calculated only from preferred identification.
-2. Preferred identification are taking without consideration of tool produced it. But there can be only one preferred identification per spectre
-3. You always need to "Calculate protein identifications" before calculate LFQ as LFQ calculation requires protein identifications calculated
-4. UniProtKB enrichment requires internet connection
-5. Only proteins found with given criteria by minimum peptides/minimum unique peptides will be enriched from UniProt, if you make criteria softer, rerun enrichment step
-6. UniProtKB Enrichment can be skipped if you imported .fasta file before and do not need additional information like pathways, biological functions, subcellular locations etc.
+- **Overwrite names from FASTA:** Replace protein names and gene symbols parsed from the local FASTA file with current canonical entries from UniProtKB.
+- **Force update:** Re-fetch UniProtKB records even for proteins that have already been enriched.
+- **Enrich protein data from UniProt:** Queries the online UniProtKB API for all identified proteins to retrieve gene names, protein descriptions, molecular weights, functional annotations, subcellular locations, and pathways.
 
-## Protein data view
+## Recommended Processing Order
 
-**Important**: After calculation, do not forget to open filter block and press "Apply settings" button!
+Always run the protein-level steps in the following sequence:
 
-Proteins tab offer two tables that can be switched by the buttons block:
-![table switcher](img/table_switch.png)
+1. **Verify preferred identifications:** Ensure you have completed the pipeline on the **Peptides** tab and have a reasonable number of preferred identifications mapped to proteins.
+2. **Run "Calculate protein identifications":** Identifies proteins per sample based on your minimum peptide and unique evidence thresholds.
+3. **Run "Enrich protein metadata from UniProtKB" *(optional)*:** Particularly important if you imported protein accessions directly from search engine files without loading a full `.fasta` sequence database, as LFQ methods require protein sequences and molecular weights.
+4. **Run "Calculate LFQ":** Computes relative (and optional absolute) protein abundances for all identified proteins.
 
-**Identifications table** present protein identifications per sample with LFQ values.
+## Important Notes
 
-**Statistics table** aggregates identification data to one line per protein displaying amount of samples and groups containing this protein.
+1. **Preferred identifications only:** Protein inference and LFQ use **only** preferred identifications. Competing non-preferred PSMs are ignored so each spectrum contributes at most once.
+2. **Tool-agnostic aggregation:** Preferred identifications from all tools (database search and *de novo*) are pooled together when inferring proteins and computing LFQ.
+3. **Dependency order:** You must re-run **Calculate protein identifications** before **Calculate LFQ** whenever peptide matches or detection thresholds change.
+4. **Internet connection:** UniProtKB enrichment requires an active internet connection.
+5. **Scope of UniProt enrichment:** Only proteins that pass the current **Protein Detection** thresholds are queried against UniProtKB. If you later relax the minimum peptide thresholds and detect additional proteins, run the enrichment step again.
+6. **When enrichment can be skipped:** If you already imported a complete UniProt `.fasta` file on the Peptides tab and do not need extra functional annotations, you can proceed directly from protein detection to LFQ.
 
-![identifications table](img/protein_ids_table.png)
+## Viewing Protein Data
 
-![img.png](img/protein_stats_table.png)
+> **Important:** After running protein calculations, expand the **Filters** block above the table and click **Apply filters** to load or refresh the table rows.
 
-## Protein plots
+The **Proteins** tab provides two table modes, which you can switch between using the segmented toggle button:
 
-DASMixer can draw boxplots and violin plots to display difference in concentration of the specified protein between comparison groups in the project.
-UI is commonly the same as for fragmentation plots in the Peptides tab.
+![Table switcher](img/table_switch.png){data-description="Segmented toggle to switch between Identifications and Statistics table views."}
 
-![img.png](img/proteins_plot.png)
+- **Identifications table:** Displays one row per **protein per sample**, showing the sample name, comparison group, peptide count, unique evidence count, sequence coverage (%), summed intensity, and calculated LFQ values (`emPAI`, `iBAQ`, `NSAF`, `Top3`).
+- **Statistics table:** Aggregates data to one row per **unique protein across the entire project**, summarizing how many samples and comparison groups contain the protein alongside its gene name and description.
 
-Plot settings expandable block allows you to:
-- select LFQ method witch values should be shown on a plot
-- select plot type: boxplot or violin plot
-- customize plot apperance with title and flag to show all data points
-- select value type: relative, absolute in g/l, absolute in mol/l
-- if absolute value selected, multiplier option allows to change value from g/l to mg/l, ng/l etc.
-- outlier values can also be removed from the plot based on times difference with median
-- and also comparison groups (subsets) can be added to/removed from the plot using "Subset Selection" block
+![Protein Identifications table](img/protein_ids_table.png){data-description="Protein Identifications table — one row per protein per sample with peptide counts, coverage, and LFQ values."}
 
-![img.png](img/protein_plot_settings.png)
+![Protein Statistics table](img/protein_stats_table.png){data-description="Protein Statistics table — one row per unique protein across the project with occurrence counts."}
 
-## Insights
+Just like on the Peptides tab, you can filter rows, customize visible columns via the **⚙️** button, and export the filtered table to **CSV** or **XLSX**.
 
-Protein tab leads to understanding of proteome of the whole experiment, group-specific proteins
-and differential expression of the proteins between the comparison groups. It also gives a tool to create plots to compare 
-protein concentrations between groups. And after collecting proteins data ot this tab, you may proceed to prepare [reports](reports.md)
+## Protein Abundance Plots
+
+Clicking the plot icon (**📈**) on any row in either the **Identifications** or **Statistics** table generates a comparative abundance chart for that protein across your comparison groups:
+
+![Protein concentration plot](img/proteins_plot.png){data-description="Protein abundance box plot comparing LFQ values across comparison groups."}
+
+Expanding the **Plot settings** panel above the figure allows you to customize the chart:
+
+- **LFQ method:** Choose which quantification algorithm (`emPAI`, `iBAQ`, `NSAF`, or `Top3`) to plot.
+- **Plot type:** Switch between a **Box plot** and a **Violin plot**.
+- **Appearance:** Customize the plot title and toggle whether individual sample data points are overlaid on the distributions.
+- **Value type:** Choose between **Relative** abundance, **Absolute (g/L)** mass concentration, or **Absolute (mol/L)** molar concentration (when [Absolute Concentrations](advanced/abs_concentrations.md) have been calculated).
+- **Unit multiplier:** When plotting absolute concentrations, scale units automatically (e.g., from $\text{g/L}$ to $\text{mg/L}$, $\mu\text{g/L}$, $\text{ng/L}$, or $\text{nmol/L}$).
+- **Outlier filtering:** Automatically exclude extreme sample values that deviate from the group median by more than a specified factor.
+- **Subset selection:** Check or uncheck which comparison groups are included in the figure.
+
+![Protein plot settings](img/protein_plot_settings.png){data-description="Protein plot settings panel — LFQ method, plot type, value type, unit multiplier, and subset selection."}
+
+Click **Apply settings** after modifying any option to redraw the plot. Like peptide spectrum plots, protein plots can be copied to the clipboard, saved to the project (**Save to project**), exported as **SVG/PNG**, or inspected in the **Interactive** viewer.
+
+## Next Steps
+
+The **Proteins** tab gives you a comprehensive view of sample-level protein identifications, cross-group occurrence, and individual protein abundance distributions. Once protein identification and LFQ calculations are complete, proceed to the [Reports tab](reports.md) to run project-wide statistical analyses, tool comparisons, PCA, UpSet intersections, and Volcano plots.

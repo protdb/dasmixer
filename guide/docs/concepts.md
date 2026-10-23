@@ -2,214 +2,201 @@
 toc_depth: 3
 ---
 
-# Core concepts and formulas
+# Core Concepts and Formulas
 
-This note is important to avoid misunderstandings in terms used in DASMixer as they may not match any other terminology used by other proteomics software.
+Understanding the core terminology used in DASMixer is important before starting your analysis, as some terms have specific meanings within the application that may differ slightly from other proteomics software.
 
 ## Tool
 
-An instrument used to identify peptide sequences from spectre. Can be created by user and
-represents some source of Identifications (see below). Uses parser (or "importer") to parse input data format and
-transform it to internal representation of identification
+A **Tool** represents an identification search engine or *de novo* sequencing algorithm used to infer peptide sequences from mass spectra. Tools are created and configured by the user within a project and represent distinct sources of **Identifications** (see below). Each tool uses a designated parser (or "importer") to read external result files and transform them into DASMixer's internal representation.
 
 ## Sample
 
-Proteomic sample of any source. Samples are created authomatically based on input spectra files. However single sample can contain more than one spectre file.
+A **Sample** represents a single biological or technical proteomic sample. Samples are typically created automatically when importing spectral files, though a single sample can contain multiple spectral files.
 
-Features from two spectre files in the same Sample are directly combined, so it is not recommended to upload technical/biological repeats as different spectre files of the same sample. Consider using it for cases of fractioning or split processing.
+Features and identifications from multiple spectral files within the same Sample are combined directly during protein inference and quantification. Therefore, you should **not** upload separate biological or technical replicates into a single sample. Instead, multi-file samples are intended for fractionated runs or split acquisitions of the same physical sample.
 
-## Specre
+## Spectrum (Spectre)
 
-Spectre for DASMixer is a single set of Mz and intensity values for a single precursor. Identifications must be matched to the precursor spectre to be calculatable and stored in the DASMixer project.
+In DASMixer, a **Spectrum** (internally referred to as `spectre` in database tables) is a single MS/MS fragmentation record consisting of $m/z$ and intensity arrays associated with a precursor ion. Every peptide identification must be linked to a precursor spectrum in order to be evaluated and stored in a DASMixer project.
 
 ## Identification
 
-Identification (widely known as PSM, peptide spectra match) is a peptide sequence matched to the Spectre using search engine and imported in DASMixer.
+An **Identification** (commonly known as a PSM, or Peptide-Spectrum Match) is a candidate peptide sequence assigned to a spectrum by a search engine or *de novo* tool and imported into DASMixer.
 
-Identification is basically described with:
+Each identification is characterized by:
 
-- Tool used to get this identification
-- Peptide sequence in two forms:
-  - `sequence` with described PTMs in [HuPO ProForma notation](https://github.com/HUPO-PSI/ProForma) with priority to named PTM form like `[Phospho]` or `[Deamidated]` instead of unreadable `[UNIMOD:7]` 
-  - `canonical sequence` with only canonical amino acids
-- search engine score
-- physical PSM characteristics
+- The **Tool** that produced it
+- The **Peptide sequence** in two forms:
+  - `sequence`: includes post-translational modifications (PTMs) formatted in [HUPO-PSI ProForma notation](https://github.com/HUPO-PSI/ProForma), prioritizing human-readable modification names such as `[Phospho]` or `[Deamidated]` over numerical accession codes like `[UNIMOD:7]`
+  - `canonical_sequence`: the unmodified amino acid sequence containing only standard canonical residues
+- The original search engine **score** (and per-residue positional scores, if available)
+- Physical and spectral matching characteristics calculated by DASMixer
 
-## Identification properties
+## Identification Properties
 
-DASMixer does not implement False Discovery statistical protocol. Instead, it calculates peptide fragmentation and analyze how it is mapped to the spectre.
+DASMixer does not rely solely on target-decoy False Discovery Rate (FDR) statistics — which are unavailable for pure *de novo* sequencing. Instead, it models theoretical peptide fragmentation and evaluates how well the predicted fragment ions explain the experimental MS/MS spectrum.
 
-Identifications mapping process performed with "Calculate Ion coverage" action. However, Ion Coverage is not the only one parameter calculating in this process.
+This evaluation is performed during the **"Calculate ion coverage"** step, which computes several key metrics:
 
-These criteria follows:
+### Intensity Coverage (%)
 
-### Intensity Coverage, %
+The percentage of total fragment ion current in the experimental spectrum that is explained by matched theoretical peptide fragments:
 
-Percent of total intensity of peacs in spectre to peaks associated with fragments.
+$$I_c = \frac{\sum i_{\text{frag}}}{\sum i_{\text{all}}} \times 100$$
 
-$$Ic = \frac{\sum_{mz=0}^n i_{frag}}{\sum_{mz=0}^n i_{all}}*100$$
+### PPM Error
 
-### PPM
+The precursor mass error in parts per million (ppm), measuring the relative difference between the experimental precursor $m/z$ reported in the spectrum and the theoretical $m/z$ of the identified peptide sequence (accounting for PTMs and charge):
 
-Precursor error in parts per million, PPM error. Difference between precursor mass from spectre and theoretical mass of the identified sequence regarding PTMs and charge
+$$\text{PPM} = \frac{\text{Pepmass} - MZ_{\text{theor}}}{MZ_{\text{theor}}} \times 10^6$$
 
-$$PPM = \frac{Pepmass - MZ_{theor}}{MZ_{theor}} * 1e6$$
+where $\text{Pepmass}$ is the experimental precursor $m/z$ and $MZ_{\text{theor}}$ is calculated as:
 
-Where \(Pepmass\) is precursor mass reported along with spectra and \(MZ_{theor}\) calculated as follows:
+$$MZ_{\text{theor}} = \frac{\text{Mass}_n + \text{Charge} \times \text{Proton}}{\text{Charge}}$$
 
-$$MZ_{theor} = \frac{Mass_n + Charge * Proton}{Charge}$$
+Here:
 
-Where:
+* $\text{Mass}_n$ is the neutral monoisotopic mass of the peptide sequence (including PTMs)
+* $\text{Charge}$ is the precursor ion charge state
+* $\text{Proton}$ is the mass of a proton ($1.007276\text{ Da}$)
 
-* \(Mass_n\) is neutral monoisotopic mass of sequence with PTMs
-* \(Charge\) is precursor charge
-* \(Proton\) is a single proton mass constant (`1.007276`)
+### Peaks Covered and Top Peaks
 
-### Peaks covered, top peaks
-
-Number of peaks matched to ions. peaks covered is a simple metrics of how many fragments get matched to experimental spectra. Top peaks calculated as number of top-10 experimental spectra peaks matched to the fragments
+**Peaks covered** (`ions_matched`) is the total number of experimental spectrum peaks matched to theoretical fragment ions. **Top peaks** (`top_peaks_covered`) counts how many of the 10 most intense peaks in the experimental spectrum are explained by theoretical fragments.
 
 ### Quality
 
-Identification quality is an index of ions matched to the spectra. Based on:
+**Identification Quality** is an index measuring the completeness of backbone bond cleavage coverage across the selected ion series, based on:
 
 > Bern, M., Goldberg, D., McDonald, W. H., & Yates, J. R. (2004).
 > *Automatic Quality Assessment of Peptide Tandem Mass Spectra.*
 > **Bioinformatics**, 20(suppl_1), i49–i54.
 > https://doi.org/10.1093/bioinformatics/bth947
 
-$$Q = \frac{1}{N_{types}} * \frac{N_{match}}{L - 1}$$
+$$Q = \frac{1}{N_{\text{types}}} \times \frac{N_{\text{match}}}{L - 1}$$
 
 Where:
 
-* \(N_{types}\) is number of ion types selected (2 if only _b_ and _y_ ions selected; up to 6 for a, b, c, x, y, and z)
-* \(N_{match}\) is number of unique ion matched. This value intentionnaly eexclude duplicates of fragment variations by charges and losses: y6, y6++ and y6-NH3 will count as single found fragment
-* \(L\) is length of peptide sequence.
+* $N_{\text{types}}$ is the number of fragment ion series selected (e.g., $2$ if only *b* and *y* ions are enabled; up to $6$ for *a, b, c, x, y,* and *z*)
+* $N_{\text{match}}$ is the number of unique backbone cleavage positions matched per ion series. Duplicate matches of the same fragment with different charge states or neutral losses (e.g., `y6`, `y6++`, and `y6-NH3`) are counted as a single matched fragment ion
+* $L$ is the amino acid length of the peptide sequence
 
-### Longest Consequtive Run Ratio (LCRR)
+### Longest Consecutive Run Ratio (LCRR)
 
-An indicator of longest sequence of fragment ions found in the spectre and divided by sequence lenght. Can be described better by example:
+**LCRR** measures the longest uninterrupted sequence of consecutive fragment ions of the same series found in the spectrum, normalized by the peptide length.
 
-Let's say, for a peptide consists of 10 amino acids, there are following fragments mapped to the experimental spectra:
+For example, consider a 10-amino-acid peptide with the following fragments matched to the experimental spectrum:
 
 ```
 y2, y3, y3++, y4-NH3, y6, y7, y9, b2, b4, b5, b7
 ```
 
-LCRR value in this case will be equal to `0.3` as the longest conequtive run is of lenght 3 (`y2, y3, y4`) and peptide length is 10. y3 and y3++ considered as a single ion
-(like Quality calculation described above) and y5 is missing.
+In this case, the LCRR value is `0.3`, because the longest consecutive run has length 3 (`y2, y3, y4`) and the peptide length is 10. Variants such as `y3` and `y3++` are treated as a single cleavage position (just as in the Quality metric), and `y5` is missing, which breaks the run.
 
 ### Unconfirmed PTMs
 
->**Note**: described logic is subject of refinement in further versions
+> **Note:** This metric is subject to further refinement in upcoming versions.
 
-Number of PTMs present in identification but not confirmed by fragmentation.
+**Unconfirmed PTMs** represents the number of post-translational modifications present in the full peptide sequence that are not directly supported by matched fragment ions.
 
-The fragment of the spectre corresponds to a partial sequence of the whole precursor peptide. As sequence is partial, it is common when overall fine covered sequence has no ion with sequence including one or more PTMs.
+Because each fragment ion covers only a prefix or suffix of the precursor peptide, a sequence with good overall coverage may still lack fragment ions spanning one or more modified residues:
 
-$$Unconfirmed = PTM(peptide) - \max_{i}(PTM({fragment_i}))$$
+$$\text{Unconfirmed} = \text{PTM}(\text{peptide}) - \max_{i}\left(\text{PTM}(\text{fragment}_i)\right)$$
 
-where _fragment_ is fragment sequence, peptide is peptide sequence and PTM is function to calculate PTMs from ProForma record
+where $\text{fragment}_i$ is a matched fragment ion sequence, $\text{peptide}$ is the full precursor sequence, and $\text{PTM}(\cdot)$ counts the number of modifications in a ProForma sequence.
 
-## Spectre and identification correction
+## Spectrum and Identification Correction
 
-There are common problems with spectre metadata and sequence annotation that DASMixer tries to fix when calculating ion coverage:
+Experimental spectra and search engine outputs frequently suffer from annotation inaccuracies that DASMixer attempts to correct automatically during the ion coverage calculation step:
 
-1. wrong or absent precursor charge of the spectra
-2. precursor mass error based on isotope offset
-3. fixed PTMs considered by search engine but not reported in sequence
-4. unlocalized PTMs (especially common for PLGS)
+1. Missing or inaccurate precursor charge state in the spectrum metadata
+2. Precursor mass shifts caused by C13 isotope peak picking (isotope offset)
+3. Fixed or variable PTMs considered by a search engine (or absent in *de novo* output) that are not explicitly annotated in the sequence string
+4. Unlocalized PTMs (particularly common in Waters PLGS outputs)
 
-first two points can result in significant difference in theoretical and experimental precursor masses while 3rd and 4th affect fragment mapping.
+The first two issues cause large discrepancies between theoretical and experimental precursor $m/z$, while the third and fourth degrade fragment ion matching.
 
-DASMixer will try to:
-- minimize precursor PPM error iterating over charges and, for charge resulting in minimum absolute PPM, shifting mass for isotope offset;
-- recombinate PTMs in sequence to reach reasonable PPM error without decreasing intensity coverage
+To address this, DASMixer's **SeqFixer** algorithm can:
 
-These steps are inkluded in pipeline by default yet can be easily omitted.
+- Minimize precursor PPM error by iterating over allowed precursor charge states and testing isotope offsets ($\pm n \times 1.003\text{ Da}$)
+- Generate combinatorial PTM hypotheses on the peptide sequence to achieve an acceptable precursor PPM error while maximizing fragment intensity coverage
 
-## Preferred identifications
+These correction steps are enabled in the pipeline by default and can be finely tuned or disabled per tool.
 
-Preferred identification is one of the most important concepts of DASMixer workflow and at the same time requires some effort to be understood.
+## Preferred Identifications
 
-It is obvious that not every identification can be trusted, especially if it is prodused by de novo search engine.
-Instead of calculating its own score or FDR value, DASMixer operates with set of criteria (described above) and user-defined thresholds for these criteria.
-Also while every identification is linked to the spectre, it is also important to not duplicate identifications used to estimate proteins abundance in sample.
-Preferred identification concept aimed to solve these two problems.
+The **Preferred Identification** is one of the central concepts in the DASMixer workflow.
 
-Identification can be considered preferred only if all its indicators passes thresholds set by user.
-If two or more identification of a single spectre passed thresholds, only the best one can be selected as preferred.
-If identifications are identical, preferred flag is set to first tool in list
-(it is not important when we speak about protein identification, however these identifications counted in Tool match report as found by "Both" tools).
+When integrating multiple tools — especially *de novo* sequencing engines that generate a candidate sequence for nearly every spectrum — not every identification is reliable. Furthermore, because multiple tools may identify the same spectrum, simply pooling all identifications would artificially inflate spectral counts and bias protein quantification. The Preferred Identification step solves both filtering and deduplication:
 
-**In short**: preferred identification is an identification that passes treshold of physical criteria for the tool and is better in spectre explanation than other identifications for this spectra.
+1. **Quality Filtering:** An identification can only become preferred if **all** of its calculated metrics pass the user-defined thresholds configured for its tool (e.g., maximum PPM error, minimum intensity coverage, minimum quality, minimum score).
+2. **Cross-Tool Selection:** If two or more identifications for the same spectrum pass their respective tool thresholds, only the single best identification is marked as preferred, based on the global selection criterion (either highest **Intensity Coverage** or lowest absolute **PPM** error).
+3. **Tie-Breaking:** If two tools produce identical sequences that tie on the selection criterion, the preferred flag is assigned to the first tool in project order. (While this does not affect downstream protein inference, tied sequences are counted as found by **"Both"** tools in the Tool Match Report).
 
-Only preferred identifications are used to determine protein abundance. 
-But preferred identifications not matched to the proteins can be additional point of interest representing unknown proteoforms
-or elements of peptidome. However, we recommend to thoroughly review such findings.  
+**In summary:** A preferred identification is an identification that satisfies all quality thresholds for its tool and explains its spectrum better than any competing identification from other tools.
 
-## Protein matching
+Only **preferred identifications** are used downstream to infer protein identifications and calculate protein abundance (LFQ). Preferred identifications that do not map to any known database protein can also be investigated as potential novel proteoforms, splice variants, or endogenous peptidome components.
 
-For database search engines all the imported identifications are peptides taken from known proteins in proteome, while de novo search tools often provide only sequence without mapping to the proteins.
-DASMixer provides the tool to search identification sequences in user-provided proteome (via .fasta file upload).
-Uploading proteome to DASMixer is also useful if you are working with DB search only as identification data does not provide full protein sequences required to calculate protein coverage and theoretical peptides for LFQ.
+## Protein Mapping
 
-Protein matching is performed using npysearch library:
+Database search engines naturally link every identified peptide to a protein accession from the search FASTA, whereas *de novo* sequencing tools output only amino acid sequences without protein context. DASMixer bridges this gap by mapping peptide sequences against a user-provided FASTA protein database.
 
-> Schmid S, Jeevannavar A, Julian TR, Tamminen M (2023) 
-> Portable BLAST-like algorithm library and its implementations 
-> for command line, Python, and R. PLoS ONE 18(11): e0289693. 
+Uploading a FASTA database is also strongly recommended even when working exclusively with database search results, because identification files rarely include full-length protein sequences — which are required to calculate protein sequence coverage and theoretical observable peptides for emPAI and iBAQ quantification.
+
+Protein mapping is powered by the `npysearch` library:
+
+> Schmid S, Jeevannavar A, Julian TR, Tamminen M (2023).
+> *Portable BLAST-like algorithm library and its implementations for command line, Python, and R.*
+> **PLoS ONE** 18(11): e0289693.
 > https://doi.org/10.1371/journal.pone.0289693
 
-Protein matching process is mandatory in pipeline, however for database search results it can just load proteins provided with identifications to project. This process is quite more important for de novo and open search scenarios.
+### Protein Identity
 
-### Protein identity
+**Protein Identity** defines the minimum sequence similarity required between an identified peptide's canonical sequence and a candidate region in the protein database. It ranges from `0.0` to `1.0`, where `1.0` requires an exact 100% match.
 
-Identity is a lower limit of match between identification sequence and most similar fragment in protein database. Identity can be in 0...1 interval where 1.0 is 100% match and 0.0 is just any aminoacid sequence.
+### De Novo Correction
 
-### De Novo correction
+DASMixer provides a **De Novo Correction** mode designed to rescue *de novo* identifications that contain minor sequencing errors (such as isobaric dipeptide swaps or single-residue inaccuracies). To use this mode, set the tool's **Min protein identity** below `1.0` (typically `0.7`–`0.8`) and enable **De novo correction**.
 
-DASMixer offers a de novo correction scenario to fix some portion of de novo sequencing errors. In this case, you should lower the _protein identity_ setting and enable _de novo correction_ mode for tool.
+When a partial match ($1.0 > \text{identity} \ge \text{threshold}$) is found in the FASTA database, the database sequence is called the `matched_sequence`. Because the original canonical sequence and the `matched_sequence` differ, DASMixer re-evaluates the `matched_sequence` against the experimental MS/MS spectrum:
 
-In that case, DASMixer searches peptides in protein database with difference until given identity. For de novo correction it is recommended to use identity in 0.7-0.8 interval.
+- Recalculates precursor PPM error
+- Re-runs fragment ion matching, transferring or re-allocating PTMs from the original sequence if modification sites have changed
 
-The closest sequence found in protein database is called `matched sequence`. If identifications canonical sequence and matched sequence are not identical, DASMixer validates matched sequence against the experimental spectra:
-- calculates PPM difference.
-- calculates ion coverage with application of source PTMs. If PTM sites differs between sequence and matched sequence, DASMixer tries to re-allocate PTMs the same way it does for Ion matching
+If the `matched_sequence` achieves a PPM error and fragment intensity coverage that are as good as or better than the original *de novo* sequence (according to the selected **Match correction criteria**), the protein match is accepted. Moreover, if the original *de novo* sequence failed preferred selection thresholds solely due to precursor PPM error, the corrected match can qualify the identification as preferred during a subsequent Preferred Selection pass.
 
-If ppm error and intensity coverage of matched sequence is not worse than the same indicators of original sequence, protein match is saved to the project.
+### Amino Acid Substitutions
 
-If source sequence does not fit to preferred criteria while matched sequence does, DASMixer can consider this identification as preferred.
+Using the same partial-matching mechanism, DASMixer can also flag potential **Amino Acid Substitutions** (SAPs / mutations). However, AA substitution detection looks for the opposite outcome from *de novo* correction.
 
-### Amino Acid substitutions
+An amino acid substitution is suspected when:
 
-DASMixer can analyze if de novo identification contains potential amino acid substitution (AA substitution). AA substitution search is based on the same calculations that de novo correction, but relies on differen outcome.
+1. The original *de novo* sequence is high-quality and passes preferred identification criteria,
+2. The closest protein database match is inexact ($\text{identity} < 1.0$), **and**
+3. Replacing the *de novo* sequence with the canonical database `matched_sequence` results in a **worse** explanation of the experimental spectrum (e.g., significantly higher PPM error and loss of fragment ion coverage).
 
-AA substitution is suspected when: source sequence is fine enough to be considered preferred identification but protein match is not exact (identity < 1.0) and matched sequence has no better indicators of ppm and intensity coverage.
-In other words, sequence contains AA substitution if it slightly differs from canonical protein sequence but offers better explanation of the experimental spectre. You can see the example below:
+In other words, the experimental spectrum genuinely supports a sequence that differs from the reference proteome. An example is illustrated below:
 
 ![Amino acid substitution example](img/aa_substitution.png)
 
-> AA substitution ion coverage example. First: fragmentation plot for sequence fond using PowerNovo2. Second: plot for matched sequence with identity=0.92. 
-> minor sequence changes results in loss of almost every y ion, significant PPM error increase and decrease of intensity coverage (iC)
+> **AA substitution ion coverage example.** Top: fragmentation spectrum annotated with the sequence identified by PowerNovo2. Bottom: the same spectrum annotated with the closest reference protein match ($\text{identity} = 0.92$). Switching to the reference sequence causes the loss of nearly the entire *y*-ion series, a large precursor PPM error, and a sharp drop in intensity coverage ($I_c$).
 
-**Note:** AA substitution search algorithm is experimental and can be subject of refinement in future versions of DASMixer.
-Correlation between de novo detected AA substitution and genetic mutations is not confirmed yet by proper publications.
-We recommend to thoroughly review AA substitution data presented by DASMixer before any conclusions are made.
+> **Note:** The AA substitution detection algorithm is experimental and will be refined in future versions. Any candidate substitutions flagged by DASMixer should be manually inspected on the fragment spectrum plot before drawing biological conclusions.
 
-### Unique evidences
+### Unique Evidence
 
-If sequence is found in one and only one protein in database, it is considered as unique evidence of protein existence in sample.
+If a peptide sequence maps to **one and only one** protein entry in the FASTA database, it is marked as **Unique Evidence** (`unique_evidence = True`) for that protein's presence in the sample.
 
-## Protein identifications
+## Protein Identifications
 
-Based on list of preferred identifications matched to proteins, DASMixer creates a list of proteins in sample. Default limits to add protein in list are:
-- two identifications minimum
-- at least single unique evidence
+From the set of preferred identifications mapped to proteins in each sample, DASMixer compiles the list of identified sample proteins. By default, a protein is considered identified in a sample if it is supported by:
 
-These filters can be bypassed or strenghtened by user.
+- At least **2** preferred peptide identifications (`Min peptides = 2`)
+- At least **1** unique peptide identification (`Min unique peptides = 1`)
 
-### Label-free quantification
+Both thresholds can be adjusted by the user on the **Proteins** tab.
 
-Label-free quantification (LFQ) is a set of approaches to estimate proteins proportion in complex mixture of the sample.
-DASMixer offers four different approaches to calculate LFQ and also two approaches to normalize these values by orthogonally calculated value. Methods described in details on [Separate page](lfq.md)
+### Label-Free Quantification
+
+**Label-Free Quantification (LFQ)** estimates the relative (and optionally absolute) abundance of identified proteins within each sample. DASMixer implements four complementary LFQ algorithms (**emPAI**, **iBAQ**, **NSAF**, and **Top3**) along with two calibration strategies for converting relative abundances into absolute mass or molar concentrations. These methods are described in detail on the [LFQ Methods](lfq.md) page.

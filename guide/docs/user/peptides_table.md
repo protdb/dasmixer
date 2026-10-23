@@ -1,166 +1,156 @@
-# Preview peptide data
+# Viewing Identification Data
 
-Information about spectre, identification and protein match is shown in the "Search and view identifications" section in the bottom of peptides tab:
+Detailed information about every spectrum, peptide identification, and protein match is available in the **Search and view identifications** section at the bottom of the **Peptides** tab:
 
-![collapsed peptides table](img/peptides_table_collapsed.png)
+![Collapsed peptides table](img/peptides_table_collapsed.png){data-description="The Search and view identifications section with all four panels collapsed."}
 
-it consists of four collapsible blocks:
+This area is organized into four collapsible panels:
 
-- Peptide identifications:
-  - Filters
-  - Data
-- Ion match plot:
-  - Plot settings
-  - Plot preview
+- **Peptide identifications:**
+  - **Filters** — query criteria to narrow down rows
+  - **Data** — paginated table of spectra, PSMs, and protein matches
+- **Ion match plot:**
+  - **Plot settings** — display options for the MS/MS spectrum viewer
+  - **Plot preview** — annotated fragmentation spectrum plot
 
-All the blocks can be extended by clicking on its header. Expanded view of the Filters and Data section shown on the image below:
+Click any panel header to expand or collapse it. The expanded **Filters** and **Data** panels are shown below:
 
-![expanded peptide data](img/peptides_table_expanded.png)
+![Expanded peptide data](img/peptides_table_expanded.png){data-description="The Filters and Data panels expanded, showing the peptide identification table with pagination controls."}
 
-## Filtering data
+## Filtering Data
 
-You can filter table data by any combination of the controls:
+You can filter the identifications table using any combination of the following fields:
 
-- Identification ID (internal ID in DASMixer project)
-- Sample
-- Specrte index in file (Spectre Seq #)
-- Spectre Scans index
-- Spectre internal ID (Spectrum ID)
-- by preferred flag (All: ignore preferred in filtering; Yes: show only preferred records; No: show only not preferred records)
-- Tool
-- Min PPM (absolute PPM error)
-- Part of the sequence or canonical sequence (Sequence contains/Canonical sequence contains)
-- Min [Quality](../concepts.md#quality) value
-- Max per-PSM FDR value
-- Protein ID
-- Gene
-- Protein identified flag
-- Sequence identified flag
-- Has PTM flag
-- Has AA substitution flag
+- **Identification ID** — internal identification primary key in the DASMixer project
+- **Sample** — filter by a specific sample
+- **Spectre Seq #** — sequential spectrum index (`seq_no`) within the MGF file
+- **Spectre Scans** — scan number (`scans`) reported in the MGF file
+- **Spectrum ID** — internal spectrum primary key (`spectre_id`) in the project database
+- **Preferred** — `All` (show all rows), `Yes` (only preferred identifications), or `No` (only non-preferred identifications)
+- **Tool** — filter by identification tool
+- **Max PPM** — maximum absolute precursor PPM error
+- **Sequence contains / Canonical sequence contains** — substring search within the ProForma sequence (including PTMs) or unmodified canonical sequence
+- **Min Quality** — minimum backbone cleavage [Quality](../concepts.md#quality) score
+- **Max FDR** — maximum per-PSM False Discovery Rate
+- **Protein ID** — exact or partial protein accession (e.g., `P02768`)
+- **Gene** — gene symbol (e.g., `ALB`)
+- **Protein identified** — `Yes` (mapped to a protein) or `No` (unmapped)
+- **Sequence identified** — whether the spectrum has any identification assigned
+- **Has PTM** — whether the peptide sequence carries post-translational modifications
+- **Has AA substitution** — whether the match is flagged as a candidate amino acid substitution
 
-Enter values to filter and press "Apply filters" button. You also need to press this button after calculation is finished to update data in the table.
+After entering your filter criteria, click **Apply filters** to refresh the table. You should also click **Apply filters** after running calculations on the Peptides tab to load the newly computed results into the table.
 
-Some column in the table (Spectrum ID, Scans, ID, Protein) can be clicked to filter by the value in column. Clickable values are shown in hyperlink style with blue color and underline.
-Click on such column will add the value to the filter and apply it immediately without cleaning other filters.
+### Quick Drill-Down Links
 
-## Hidden columns
+Several columns in the table — **Spectrum ID**, **Scans**, **ID**, and **Protein** — are rendered as blue underlined hyperlinks. Clicking any value in these columns automatically populates the corresponding filter field and refreshes the table, making it easy to inspect all identifications competing for a single spectrum or all peptides mapped to a specific protein.
 
-Some columns in the table are not shown by default but can be useful in some cases. There is a "⚙️" button on the top right corner of the table.
-It enables selection of visible fields in the table. You can hide current fields by deselecting them and show hidden fields by selecting
+## Customizing Visible Columns
 
-![img.png](img/peptides_table_fields.png)
+To keep the table readable, some columns are hidden by default. Click the gear icon (**⚙️**) in the top-right corner of the table header to open the column selector dialog, where you can check or uncheck individual fields:
 
-## Count and export
+![Peptides table column selector](img/peptides_table_fields.png){data-description="Column selector dialog — toggle visibility of individual table columns."}
 
-Below the table, there are useful set of controls:
+## Pagination and Table Export
 
-![peptide table controls](img/peptides_table_controls.png)
+Beneath the data table, a control bar provides pagination and export tools:
 
-- Amount of records with given filters: "Showing 1-20 of XXXXX rows..." where XXXXX is total amount of lines matching filters.
-- "Export" button: allows you to export all data from table. 
-- "Rows per page" dropdown list let you choose the size of displayed table page.
-- To show next or previous page of the table, you can use arrows in the right corner
+![Peptide table controls](img/peptides_table_controls.png){data-description="Pagination bar and export controls: row counter, Export button, rows-per-page selector, and page navigation arrows."}
 
-Important notes about export:
+- **Row counter:** Displays `Showing 1–20 of XXXXX rows...`, indicating the total number of records matching the active filters.
+- **Export:** Exports **all** rows matching the current filters (not just the visible page) to a file.
+- **Rows per page:** Adjusts how many rows are displayed per page.
+- **Page navigation arrows:** Step forward or backward through the filtered dataset.
 
-![export dialog](img/export_dialog.png)
+### Exporting Filtered Table Data
 
-- For large projects, export can be slow, even opening the exprot setting window can take some time.
-- You can choose the format of exporting table. CSV (values in plain text separated by comma) or XLSX (Microsoft Excel native format).
-- If "Technical headers" flag has been checked, the table will contain less human-readable (but better machine-readable) headers row: e.g. protein_id instead of Protein ID.
+Clicking **Export** opens the table export dialog:
 
-> **Hint:**
+![Table export dialog](img/export_dialog.png){data-description="Table export dialog — choose CSV or XLSX format and toggle technical database column headers."}
+
+- **Format:** Choose between **CSV** (comma-separated values) and **XLSX** (Microsoft Excel workbook).
+- **Technical headers:** When checked, exported columns use internal database field names (e.g., `protein_id`, `intensity_coverage`) instead of human-readable display labels (`Protein ID`, `Intensity Coverage, %`).
+
+> **Tip:**
+> When exporting data for manuscript supplementary tables or manual inspection in Excel, select **XLSX** and leave **Technical headers** unchecked.
 > 
-> if you export data to supliment the manuscript or to investigate yourself in Excel, select XLSX format and do not check "technical headers" flag.
+> When exporting data for downstream scripts (Python, R), select **CSV** and check **Technical headers**.
 > 
-> If you need this export to process programmatically, export it as CSV with technical headers.
+> Note that exporting hundreds of thousands of rows from a large project may take a moment to query and write to disk.
 
+## Useful Filtering Scenarios
 
-## Filtering use cases
+Combining filters allows you to quickly answer common biological and quality-control questions:
 
-Some filters combinations are not obvious but may lead to useful insights.
-There are a few examples that should help you better understand how to use filtering in peptides table.
+### 1. Find high-confidence peptides that do not map to the reference proteome
+- Set **Preferred** to `Yes` and **Protein identified** to `No`.
+- These records may represent unannotated proteoforms, contaminants, or endogenous peptides absent from your FASTA file.
 
-### Find fine peptides not matched to the proteins
+### 2. Find all phosphorylated peptides
+- Type `Phospho` into the **Sequence contains** field and click **Apply filters**.
 
-Set "Preferred" to "Yes" and "Protein identified" to "No".
+### 3. Inspect candidate amino acid substitutions for a specific protein
+- Enter the target accession or symbol in **Protein ID** or **Gene**, and set **Has AA substitution** to `Yes`.
 
-### Find all phosphorylated peptides
+## Viewing Fragmentation Spectra
 
-Simply enter "Phospho" to "Sequence contains" field
+In the rightmost column of every table row, click the plot icon (**📈**) to generate an annotated MS/MS fragmentation plot for that spectrum.
 
-### Find all AA substitution for specific protein
+While the figure is being rendered, a loading indicator appears in the **Plot preview** panel:
 
-Fill "Gene" or "Protein ID" field and set "AA substitution" to "Yes"
+![Peptide plot loading preview](img/peptide_plot_preview.png){data-description="Plot preview panel showing a loading indicator while the spectrum figure is being rendered."}
 
-## Plotting fragments
+Once ready, the annotated spectrum is displayed directly below the table:
 
-in the most right column of the table, there is plot icon (📈) for every row. Clicking on this icon will result in fragmentation plot appearance below the table.
+![Peptide plot displayed](img/peptide_plot_displayed.png){data-description="Annotated MS/MS fragmentation plot with b- and y-ion series highlighted in colour and peak labels."}
 
-First, you will see the loader in the "Plot preview" section:
+Matched fragment ion series (*b*, *y*, etc.) are highlighted in distinct colors with peak labels (`b3`, `y7-H2O`, etc.), while unmatched experimental peaks are drawn in gray. If multiple identifications exist for the selected spectrum, DASMixer stacks subplots vertically — one panel per identification — so you can visually compare how competing sequences explain the same spectrum. Preferred identifications are marked with a star (`★`).
 
-![peptide plot preview](img/peptide_plot_preview.png)
+> **Plot sizing tip:** The inline preview image is scaled to fit your current DASMixer window width. To generate a wider image, maximize the application window and click the plot icon (or **Apply settings**) again. You can also change the global **Plot aspect ratio** in [Settings](configuration.md).
 
-When ready, the plot will be displayed:
+Above the rendered figure, four action buttons let you work with the plot:
 
-![peptide plot displayed](img/peptide_plot_displayed.png)
+- **Copy** — copies the high-resolution PNG image directly to your system clipboard. *(Note: On Linux, clipboard support requires `xclip` or `wl-clipboard` to be installed).*
+- **Save to project** — stores the plot inside the `.dasmix` project so you can view or batch-export it later from the [Plots tab](plots_tab.md).
+- **Export** — saves the figure to disk as a vector **SVG** or raster **PNG** file.
+- **Interactive** — opens the plot in a dedicated interactive window where you can zoom, pan, and hover over individual peaks.
 
-Plot displays fragment of each type with separated colors. unmapped peaks remain gray.
+> **Publication tip:** Export figures in **SVG** format when preparing manuscripts. Vector graphics scale to any resolution without pixelation and can be edited directly in Inkscape or Adobe Illustrator, or converted to high-DPI TIFF/PNG files.
 
-> **Note**: plot is generated based on current window size to bi as large as possible while fitting in the app window. 
-> To make plot bigger, maximize the window and generate it again.
+### Interactive Plot Viewer
+
+Clicking **Interactive** opens the Plotly figure in a standalone viewer:
+
+![Interactive peptide plot](img/peptide_plot_interactive.png){data-description="Interactive Plotly viewer window — zoom, pan, and hover over individual fragment peaks."}
+
+> **Troubleshooting the Interactive Viewer:**
 > 
-> And to make smaller plot, you can make DASMixer window smaller and generate it again
-
-If there are more than one identification for a given spectra, all identifications will be displayed in rows on the plot.
-
-Plot can be handled in the following ways:
-
-- Copy (to clipboard). Note that in Linux clipboard requires xclip or wl-clipboard installed in your system.
-- Save to project: save plot to export with other plots in future
-- Export: save plot as SVG or PNG file on your computer
-- Interactive: open in interactive view separate window
-
-> Hint: export plot as SVG if you need high resolution for printing.
-> Editorial offices can accept SVG format itself, or you can convert it to PNG/JPG/any other image format using GIMP, Inkscape or just by searching "SVG to PNG converter online" in the internet.
-
-Interactive mode opens your plot in separate window when you can zoom and inspect plot to get more details:
-
-![interactive peptide plot](img/peptide_plot_interactive.png)
-
-> Note: interactive mode may not work properly in some systems. If no window appears in reasonable time, go to settings and change "Plot and report view mode" to "browser (default)" and restart DASMixer.
+> If the standalone interactive window fails to open on your system, go to **Options → Settings**, change **Plot and report view mode** from `Window (pywebview)` to `Browser (default)`, and restart DASMixer.
 > 
-> Note 2: On Linux systems, you may encounter error "not found"/"not allowed" in browser after changing "Plot and report view mode" 
-> to browser if your browser is installed via Snap. Change the "Temporary files directory" to some location having no hidden folders (like .cache) in its path.
-> 
-> Note 3: There is also "Plot aspect ratio" parameter in the settings changing proportions of the plots generated by system. You can adjust it to get less wide plots.
+> **Linux Snap browser note:** If your default web browser is installed as a Snap package (common on Ubuntu), it cannot read files inside hidden directories such as `~/.cache` (as well as /tmp directory). If the browser shows a *File not found* or *Access denied* error, open **Options → Settings** and change the **Temporary files directory** to a non-hidden path inside your home folder (e.g., `~/dasmixer_tmp`).
 
-## Plot configuration
+## Configuring the Spectrum Plot
 
-between the table and the plot view, there is also collapsible block called "Plot settings":
+Between the data table and the plot preview lies the collapsible **Plot settings** panel:
 
-![peptide plot settings](img/peptide_plot_settings.png)
+![Peptide plot settings](img/peptide_plot_settings.png){data-description="Plot settings panel: toggle title, protein mapping sequences, and subplot header fields."}
 
-Here you can:
+Here you can customize:
 
-- Control whether overall plot title is displayed ("show title")
-- Add sequences of protein mapping to the plot (useful for identifications after de novo correction or with amino acid substitutions)
-- add parameters to display in subplot title.
+- **Show title** — toggle the main figure header showing scan number, precursor mass, and retention time.
+- **Show protein mapping sequences** — add extra subplot panels for database `matched_sequence` alignments alongside the original identifications (especially informative when inspecting *de novo* corrections or amino acid substitutions).
+- **Subplot title fields** — choose which metrics (score, PPM, coverage, quality, etc.) are displayed in each identification's subplot header.
 
-After changing any of these parameters, click "Apply settings" button to redraw the plot.
+After changing any option, click **Apply settings** to redraw the current plot.
 
-> One more note: Changing the parameters in "Ion mapping settings" applies to the plot too, but without re-calculation of "Ion coverage", values like Ion coverage and quality will not be chenged
+> **Note:** Changing fragment matching parameters in the top **Ion match settings** panel will also immediately affect how peaks are annotated when you redraw a plot, even before you re-run the batch **Calculate ion coverage** action.
 
+## Quality Control Checklist Before Moving On
 
-## Conclusions to make
+While it is impractical to manually inspect thousands of MS/MS spectra, reviewing a representative sample of both **preferred** and **non-preferred** identifications is an essential quality-control step:
 
-Commonly you cannot review all the specra yourself to strictly verify every PSM is good enough.
-But you can check limited amount of identifications, both preferred and not preferred to make sure that 
-most of the preferred identifications you encounter are satisfying and most of non-preferred are not.
-You can also check the amount of preferred identifications by tool and in total to make sure that 
-it's enough to preceed with protein identifications.
+1. Verify that identifications marked as **Preferred** show convincing backbone ion series and low noise.
+2. Check that identifications rejected as **Non-preferred** genuinely lack sufficient fragment support.
+3. Confirm that the total number of preferred identifications across your samples and tools is sufficient for downstream protein inference.
 
-If you're not agree with the system, you can adjust preferred parameters for tools or even change ion mapping parameters and recalculate the data. Or even make a decision to rerun search or even reinitialize the MS/MS experiment itself.
-
-When you see that identifications are processed well, you can proceed to [proteins tab](proteins_tab.md)
+If the filtering appears too strict or too permissive, adjust the **Preferred settings** on the tool cards and click **Select preferred** — this takes only a few seconds. Once you are satisfied with the peptide-level results, proceed to the [Proteins tab](proteins_tab.md).
