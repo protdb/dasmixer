@@ -4,6 +4,8 @@
 
 Developed at the **Laboratory of Structural Proteomics, IBMC, Moscow**.
 
+![logo](guide/docs/img/logo_big.png)
+
 ---
 
 ## Key Features
@@ -59,36 +61,6 @@ The project is split into four PyPI packages:
 
 
 ---
-
-## Development roadmap
-
-```mermaid
----
-config:
-  theme: 'forest'
----
-timeline TD
-title DASMixer roadmap
-section Q4 2026
-    0.7.5 : De novo correction/AA substitution refinement
-          : extended FC/p-val report for multiple LFQ
-    0.7.6 : peptidoform statistics
-          : SQLite project console
-section Q1 2027
-    0.7.7 : Flet update
-          : autotesting, CI/CD overhaul
-    0.7.8 : CLI overhaul, interactive modes
-    0.7.9 : Mzid/MzML import, mzid export
-    0.8.0 : UI overhaul, pipeline management
-          : Shipment as MacOS and Linux bundles
-section Q2 2027
-    0.8.1 : Automatic .fasta download and import
-          : Project templates, default settings for tools
-    0.8.2 : Separate format and sequence parsers
-    0.9.0 : Localization and internalization support
-section Q3-Q4 2028
-    1.0.0 : Final optimization and polishing
-```
 
 ---
 
@@ -186,40 +158,35 @@ For a targeted upgrade of a single package without touching the rest: `poetry up
 poetry run python -c "import importlib.metadata as m; print(m.version('<package>'))"
 ```
 
+## Development roadmap
+
+```mermaid
 ---
-
-## Usage
-
-### GUI
-
-```bash
-dasmixer                          # Start with empty screen
-dasmixer project.dasmix           # Open existing project in GUI
+config:
+  theme: 'forest'
+---
+timeline TD
+title DASMixer roadmap
+section Q4 2026
+    0.7.5 : De novo correction/AA substitution refinement
+          : extended FC/p-val report for multiple LFQ
+    0.7.6 : peptidoform statistics
+          : SQLite project console
+section Q1 2027
+    0.7.7 : Flet update
+          : autotesting, CI/CD overhaul
+    0.7.8 : CLI overhaul, interactive modes
+    0.7.9 : Mzid/MzML import, mzid export
+    0.8.0 : UI overhaul, pipeline management
+          : Shipment as MacOS and Linux bundles
+section Q2 2027
+    0.8.1 : Automatic .fasta download and import
+          : Project templates, default settings for tools
+    0.8.2 : Separate format and sequence parsers
+    0.9.0 : Localization and internalization support
+section Q3-Q4 2028
+    1.0.0 : Final optimization and polishing
 ```
-
-### CLI
-
-```bash
-dasmixer-cli create path/to/project.dasmix
-dasmixer-cli subset list path/to/project.dasmix
-dasmixer-cli subset add path/to/project.dasmix --name "Treatment"
-dasmixer-cli import mgf-file path/to/project.dasmix --sample "S1" --file spectra.mgf
-dasmixer-cli import mgf-pattern path/to/project.dasmix --sample "S1" --folder ./ --pattern "*.mgf"
-dasmixer-cli import ident-file path/to/project.dasmix --tool "PowerNovo2" --file data.csv
-dasmixer-cli import ident-pattern path/to/project.dasmix --tool "PowerNovo2" --folder ./ --pattern "*.csv"
-```
-
-### Python API
-
-```python
-from dasmixer.api.project.project import Project
-
-async with Project(path="study.dasmix", create_if_not_exists=True) as project:
-    samples = await project.get_samples()
-    ...
-```
-
-[User guide](docs/user/Instruction_DasMixer.pdf) — [Workflow guide](docs/user/workflow.md)
 
 ---
 
@@ -237,25 +204,6 @@ async with Project(path="study.dasmix", create_if_not_exists=True) as project:
 | Export | openpyxl, html-for-docx, Kaleido |
 | Build | Poetry |
 
-## Project File Format
-
-Projects are stored as **single SQLite files** (`.dasmix`). The database contains metadata, spectra (compressed NumPy arrays), identifications, protein sequences, LFQ results, and generated reports.
-
 ---
-
-## Documentation
-
-| Document | Description |
-|---|---|
-| [docs/project/MASTER_SPEC_NEW.md](docs/project/MASTER_SPEC_NEW.md) | Full project specification |
-| [docs/project/spec/0.5.0_REQUIREMENTS.md](docs/project/spec/0.5.0_REQUIREMENTS.md) | 0.5.0 requirements |
-| [docs/project/spec/0.5.0_SPEC.md](docs/project/spec/0.5.0_SPEC.md) | 0.5.0 implementation spec |
-| [docs/project/changes/v0.5.0.md](docs/project/changes/v0.5.0.md) | 0.5.0 changelog |
-| [docs/user/](docs/user/) | User guides |
-| [AGENTS.md](AGENTS.md) | AI agent development guide |
-
----
-
-## License
 
 Copyright © Laboratory of Structural Proteomics, IBMC, Moscow. All rights reserved.
