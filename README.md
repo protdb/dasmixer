@@ -42,6 +42,10 @@ Developed at the **Laboratory of Structural Proteomics, IBMC, Moscow**.
 - Install custom report modules
 - Manage plugins via GUI Plugins panel
 
+## Documetation
+
+**Read the full documentation at GitHub pages**: [https://protdb.github.io/dasmixer/](https://protdb.github.io/dasmixer/) 
+
 ## Packages
 
 The project is split into four PyPI packages:
@@ -92,9 +96,9 @@ section Q3-Q4 2028
 
 ### Windows installer:
 
-[**Download windows installer here**](https://github.com/protdb/dasmixer/releases/download/v0.6.0/DASMixer0.6.0-setup.exe)
+You can get Windows installer from the [**latest GitHub Release**](https://github.com/protdb/dasmixer/releases/latest). Find the DASMixerX.Y.Z-setup.exe file in Assets section, download it and run:
 
-See latest 0.6.0 changelog [here](https://github.com/protdb/dasmixer/releases/tag/v0.6.0)
+![setup.exe select](guide/docs/img/win_download.png)
 
 ### Full install via pip
 
