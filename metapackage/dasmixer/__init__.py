@@ -1,2 +1,2 @@
 """DASMixer — umbrella metapackage."""
-__version__ = "0.7.4rc2"
+__version__ = "0.7.5a1"
