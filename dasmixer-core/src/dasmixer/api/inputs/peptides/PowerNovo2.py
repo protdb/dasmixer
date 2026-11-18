@@ -62,4 +62,5 @@ class PowerNovo2Importer(SimpleTableImporter):
             df['POSITIONAL SCORES'] = df['POSITIONAL SCORES'].apply(
                 self.process_positional_score
             )
+        df = df[df['CANONICAL SEQ.'].str.len() > 1]
         return df
