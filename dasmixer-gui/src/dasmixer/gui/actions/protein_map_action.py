@@ -4,6 +4,7 @@ import asyncio
 
 import flet as ft
 from dasmixer.api.calculations.peptides.protein_map import map_proteins
+from dasmixer.api.calculations.peptides.types import ProteinMapProgress
 from dasmixer.api.config import config as _config
 from dasmixer.api.project.project import Project
 from dasmixer.gui.views.tabs.peptides.shared_state import PeptidesTabState
@@ -90,12 +91,17 @@ class MatchProteinsAction(BaseAction):
                 s.get('use_protein_from_file', False) for s in tool_settings.values()
             )
 
-            def _on_progress(processed: int, total: int) -> None:
-                # total is always -1 (unknown) from map_proteins — show indeterminate bar
+            def _on_progress(progress: ProteinMapProgress) -> None:
+                is_processing = progress.stage == 'processing'
+                details = ""
+                if is_processing and progress.processed is not None:
+                    details = f"Processed {progress.processed} of {progress.total}"
                 dialog.update_progress(
-                    None,
-                    "Mapping...",
-                    f"Processed {processed} identifications",
+                    progress.fraction,
+                    progress.message,
+                    details,
+                    processed=progress.processed if is_processing else None,
+                    total=progress.total if is_processing else None,
                 )
 
             def stop_check():

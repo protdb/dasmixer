@@ -106,7 +106,11 @@ class ToolSettingsSection(BaseSection):
         ptm_display_text = ', '.join(initial_ptm_selected) if initial_ptm_selected else '(none)'
 
         # Match correction criteria — load from saved settings
-        saved_criteria: list[str] = settings.get('match_correction_criteria', ['ppm', 'intensity_coverage'])
+        _allowed_criteria = {'ppm', 'lcrr', 'quality', 'intensity_coverage'}
+        saved_criteria: list[str] = [
+            c for c in settings.get('match_correction_criteria', ['ppm', 'intensity_coverage'])
+            if c in _allowed_criteria
+        ]
 
         return {
             # ── Basic quality filters ──────────────────────────────────────
@@ -239,17 +243,17 @@ class ToolSettingsSection(BaseSection):
                 label="PPM",
                 value='ppm' in saved_criteria,
             ),
+            'match_correction_lcrr': ft.Checkbox(
+                label="LCRR",
+                value='lcrr' in saved_criteria,
+            ),
+            'match_correction_quality': ft.Checkbox(
+                label="Quality",
+                value='quality' in saved_criteria,
+            ),
             'match_correction_intensity': ft.Checkbox(
                 label="Intensity\ncoverage",
                 value='intensity_coverage' in saved_criteria,
-            ),
-            'match_correction_ions': ft.Checkbox(
-                label="Ions matched",
-                value='ions_matched' in saved_criteria,
-            ),
-            'match_correction_top10': ft.Checkbox(
-                label="Top 10\nions matched",
-                value='top10_ions_matched' in saved_criteria,
             ),
             # ── Save AA substitutions ──────────────────────────────────────
             'save_aa_substitutions': ft.Checkbox(
@@ -354,9 +358,9 @@ class ToolSettingsSection(BaseSection):
             ),
             ft.Row([
                 controls['match_correction_ppm'],
+                controls['match_correction_lcrr'],
+                controls['match_correction_quality'],
                 controls['match_correction_intensity'],
-                controls['match_correction_ions'],
-                controls['match_correction_top10'],
             ], spacing=15),
             controls['save_aa_substitutions'],
         ], spacing=8)
@@ -602,9 +606,9 @@ class ToolSettingsSection(BaseSection):
         # Build match correction criteria list
         criteria_map = {
             'ppm': controls['match_correction_ppm'],
+            'lcrr': controls['match_correction_lcrr'],
+            'quality': controls['match_correction_quality'],
             'intensity_coverage': controls['match_correction_intensity'],
-            'ions_matched': controls['match_correction_ions'],
-            'top10_ions_matched': controls['match_correction_top10'],
         }
         match_correction_criteria = [k for k, cb in criteria_map.items() if cb.value]
 
@@ -661,9 +665,9 @@ class ToolSettingsSection(BaseSection):
 
             criteria_map = {
                 'ppm': controls['match_correction_ppm'],
+                'lcrr': controls['match_correction_lcrr'],
+                'quality': controls['match_correction_quality'],
                 'intensity_coverage': controls['match_correction_intensity'],
-                'ions_matched': controls['match_correction_ions'],
-                'top10_ions_matched': controls['match_correction_top10'],
             }
             match_correction_criteria = [k for k, cb in criteria_map.items() if cb.value]
 

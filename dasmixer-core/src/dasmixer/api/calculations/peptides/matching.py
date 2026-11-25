@@ -19,7 +19,7 @@ async def select_preferred_identifications(
         This legacy function uses an N+1-query pattern and a simpler
         filtering model. Prefer :func:`calculate_preferred_identifications_for_file`
         (called per spectra file) which mirrors the GUI pipeline and supports
-        trusted/normal pools, de-novo correction and richer quality filters.
+        trusted/normal pools and richer quality filters.
 
     Args:
         project: Project instance
@@ -30,7 +30,6 @@ async def select_preferred_identifications(
             - min_ion_intensity_coverage: Minimum % intensity coverage (float)
             - use_protein_from_file: Use protein IDs from file (bool)
             - min_protein_identity: Minimum protein sequence identity (float)
-            - denovo_correction: Apply de novo correction (bool)
             - min_peptide_length: Minimum peptide length (int, default 7)
             - max_peptide_length: Maximum peptide length (int, default 30)
 
@@ -58,32 +57,21 @@ async def select_preferred_identifications(
             if tool_params.get("ignore_criteria", False):
                 idents_not_merged.append(idents.copy())
                 continue
-            max_ppm = tool_params.get("max_ppm", 50000)  # noqa: F841 (pandas @query ref)
+            max_ppm = tool_params.get("max_ppm", 50)  # noqa: F841 (pandas @query ref)
             min_score = tool_params.get("min_score", 0)  # noqa: F841 (pandas @query ref)
             min_ion_intensity_coverage = tool_params["min_ion_intensity_coverage"]  # noqa: F841 (pandas @query ref)
             min_len = tool_params.get("min_peptide_length", 7)  # noqa: F841 (pandas @query ref)
             max_len = tool_params.get("max_peptide_length", 30)  # noqa: F841 (pandas @query ref)
 
-
-
             idents['canonical_length'] = idents['canonical_sequence'].str.len()
             idents['ppm'] = idents['ppm'].abs()
-            if not tool_params.get("denovo_correction", False):
-                query = (
-                    "ppm <= @max_ppm and "
-                    "score >= @min_score and "
-                    "intensity_coverage >= @min_ion_intensity_coverage and "
-                    "canonical_length >= @min_len and "
-                    "canonical_length <= @max_len"
-                )
-            else:
-                query = (
-                    "ppm <= 50000 and "
-                    "score >= @min_score and "
-                    "intensity_coverage >= @min_ion_intensity_coverage and "
-                    "canonical_length >= @min_len and "
-                    "canonical_length <= @max_len"
-                )
+            query = (
+                "ppm <= @max_ppm and "
+                "score >= @min_score and "
+                "intensity_coverage >= @min_ion_intensity_coverage and "
+                "canonical_length >= @min_len and "
+                "canonical_length <= @max_len"
+            )
             idents_not_merged.append(idents.query(query).copy())
 
         all_idents = pd.concat(idents_not_merged, ignore_index=True)
@@ -125,9 +113,12 @@ async def calculate_preferred_identifications_for_file(
     3. Per spectrum:
        - If trusted candidates exist → pick the best among trusted by criterion.
        - Otherwise → pick the best among normal candidates by criterion.
-    4. Within each pool the selection criterion is:
-       - ``criterion="ppm"``       → lowest |PPM|
-       - ``criterion="intensity"`` → highest intensity_coverage
+    4. Within each pool the selection criterion uses the *effective* values
+       returned by the project layer (``eff_abs_ppm`` / ``eff_intensity_coverage``):
+       de-novo-corrected values are used when a ``correction='denovo'`` match
+       exists, otherwise the raw ``|ppm|`` / ``intensity_coverage`` is used.
+       - ``criterion="ppm"``       → lowest ``eff_abs_ppm``
+       - ``criterion="intensity"`` → highest ``eff_intensity_coverage``
 
     Args:
         project: Project instance
@@ -140,8 +131,7 @@ async def calculate_preferred_identifications_for_file(
             ``min_spectre_peaks`` (default 1), ``min_top_peaks`` (default 1),
             ``min_ions_covered`` (default 1), ``min_quality`` (default 0.25),
             ``min_lcrr`` (default 0.2), ``max_unconfirmed_ptms`` (default 0),
-            ``max_fdr`` (default 0.01), ``denovo_correction`` (default False),
-            ``denovo_correction_ppm`` (default 50000).
+            ``max_fdr`` (default 0.01).
 
     Returns:
         List of identification IDs that should be marked as preferred
@@ -160,14 +150,15 @@ async def calculate_preferred_identifications_for_file(
             idents = await project.get_all_idents_for_preferred(
                 spectra_file_id=spectra_file_id,
                 tool_id=tool_id,
+                criterion=criterion,
             )
             logger.debug(f"tool_id={tool_id} spectra_file_id={spectra_file_id} ignore_criteria=True rows={len(idents)}")
             if not idents.empty:
                 # Compute sort key
                 if criterion == "ppm":
-                    idents['_sort_key'] = idents['ppm'].abs()
+                    idents['_sort_key'] = idents['eff_abs_ppm']
                 else:
-                    idents['_sort_key'] = idents['intensity_coverage']
+                    idents['_sort_key'] = idents['eff_intensity_coverage']
                 trusted_frames.append(idents.copy())
         else:
             max_ppm = tool_params.get("max_ppm", 50)
@@ -182,14 +173,12 @@ async def calculate_preferred_identifications_for_file(
             min_lcrr = tool_params.get("min_lcrr", 0.2)
             max_unconfirmed_ptms = tool_params.get("max_unconfirmed_ptms", 0)
             max_fdr = tool_params.get("max_fdr", 0.01)
-            denovo_correction = tool_params.get("denovo_correction", False)
-            denovo_correction_ppm = tool_params.get("denovo_correction_ppm", 50000)
 
             idents = await project.get_idents_for_preferred(
                 spectra_file_id=spectra_file_id,
                 tool_id=tool_id,
                 min_score=min_score,
-                max_abs_ppm=max_ppm if not denovo_correction else denovo_correction_ppm,
+                max_abs_ppm=max_ppm,
                 intensity_coverage=min_ion_intensity_coverage,
                 canonical_length=(min_len, max_len),
                 spectre_peaks_count=min_peaks,
@@ -199,19 +188,14 @@ async def calculate_preferred_identifications_for_file(
                 min_lcrr=min_lcrr,
                 max_unconfirmed_ptms=max_unconfirmed_ptms,
                 max_fdr=max_fdr,
+                criterion=criterion,
             )
             logger.debug(f"tool_id={tool_id} spectra_file_id={spectra_file_id} rows={len(idents)}")
             if not idents.empty:
-                if denovo_correction:
-                    idents['_sort_key'] = idents.apply(
-                        lambda row: min(abs(row['ppm']), abs(row['matched_ppm'])), axis=1
-                    )
-                    idents = idents[idents['_sort_key'] <= max_ppm]
+                if criterion == "ppm":
+                    idents['_sort_key'] = idents['eff_abs_ppm']
                 else:
-                    if criterion == "ppm":
-                        idents['_sort_key'] = idents['ppm'].abs()
-                    else:
-                        idents['_sort_key'] = idents['intensity_coverage']
+                    idents['_sort_key'] = idents['eff_intensity_coverage']
                 if not idents.empty:
                     normal_frames.append(idents.copy())
 

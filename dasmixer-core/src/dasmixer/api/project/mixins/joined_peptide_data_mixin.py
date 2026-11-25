@@ -42,6 +42,7 @@ class JoinedPeptideDataMixin:
         has_ptm: str | None = None,
         has_substitution: str | None = None,
         max_fdr: float | None = None,
+        correction: str | None = None,
     ) -> tuple[list[str], list]:
         """
         Build WHERE conditions and bound parameters for joined peptide queries.
@@ -84,6 +85,10 @@ class JoinedPeptideDataMixin:
                 ``peptide_match.substitution = 1``; 'No' keeps 0.
             max_fdr: Keep rows with ``identification.fdr <= value``
                      (NULL fdr is excluded). When None, no FDR filter.
+            correction: Filter by ``peptide_match.correction``. ``None`` or
+                ``'all'`` — no filter; ``'none'`` — only not corrected
+                (``correction IS NULL``); ``'ilc'`` — only I/L-corrected;
+                ``'denovo'`` — only de novo-corrected.
 
         Returns:
             Tuple ``(conditions, params)`` — list of SQL fragments (to be
@@ -201,6 +206,99 @@ class JoinedPeptideDataMixin:
             conditions.append("(i.fdr IS NOT NULL AND i.fdr <= ?)")
             params.append(float(mf))
 
+        # Correction filter (peptide_match.correction)
+        if correction is not None and correction != 'all':
+            if correction == 'none':
+                conditions.append("m.correction IS NULL")
+            elif correction in ('ilc', 'denovo'):
+                conditions.append("m.correction = ?")
+                params.append(correction)
+            else:
+                raise ValueError(
+                    f"Unknown correction filter: {correction!r}; "
+                    "expected None, 'all', 'none', 'ilc' or 'denovo'"
+                )
+
+        return conditions, params
+
+    @staticmethod
+    def _build_peptide_filter_conditions_matched(
+        is_preferred: bool | None = None,
+        spectre_id: int | None = None,
+        sequence_identified: bool | None = None,
+        protein_identified: bool | None = None,
+        sample: str | None = None,
+        subset: str | None = None,
+        sample_id: int | None = None,
+        subset_id: int | None = None,
+        sequence: str | None = None,
+        canonical_sequence: str | None = None,
+        matched_sequence: str | None = None,
+        seq_no: int | None = None,
+        scans: int | None = None,
+        tool: str | None = None,
+        tool_id: int | None = None,
+        identification_id: int | None = None,
+        max_ppm: float | None = None,
+        min_score: float | None = None,
+        protein_id: str | None = None,
+        gene: str | None = None,
+        min_quality: float | None = None,
+        has_ptm: str | None = None,
+        has_substitution: str | None = None,
+        max_fdr: float | None = None,
+        correction: str | None = None,
+    ) -> tuple[list[str], list]:
+        """
+        Build filter conditions where Max PPM and Min Quality also accept
+        values from a de novo-corrected match (correction = 'denovo').
+
+        All other filters behave exactly like
+        :meth:`_build_peptide_filter_conditions`.
+        """
+        conditions, params = JoinedPeptideDataMixin._build_peptide_filter_conditions(
+            is_preferred=is_preferred,
+            spectre_id=spectre_id,
+            sequence_identified=sequence_identified,
+            protein_identified=protein_identified,
+            sample=sample,
+            subset=subset,
+            sample_id=sample_id,
+            subset_id=subset_id,
+            sequence=sequence,
+            canonical_sequence=canonical_sequence,
+            matched_sequence=matched_sequence,
+            seq_no=seq_no,
+            scans=scans,
+            tool=tool,
+            tool_id=tool_id,
+            identification_id=identification_id,
+            max_ppm=None,
+            min_score=min_score,
+            protein_id=protein_id,
+            gene=gene,
+            min_quality=None,
+            has_ptm=has_ptm,
+            has_substitution=has_substitution,
+            max_fdr=max_fdr,
+            correction=correction,
+        )
+
+        if max_ppm is not None:
+            conditions.append(
+                "(abs(i.ppm) <= ? OR (m.correction = 'denovo' AND abs(m.matched_ppm) <= ?))"
+            )
+            params.append(float(max_ppm))
+            params.append(float(max_ppm))
+
+        if min_quality is not None:
+            conditions.append(
+                "((i.quality IS NOT NULL AND i.quality >= ?) OR "
+                "(m.correction = 'denovo' AND m.quality IS NOT NULL AND m.quality >= ?))"
+            )
+            params.append(float(min_quality))
+            params.append(float(min_quality))
+
         return conditions, params
 
     async def count_joined_peptide_data(
@@ -229,12 +327,22 @@ class JoinedPeptideDataMixin:
         has_ptm: str | None = None,
         has_substitution: str | None = None,
         max_fdr: float | None = None,
+        correction: str | None = None,
+        apply_to_matched: bool = False,
     ) -> int:
         """
         Count joined peptide data rows matching the given filters.
 
         Same filter parameters as :meth:`get_joined_peptide_data` (without
         ``limit``/``offset``).
+
+        Args:
+            correction: Filter by ``peptide_match.correction``. ``None`` or
+                ``'all'`` — no filter; ``'none'`` — only not corrected;
+                ``'ilc'`` — only I/L-corrected; ``'denovo'`` — only de
+                novo-corrected.
+            apply_to_matched: When True, Max PPM and Min Quality also accept
+                de novo-corrected match values.
 
         Returns:
             Total number of rows matching the filters.
@@ -252,7 +360,12 @@ class JoinedPeptideDataMixin:
             WHERE 1=1
         """
 
-        conditions, params = self._build_peptide_filter_conditions(
+        builder = (
+            self._build_peptide_filter_conditions_matched
+            if apply_to_matched
+            else self._build_peptide_filter_conditions
+        )
+        conditions, params = builder(
             is_preferred=is_preferred,
             spectre_id=spectre_id,
             sequence_identified=sequence_identified,
@@ -277,6 +390,7 @@ class JoinedPeptideDataMixin:
             has_ptm=has_ptm,
             has_substitution=has_substitution,
             max_fdr=max_fdr,
+            correction=correction,
         )
 
         if conditions:
@@ -307,12 +421,15 @@ class JoinedPeptideDataMixin:
         protein_id: str | None = None,
         gene: str | None = None,
         max_ppm: float | None = None,
+        min_score: float | None = None,
         min_quality: float | None = None,
         has_ptm: str | None = None,
         has_substitution: str | None = None,
         max_fdr: float | None = None,
         limit: int | None = None,
         offset: int = 0,
+        correction: str | None = None,
+        apply_to_matched: bool = False,
     ) -> pd.DataFrame:
         """
         Get joined peptide data with optional filtering and pagination.
@@ -345,6 +462,7 @@ class JoinedPeptideDataMixin:
                 e.g. UniProt accession).
             gene: Filter by ``protein.gene`` (LIKE %value%).
             max_ppm: Keep rows with ``|identification.ppm| <= value``.
+            min_score: Keep rows with ``identification.score >= value``.
             min_quality: Keep rows with ``identification.quality >= value``
                 (NULL quality is excluded).
             has_ptm: Tri-state ('Yes'/'No'/other = all). 'Yes' keeps
@@ -353,6 +471,16 @@ class JoinedPeptideDataMixin:
                 ``peptide_match.substitution = 1``; 'No' keeps 0.
             max_fdr: Keep rows with ``identification.fdr <= value``
                 (NULL fdr is excluded). When None, no FDR filter.
+            correction: Filter by ``peptide_match.correction``. ``None`` or
+                ``'all'`` — no filter; ``'none'`` — only not corrected
+                (``correction IS NULL``); ``'ilc'`` — only I/L-corrected;
+                ``'denovo'`` — only de novo-corrected.
+            apply_to_matched: When True, Max PPM and Min Quality also accept
+                de novo-corrected match values (i.e. rows where
+                ``m.correction = 'denovo'`` and the corresponding
+                ``m.matched_ppm`` / ``m.quality`` value satisfies the
+                threshold are kept even when the ``i.ppm`` / ``i.quality``
+                value does not).
             limit: Maximum rows to return. ``None`` or ``-1`` disables
                 pagination (returns all matching rows).
             offset: Number of rows to skip (for pagination).
@@ -371,7 +499,9 @@ class JoinedPeptideDataMixin:
                   q_value
                 - matched_sequence, matched_ppm, protein_id, identity,
                   unique_evidence, gene, matched_peaks, matched_top_peaks,
-                  matched_ion_type, matched_sequence_modified, substitution
+                  matched_ion_type, matched_sequence_modified, substitution,
+                  source_ppm, correction, fasta_start, matched_lcrr,
+                  matched_quality, matched_unconfirmed_ptms
         """
         query = """
             SELECT
@@ -391,7 +521,11 @@ class JoinedPeptideDataMixin:
                 m.matched_sequence, m.matched_ppm, m.protein_id, m.identity,
                 m.unique_evidence, p.gene,
                 m.matched_peaks, m.matched_top_peaks, m.matched_ion_type,
-                m.matched_sequence_modified, m.substitution
+                m.matched_sequence_modified, m.substitution,
+                i.source_ppm,
+                m.correction, m.fasta_start,
+                m.lcrr AS matched_lcrr, m.quality AS matched_quality,
+                m.unconfirmed_ptms AS matched_unconfirmed_ptms
             FROM spectre AS s
             LEFT JOIN spectre_file f ON f.id = s.spectre_file_id
             LEFT JOIN sample sm ON sm.id = f.sample_id
@@ -403,7 +537,12 @@ class JoinedPeptideDataMixin:
             WHERE 1=1
         """
 
-        conditions, params = self._build_peptide_filter_conditions(
+        builder = (
+            self._build_peptide_filter_conditions_matched
+            if apply_to_matched
+            else self._build_peptide_filter_conditions
+        )
+        conditions, params = builder(
             is_preferred=is_preferred,
             sequence_identified=sequence_identified,
             protein_identified=protein_identified,
@@ -423,10 +562,12 @@ class JoinedPeptideDataMixin:
             protein_id=protein_id,
             gene=gene,
             max_ppm=max_ppm,
+            min_score=min_score,
             min_quality=min_quality,
             has_ptm=has_ptm,
             has_substitution=has_substitution,
             max_fdr=max_fdr,
+            correction=correction,
         )
 
         if conditions:

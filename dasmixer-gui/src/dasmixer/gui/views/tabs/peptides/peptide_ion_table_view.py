@@ -70,6 +70,12 @@ class PeptideIonTableView(BaseTableView):
         'matched_ion_type': 'Match Ion Type',
         'matched_sequence_modified': 'Match Seq (modified)',
         'substitution': 'AA Substitution',
+        'source_ppm': 'Source PPM',
+        'correction': 'Correction',
+        'fasta_start': 'Match Start',
+        'matched_lcrr': 'Match LCRR',
+        'matched_quality': 'Match Quality',
+        'matched_unconfirmed_ptms': 'Match Unconf. PTMs',
     }
 
     column_filter_mapping = {
@@ -109,6 +115,8 @@ class PeptideIonTableView(BaseTableView):
             'max_fdr': "",
             'has_ptm': 'None',
             'has_substitution': 'None',
+            'correction': 'all',
+            'apply_to_matched': False,
         }
 
     def _build_filter_view(self) -> ft.Control:
@@ -211,6 +219,21 @@ class PeptideIonTableView(BaseTableView):
             ],
             width=180,
         )
+        self.correction_field = ft.Dropdown(
+            label="Correction",
+            options=[
+                ft.DropdownOption(key="all", text="All"),
+                ft.DropdownOption(key="none", text="Not corrected"),
+                ft.DropdownOption(key="ilc", text="I/L"),
+                ft.DropdownOption(key="denovo", text="De novo"),
+            ],
+            value=self.filter.get('correction', 'all') or 'all', width=170,
+        )
+        self.apply_to_matched_field = ft.Checkbox(
+            label="Apply to matched fields",
+            value=bool(self.filter.get('apply_to_matched', False)),
+            tooltip="Max PPM and Min Quality also match De novo-corrected sequences",
+        )
         # Register filter_controls (for set_filters_in_ui)
         self.filter_controls = {
             'identification_id': self.identification_id_field,
@@ -248,6 +271,8 @@ class PeptideIonTableView(BaseTableView):
                 self.max_fdr_field,
                 self.has_ptm_field,
                 self.has_substitution_field,
+                self.correction_field,
+                self.apply_to_matched_field,
             ], spacing=10),
         ], spacing=10)
 
@@ -284,6 +309,15 @@ class PeptideIonTableView(BaseTableView):
             self.filter['max_fdr'] = None
         self.filter['has_ptm'] = self.has_ptm_field.value
         self.filter['has_substitution'] = self.has_substitution_field.value
+        self.filter['correction'] = self.correction_field.value
+        self.filter['apply_to_matched'] = bool(self.apply_to_matched_field.value)
+
+    async def _load_filters_from_project(self):
+        await super()._load_filters_from_project()
+        if hasattr(self, 'correction_field'):
+            self.correction_field.value = self.filter.get('correction', 'all') or 'all'
+        if hasattr(self, 'apply_to_matched_field'):
+            self.apply_to_matched_field.value = bool(self.filter.get('apply_to_matched', False))
 
 
     async def load_data(self):
@@ -394,6 +428,12 @@ class PeptideIonTableView(BaseTableView):
         if hs and hs != 'None':
             kwargs['has_substitution'] = hs
 
+        if self.filter.get('correction') not in (None, '', 'all'):
+            kwargs['correction'] = self.filter['correction']
+
+        if self.filter.get('apply_to_matched'):
+            kwargs['apply_to_matched'] = True
+
         logger.debug(f"kwargs: {kwargs}")
         return kwargs
 
@@ -425,7 +465,9 @@ class PeptideIonTableView(BaseTableView):
             'top_peaks_covered',
             'isotope_offset',
             'tool_id',
-            'unconfirmed_ptms'
+            'unconfirmed_ptms',
+            'fasta_start',
+            'matched_unconfirmed_ptms'
         ]
 
         for col in NULLABLE_BOOL_COLUMNS:
@@ -435,6 +477,13 @@ class PeptideIonTableView(BaseTableView):
         for col in NULLABLE_INT_COLUMNS:
             if col in df.columns:
                 df[col] = Nullables.int_column(df[col], to_string=True)
+
+        if 'correction' in df.columns:
+            df['correction'] = (
+                df['correction']
+                .map({'ilc': 'I/L', 'denovo': 'De novo'})
+                .fillna('')
+            )
 
         tips = pd.DataFrame(index=df.index)
 

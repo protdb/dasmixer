@@ -7,7 +7,7 @@ from typing import Self
 import aiosqlite
 from dasmixer.utils.logger import logger
 
-from ..schema import CREATE_SCHEMA_SQL, DEFAULT_METADATA
+from ..schema import CREATE_SCHEMA_SQL, DEFAULT_METADATA, NEW_PROJECT_EXTRA_SQL
 from .base import ProjectBase
 
 
@@ -46,6 +46,8 @@ class ProjectLifecycle(ProjectBase):
             metadata = await self.get_metadata()
             if 'version' not in metadata:
                 now = datetime.now().isoformat()
+                await self._db.executescript(NEW_PROJECT_EXTRA_SQL)
+                await self._db.commit()
                 for key, value in DEFAULT_METADATA.items():
                     if value is None:
                         value = now

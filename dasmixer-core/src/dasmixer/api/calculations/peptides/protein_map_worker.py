@@ -4,7 +4,8 @@ Per-row protein mapping worker (process-pool safe).
 Contains the CPU-bound part of the ``identity < 1.0`` branch of
 ``map_proteins`` (see ``protein_map.py``): recalculation of PPM and ion
 coverage for a BLAST partial match, application of Match Correction
-Criteria, and the optional AA-substitution fallback.
+Criteria (ppm / lcrr / quality / intensity_coverage — strict improvement),
+and the optional AA-substitution fallback.
 
 This module is fully self-contained:
 
@@ -93,21 +94,47 @@ def _pick_best_override(
 def _check_correction_criteria(
     criteria: list[str],
     ident_ppm: float | None,
+    ident_lcrr: float | None,
+    ident_quality: float | None,
     ident_intensity_coverage: float | None,
-    ident_ions_matched: int | None,
-    ident_top_peaks_covered: int | None,
     match_abs_ppm: float | None,
-    match_result: MatchResult,
+    match_lcrr: float | None,
+    match_quality: float | None,
+    match_intensity_percent: float | None,
 ) -> bool:
     """
-    Return True if at least one of the selected criteria is met.
+    Return ``True`` if at least one of the selected criteria is satisfied,
+    i.e. the recalculated match is a *strict* improvement over the original
+    identification on that metric.
 
-    For ppm:               match_abs_ppm <= abs(ident_ppm)
-    For intensity_coverage: match_result.intensity_percent >= ident_intensity_coverage
-    For ions_matched:       match_result.max_ion_matches >= ident_ions_matched
-    For top10_ions_matched: match_result.top10_intensity_matches >= ident_top_peaks_covered
+    All inputs are NaN/None-safe: ``_safe_float`` must have been applied to
+    the values passed in, so that ``None`` (and not ``NaN``) is the only
+    sentinel for "metric not available".
 
-    Empty criteria — always accept.
+    Improvement table (strict ``<`` / ``>``):
+
+    | Criterion           | Improvement                                          |
+    | -------------------- | ---------------------------------------------------- |
+    | ``'ppm'``              | ``abs(match_abs_ppm) < abs(ident_ppm)``; if           |
+    |                      | ``ident_ppm is None`` — any non-None ``match_abs_ppm``. |
+    | ``'lcrr'``             | ``match_lcrr > ident_lcrr``; if ``ident_lcrr is None`` |
+    |                      | — any non-None ``match_lcrr``.                        |
+    | ``'quality'``          | ``match_quality > ident_quality``; if                 |
+    |                      | ``ident_quality is None`` — any non-None             |
+    |                      | ``match_quality``.                                   |
+    | ``'intensity_coverage'`` | ``match_intensity_percent >                        |
+    |                      | ident_intensity_coverage``; if                       |
+    |                      | ``ident_intensity_coverage is None`` — any non-None  |
+    |                      | ``match_intensity_percent``.                         |
+
+    Rules:
+
+    - Empty ``criteria`` → ``True`` (always accept).
+    - If the ``match_*`` value for a criterion is ``None`` — that criterion
+      cannot be satisfied.
+    - Unknown criterion strings (including the legacy ``'ions_matched'`` and
+      ``'top10_ions_matched'``) are silently ignored.
+    - Returns ``True`` as soon as at least one criterion is satisfied.
     """
     if not criteria:
         # No criteria selected — always accept
@@ -115,25 +142,39 @@ def _check_correction_criteria(
 
     for c in criteria:
         if c == 'ppm':
-            ref = abs(ident_ppm) if ident_ppm is not None and not math.isnan(ident_ppm) else None
-            val = match_abs_ppm
-            if ref is not None and val is not None and val <= ref:
+            if match_abs_ppm is None:
+                continue
+            if ident_ppm is None:
+                return True
+            if abs(match_abs_ppm) < abs(ident_ppm):
+                return True
+
+        elif c == 'lcrr':
+            if match_lcrr is None:
+                continue
+            if ident_lcrr is None:
+                return True
+            if match_lcrr > ident_lcrr:
+                return True
+
+        elif c == 'quality':
+            if match_quality is None:
+                continue
+            if ident_quality is None:
+                return True
+            if match_quality > ident_quality:
                 return True
 
         elif c == 'intensity_coverage':
-            ref = ident_intensity_coverage if ident_intensity_coverage is not None and not math.isnan(ident_intensity_coverage) else None
-            if ref is not None and match_result.intensity_percent >= ref:
+            if match_intensity_percent is None:
+                continue
+            if ident_intensity_coverage is None:
+                return True
+            if match_intensity_percent > ident_intensity_coverage:
                 return True
 
-        elif c == 'ions_matched':
-            ref = ident_ions_matched if ident_ions_matched is not None else None
-            if ref is not None and match_result.max_ion_matches >= ref:
-                return True
-
-        elif c == 'top10_ions_matched':
-            ref = ident_top_peaks_covered if ident_top_peaks_covered is not None else None
-            if ref is not None and match_result.top10_intensity_matches >= ref:
-                return True
+        # Unknown criteria (e.g. legacy 'ions_matched' / 'top10_ions_matched')
+        # are silently ignored.
 
     return False
 
@@ -187,7 +228,10 @@ def process_protein_map_row(
     Args:
         row_dict: Identification + BLAST metadata (see keys below). Must
             contain at least ``id``, ``sequence``, ``matched_sequence``,
-            ``protein_id``, ``identity``.
+            ``protein_id``, ``identity``. Stage-3 inputs read from
+            ``row_dict``: ``denovo_correction`` (bool), ``fasta_start``,
+            ``ident_lcrr``, ``ident_quality``, plus the existing
+            ``ppm``/``intensity_coverage``/``isotope_offset``/``score`` etc.
         mz_array: Spectrum m/z values.
         intensity_array: Spectrum intensity values.
         pepmass: Identification pepmass.
@@ -199,8 +243,12 @@ def process_protein_map_row(
         fragment_charges: Fragment charge states for match_predictions.
 
     Returns:
-        A single result row dict for the peptide matches DataFrame with
-        ``substitution`` set to False/True, or None if the match is rejected.
+        A single result row dict for the peptide matches DataFrame, or
+        ``None`` if the match is rejected. The result dict now carries
+        ``lcrr``, ``quality``, ``unconfirmed_ptms``, ``fasta_start`` and a
+        ``correction`` field (``'denovo'`` for a de novo correction,
+        ``None`` for an AA-substitution row). The ``substitution`` flag is
+        ``False`` for de novo corrections and ``True`` for AA substitutions.
 
     Notes:
         A fresh ``IonMatchParameters`` is built on every call — sharing a
@@ -221,6 +269,12 @@ def process_protein_map_row(
     matched_seq = str(row_dict['matched_sequence'])
     identity = float(row_dict['identity'])
     unique_evidence = bool(row_dict.get('unique_evidence'))
+
+    # Stage 3 inputs (B8/B9): correction mode + ident reference metrics
+    denovo_correction = bool(row_dict.get('denovo_correction', False))
+    fasta_start = _safe_int(row_dict.get('fasta_start'))
+    ident_lcrr = _safe_float(row_dict.get('ident_lcrr'))
+    ident_quality = _safe_float(row_dict.get('ident_quality'))
 
     # Step 2: isotope offset (0 if absent/NaN)
     isotope_offset = _safe_int(row_dict.get('isotope_offset')) or 0
@@ -260,6 +314,13 @@ def process_protein_map_row(
     # Step 5: recalculated absolute PPM
     match_abs_ppm = chosen_params.abs_ppm
 
+    # Step 5b: additional match metrics captured for the result row and the
+    # correction-criteria gate. getattr(..., None) guards against future
+    # MatchResult shape changes.
+    match_lcrr = _safe_float(getattr(match_result, 'longest_consec_run_rate', None))
+    match_quality = _safe_float(getattr(match_result, 'quality', None))
+    match_unconfirmed_ptms = _safe_int(getattr(match_result, 'unconfirmed_ptms', None))
+
     # Step 6: matched_sequence_modified
     matched_sequence_modified = (
         chosen_params.sequence
@@ -267,15 +328,17 @@ def process_protein_map_row(
         else None
     )
 
-    # Step 7: match correction criteria
+    # Step 7: match correction criteria (B8/B9)
     criteria_passed = _check_correction_criteria(
         criteria=row_dict.get('match_correction_criteria', []),
         ident_ppm=_safe_float(row_dict.get('ppm')),
+        ident_lcrr=ident_lcrr,
+        ident_quality=ident_quality,
         ident_intensity_coverage=_safe_float(row_dict.get('intensity_coverage')),
-        ident_ions_matched=_safe_int(row_dict.get('ions_matched')),
-        ident_top_peaks_covered=_safe_int(row_dict.get('top_peaks_covered')),
         match_abs_ppm=match_abs_ppm,
-        match_result=match_result,
+        match_lcrr=match_lcrr,
+        match_quality=match_quality,
+        match_intensity_percent=match_result.intensity_percent,
     )
 
     # Step 8: build result dict
@@ -292,10 +355,21 @@ def process_protein_map_row(
         'matched_top_peaks': match_result.top10_intensity_matches,
         'matched_ion_type': match_result.top_matched_ion_type,
         'matched_sequence_modified': matched_sequence_modified,
+        'lcrr': match_lcrr,
+        'quality': match_quality,
+        'unconfirmed_ptms': match_unconfirmed_ptms,
+        'fasta_start': fasta_start,
+        'correction': None,  # set below
     }
 
-    # Step 9: decision
-    if criteria_passed:
+    # Step 9: decision (B8/B9).
+    # ``correction='denovo'`` is only assigned when ``denovo_correction`` is
+    # True AND at least one correction criterion improved (or criteria list
+    # is empty, which _check_correction_criteria treats as a pass). Otherwise
+    # an AA substitution passing tool thresholds is saved with
+    # ``correction=None, substitution=True``. Everything else is rejected.
+    if denovo_correction and criteria_passed:
+        result['correction'] = 'denovo'
         result['substitution'] = False
         return result
 
@@ -308,6 +382,7 @@ def process_protein_map_row(
             'max_peptide_length': row_dict.get('max_peptide_length', 999),
         }
         if _ident_passes_tool_thresholds(row_dict, tool_params_dict):
+            result['correction'] = None
             result['substitution'] = True
             return result
 

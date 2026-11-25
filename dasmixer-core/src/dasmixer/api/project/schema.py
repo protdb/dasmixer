@@ -74,6 +74,7 @@ CREATE TABLE IF NOT EXISTS spectre (
     charge_array BLOB,
     charge_array_common_value INTEGER,
     all_params TEXT,  -- JSON as TEXT
+    file_name TEXT,  -- source spectrum file name; NULL until populated by importer
     FOREIGN KEY (spectre_file_id) REFERENCES spectre_file(id) ON DELETE CASCADE
 );
 
@@ -106,6 +107,7 @@ CREATE TABLE IF NOT EXISTS identification (
     sequence TEXT NOT NULL,
     canonical_sequence TEXT NOT NULL,
     ppm REAL,
+    source_ppm REAL,  -- original PPM before recalculation; NULL if never recalculated
     theor_mass REAL,
     score REAL,
     positional_scores TEXT,  -- JSON as TEXT
@@ -166,6 +168,11 @@ CREATE TABLE IF NOT EXISTS peptide_match (
     matched_top_peaks INTEGER,      -- top_peaks_covered for matched sequence
     matched_ion_type TEXT,          -- ion_match_type for matched sequence
     matched_sequence_modified TEXT, -- ProForma with PTMs if get_matched_ppm found override; NULL otherwise
+    lcrr REAL,                      -- LCRR of the matched sequence; NULL for exact matches
+    unconfirmed_ptms INTEGER,       -- unconfirmed PTMs of the matched sequence; NULL for exact matches
+    quality REAL,                   -- quality of the matched sequence; NULL for exact matches
+    fasta_start INTEGER,            -- 1-based start position of the match in the protein
+    correction VARCHAR(8),          -- NULL | 'ilc' | 'denovo'
     substitution INTEGER NOT NULL DEFAULT 0,  -- BOOLEAN: 1 if saved as AA substitution candidate
     FOREIGN KEY (protein_id) REFERENCES protein(id) ON DELETE CASCADE,
     FOREIGN KEY (identification_id) REFERENCES identification(id) ON DELETE CASCADE
@@ -261,11 +268,20 @@ CREATE TABLE IF NOT EXISTS saved_plots (
     created_at TEXT NOT NULL,
     plot_type TEXT NOT NULL,
     settings TEXT,
+    plot_format VARCHAR(16),  -- NULL == 'plotly'
     plot BLOB
 );
 
 CREATE INDEX IF NOT EXISTS idx_saved_plots_type ON saved_plots(plot_type);
 CREATE INDEX IF NOT EXISTS idx_saved_plots_created ON saved_plots(created_at);
+"""
+
+# Statements applied only when a brand-new database is created (see
+# ProjectLifecycle.initialize). They must NOT go into CREATE_SCHEMA_SQL,
+# because that script is re-executed on every open of an existing project,
+# before migrations run.
+NEW_PROJECT_EXTRA_SQL = """
+CREATE INDEX IF NOT EXISTS idx_spectre_file_name ON spectre(file_name);
 """
 
 # Default project metadata

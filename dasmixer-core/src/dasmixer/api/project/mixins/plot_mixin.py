@@ -145,6 +145,9 @@ class PlotMixin:
             m.matched_coverage_percent,
             m.protein_id,
             m.identity,
+            m.correction,
+            m.lcrr as matched_lcrr,
+            m.quality as matched_quality,
             p.gene
             from identification i
             left join peptide_match m on i.id == m.identification_id
@@ -210,13 +213,25 @@ class PlotMixin:
                         'protein_id': row['protein_id'],
                         'gene': row['gene'],
                         'is_preferred': row['is_preferred'],
-                        'ppm': row['matched_ppm'],
+                        'ppm': row['matched_ppm'] if row['matched_ppm'] is not None else row['ppm'],
                         'score': row['score'],
-                        'intensity_coverage': row['matched_coverage_percent'],
-                        # Quality/LCRR are not (re)calculated for matched
-                        # sequences on a partial protein match.
-                        'quality': None,
-                        'lcrr': None,
+                        'intensity_coverage': (
+                            row['matched_coverage_percent']
+                            if row['matched_coverage_percent'] is not None
+                            else row['intensity_coverage']
+                        ),
+                        # Quality/LCRR are recalculated only for de novo-corrected
+                        # matches; for exact (I/L) matches fall back to identification.
+                        'quality': (
+                            row['matched_quality']
+                            if row['correction'] == 'denovo' and row['matched_quality'] is not None
+                            else (row['quality'] if row['correction'] != 'denovo' else None)
+                        ),
+                        'lcrr': (
+                            row['matched_lcrr']
+                            if row['correction'] == 'denovo' and row['matched_lcrr'] is not None
+                            else (row['lcrr'] if row['correction'] != 'denovo' else None)
+                        ),
                         'matched': True,
                         'identity': row['identity']
                     })

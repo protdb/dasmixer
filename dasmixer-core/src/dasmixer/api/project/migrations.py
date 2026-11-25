@@ -74,6 +74,20 @@ MIGRATIONS: list[dict] = [
             ALTER TABLE generated_reports ADD COLUMN name TEXT;
         """,
     },
+    {
+        "version": "0.7.5",
+        "sql": """
+            ALTER TABLE spectre ADD COLUMN file_name TEXT;
+            CREATE INDEX IF NOT EXISTS idx_spectre_file_name ON spectre(file_name);
+            ALTER TABLE identification ADD COLUMN source_ppm REAL;
+            ALTER TABLE peptide_match ADD COLUMN lcrr REAL;
+            ALTER TABLE peptide_match ADD COLUMN unconfirmed_ptms INTEGER;
+            ALTER TABLE peptide_match ADD COLUMN quality REAL;
+            ALTER TABLE peptide_match ADD COLUMN fasta_start INTEGER;
+            ALTER TABLE peptide_match ADD COLUMN correction VARCHAR(8);
+            ALTER TABLE saved_plots ADD COLUMN plot_format VARCHAR(16);
+        """,
+    },
 ]
 
 

@@ -6,6 +6,7 @@ import traceback
 from pathlib import Path
 
 import flet as ft
+from dasmixer.api.calculations.peptides.tmp_cleanup import cleanup_peptide_match_tmp
 from dasmixer.api.config import config
 from dasmixer.api.project.project import Project
 from dasmixer.gui.components.merge_options_dialog import MergeOptionsDialog
@@ -77,6 +78,13 @@ class DASMixerApp:
         # Remove stale interactive-mode HTML files left by previous runs
         # (older than 24h, so concurrently running instances are not affected).
         cleanup_temp_html_files()
+
+        # Remove the previous run's protein match work directory (kept for
+        # debugging between runs; no matching run can be active at start-up).
+        try:
+            cleanup_peptide_match_tmp()
+        except Exception:
+            logger.debug("Failed to clean peptide match temp dir", exc_info=True)
 
         if initial_project_path:
             logger.debug(f"[app] Opening initial project: {initial_project_path}")

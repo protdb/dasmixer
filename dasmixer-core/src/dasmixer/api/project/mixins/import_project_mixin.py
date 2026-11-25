@@ -330,12 +330,12 @@ class ImportProjectMixin(ProjectBase):
                 INSERT INTO spectre (id, spectre_file_id, seq_no, title,
                     scans, charge, rt, pepmass, intensity, mz_array,
                     intensity_array, peaks_count, charge_array,
-                    charge_array_common_value, all_params)
+                    charge_array_common_value, all_params, file_name)
                 SELECT s.id + {b_s}, s.spectre_file_id + {b_sf},
                        s.seq_no, s.title, s.scans, s.charge, s.rt,
                        s.pepmass, s.intensity, s.mz_array, s.intensity_array,
                        s.peaks_count, s.charge_array, s.charge_array_common_value,
-                       s.all_params
+                       s.all_params, s.file_name
                 FROM src.spectre s
             """)
 
@@ -367,7 +367,7 @@ class ImportProjectMixin(ProjectBase):
                     top_peaks_covered, override_charge, source_sequence,
                     isotope_offset, quality, override_pepmass, has_ptm,
                     lcrr, unconfirmed_ptms, src_file_protein_id,
-                    fdr, e_value, q_value)
+                    fdr, e_value, q_value, source_ppm)
                 SELECT i.id + {b_i}, i.spectre_id + {b_s},
                        tm.tgt_id, i.ident_file_id + {b_idf},
                        i.is_preferred,
@@ -377,7 +377,7 @@ class ImportProjectMixin(ProjectBase):
                        i.override_charge, i.source_sequence, i.isotope_offset,
                        i.quality, i.override_pepmass, i.has_ptm,
                        i.lcrr, i.unconfirmed_ptms, i.src_file_protein_id,
-                       i.fdr, i.e_value, i.q_value
+                       i.fdr, i.e_value, i.q_value, i.source_ppm
                 FROM src.identification i
                 JOIN temp._tool_id_map tm ON tm.src_id = i.tool_id
             """)
@@ -392,14 +392,17 @@ class ImportProjectMixin(ProjectBase):
                     matched_sequence, identity, matched_ppm, matched_theor_mass,
                     unique_evidence, matched_coverage_percent, matched_peaks,
                     matched_top_peaks, matched_ion_type,
-                    matched_sequence_modified, substitution)
+                    matched_sequence_modified, substitution, lcrr,
+                    unconfirmed_ptms, quality, fasta_start, correction)
                 SELECT pm.id + {b_pm}, pm.protein_id,
                        pm.identification_id + {b_i},
                        pm.matched_sequence, pm.identity, pm.matched_ppm,
                        pm.matched_theor_mass, pm.unique_evidence,
                        pm.matched_coverage_percent, pm.matched_peaks,
                        pm.matched_top_peaks, pm.matched_ion_type,
-                       pm.matched_sequence_modified, pm.substitution
+                       pm.matched_sequence_modified, pm.substitution, pm.lcrr,
+                       pm.unconfirmed_ptms, pm.quality, pm.fasta_start,
+                       pm.correction
                 FROM src.peptide_match pm
             """)
 
@@ -454,9 +457,10 @@ class ImportProjectMixin(ProjectBase):
             b_sp = base_ids['saved_plots']
             await self._db.execute(f"""
                 INSERT INTO saved_plots (id, created_at, plot_type, settings,
-                    plot)
+                    plot, plot_format)
                 SELECT sp.id + {b_sp},
-                       sp.created_at, sp.plot_type, sp.settings, sp.plot
+                       sp.created_at, sp.plot_type, sp.settings, sp.plot,
+                       sp.plot_format
                 FROM src.saved_plots sp
             """)
 

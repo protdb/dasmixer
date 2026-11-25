@@ -213,6 +213,56 @@ class IdentificationMixin:
         
         return pd.DataFrame(rows) if rows else pd.DataFrame()
 
+    async def get_idents_with_src_protein(
+        self,
+        tool_id: int,
+        sample_id: int | None = None,
+        offset: int = 0,
+        limit: int | None = None,
+    ) -> pd.DataFrame:
+        """
+        Return identifications of a tool that carry a non-empty
+        ``src_file_protein_id`` (protein IDs supplied by the identification
+        file). Used by the protein match v2 pipeline to bypass the search for
+        such identifications.
+
+        Args:
+            tool_id: Tool id to filter by.
+            sample_id: When provided, only identifications of this sample are
+                returned (join through spectre/spectre_file).
+            offset: Rows to skip (pagination).
+            limit: Maximum rows to return (``None`` = no limit).
+
+        Returns:
+            DataFrame with columns: id, canonical_sequence, ppm, theor_mass,
+            intensity_coverage, ions_matched, ion_match_type,
+            top_peaks_covered, src_file_protein_id. Empty DataFrame when
+            nothing matches.
+        """
+        query = """
+            SELECT
+                i.id, i.canonical_sequence, i.ppm, i.theor_mass,
+                i.intensity_coverage, i.ions_matched, i.ion_match_type,
+                i.top_peaks_covered, i.src_file_protein_id
+            FROM identification i
+            JOIN spectre s ON s.id = i.spectre_id
+            JOIN spectre_file sf ON sf.id = s.spectre_file_id
+            WHERE i.tool_id = ?
+              AND i.src_file_protein_id IS NOT NULL
+              AND i.src_file_protein_id != ''
+        """
+        params: list = [int(tool_id)]
+        if sample_id is not None:
+            query += " AND sf.sample_id = ?"
+            params.append(int(sample_id))
+        query += " ORDER BY i.id"
+        if limit is not None:
+            query += " LIMIT ? OFFSET ?"
+            params.append(int(limit))
+            params.append(int(offset))
+        rows = await self._fetchall(query, tuple(params))
+        return pd.DataFrame(rows) if rows else pd.DataFrame()
+
     async def get_idents_for_preferred(
             self,
             spectra_file_id: int,
@@ -228,63 +278,94 @@ class IdentificationMixin:
             min_lcrr: float | None = None,
             max_unconfirmed_ptms: int | None = None,
             max_fdr: float | None = None,
+            criterion: str = 'ppm',
     ):
         """
         Special method for identification processing — returns candidates for
         preferred identification selection with pre-applied quality filters.
 
+        The identification row is LEFT JOINed to ``peptide_match`` restricted to
+        ``correction = 'denovo'`` rows only (substitution candidates and
+        ``correction = 'ilc'`` rows are excluded by the JOIN, so they never
+        contribute a de novo branch to the OR-based filters).
+
+        Each metric filter uses OR-logic: a row passes when either the raw
+        identification value satisfies the threshold OR a de novo-corrected
+        match of that identification satisfies it.  Two ``eff_*`` columns
+        carry the "effective" value used downstream for sorting/collapsing:
+
+        - ``eff_abs_ppm``             — ``abs(m.matched_ppm)`` when a de novo
+                                        match exists, otherwise ``abs(i.ppm)``.
+        - ``eff_intensity_coverage``   — ``m.matched_coverage_percent`` when a
+                                        de novo match exists, otherwise
+                                        ``i.intensity_coverage``.
+
+        Because the LEFT JOIN on ``peptide_match`` may yield several rows per
+        identification (different proteins sharing the same de novo-corrected
+        match), this method collapses them to one row per ``i.id`` via
+        :meth:`_collapse_preferred_rows`, keeping the best row per the
+        ``criterion`` argument.
+
         Args:
             spectra_file_id: spectre_file.id to filter by
             tool_id: tool.id to filter by
             min_score: minimum identification score
-            max_abs_ppm: maximum absolute PPM error
-            intensity_coverage: minimum intensity coverage (%)
+            max_abs_ppm: maximum absolute PPM error (applied to raw ``i.ppm``
+                         and, via the OR branch, to de novo ``m.matched_ppm``)
+            intensity_coverage: minimum intensity coverage (%) (raw or de novo)
             spectre_peaks_count: minimum number of peaks in spectrum
-            ions_matched: minimum matched ions count
-            top_peaks_covered: minimum top-10 peaks covered count
+            ions_matched: minimum matched ions count (raw or de novo)
+            top_peaks_covered: minimum top-10 peaks covered count (raw or de novo)
             canonical_length: (min_len, max_len) tuple for canonical sequence length
             min_quality: minimum identification quality (0..1). When provided,
-                         only identifications with quality >= min_quality are
-                         returned; NULL-quality rows are excluded. When None,
-                         no quality filter is applied.
-            min_lcrr: minimum lcrr value (0..1). When provided, only
-                      identifications with lcrr >= min_lcrr are returned;
-                      NULL-lcrr rows are excluded. When None, no lcrr filter
-                      is applied.
-            max_unconfirmed_ptms: maximum allowed unconfirmed PTMs count. When
-                         provided, only identifications with unconfirmed_ptms <=
-                         max_unconfirmed_ptms are returned; NULL-unconfirmed_ptms
-                         rows are excluded. When None, no filter is applied.
+                         a row passes if ``i.quality >= min_quality`` OR a de
+                         novo match has ``m.quality >= min_quality``; NULL
+                         values on a given branch are skipped on that branch.
+            min_lcrr: minimum lcrr value (0..1). Same OR-logic as ``min_quality``
+                      with ``i.lcrr`` / ``m.lcrr``.
+            max_unconfirmed_ptms: maximum allowed unconfirmed PTMs count. Same
+                         OR-logic with ``i.unconfirmed_ptms`` /
+                         ``m.unconfirmed_ptms``.
             max_fdr: maximum FDR threshold. When provided, identifications with
                      fdr <= max_fdr OR fdr IS NULL are returned. When None,
                      no FDR filter is applied.
+            criterion: collapse criterion for multiple de novo matches of the
+                       same identification — ``'ppm'`` keeps the row with the
+                       lowest ``eff_abs_ppm``, ``'intensity'`` keeps the row
+                       with the highest ``eff_intensity_coverage``. Any other
+                       value raises ``ValueError``.
+
+        Returns:
+            DataFrame with one row per identification id, including the
+            ``eff_abs_ppm`` and ``eff_intensity_coverage`` columns.
         """
+        if criterion not in ('ppm', 'intensity'):
+            raise ValueError(
+                f"Invalid criterion {criterion!r}; expected 'ppm' or 'intensity'."
+            )
+
         query = """
             SELECT
-                i.id, i.spectre_id, i.tool_id, i.ppm, i.intensity_coverage, i.score, i.lcrr, i.unconfirmed_ptms, i.fdr,
+                i.id, i.spectre_id, i.tool_id, i.score, i.fdr,
                 s.spectre_file_id,
-                m.matched_ppm, m.matched_coverage_percent
+                CASE WHEN m.matched_ppm IS NOT NULL THEN abs(m.matched_ppm) ELSE abs(i.ppm) END AS eff_abs_ppm,
+                CASE WHEN m.matched_coverage_percent IS NOT NULL THEN m.matched_coverage_percent ELSE i.intensity_coverage END AS eff_intensity_coverage,
+                i.ppm, i.intensity_coverage, i.lcrr, i.unconfirmed_ptms
             FROM identification i
             LEFT JOIN spectre s ON i.spectre_id = s.id
-            LEFT JOIN (
-                SELECT
-                    identification_id,
-                    min(abs(matched_ppm)) AS matched_ppm,
-                    min(matched_coverage_percent) AS matched_coverage_percent
-                FROM peptide_match
-                GROUP BY identification_id
-            ) m ON i.id = m.identification_id
+            LEFT JOIN peptide_match m
+                   ON m.identification_id = i.id AND m.correction = 'denovo'
             WHERE
                 s.spectre_file_id = ? AND
                 i.tool_id = ? AND
                 i.score >= ? AND
-                abs(i.ppm) <= ? AND
-                i.intensity_coverage >= ? AND
+                (abs(i.ppm) <= ? OR (m.correction = 'denovo' AND abs(m.matched_ppm) <= ?)) AND
+                (i.intensity_coverage >= ? OR (m.correction = 'denovo' AND m.matched_coverage_percent >= ?)) AND
                 length(i.canonical_sequence) >= ? AND
                 length(i.canonical_sequence) <= ? AND
                 s.peaks_count >= ? AND
-                i.ions_matched >= ? AND
-                i.top_peaks_covered >= ?
+                (i.ions_matched >= ? OR (m.correction = 'denovo' AND m.matched_peaks >= ?)) AND
+                (i.top_peaks_covered >= ? OR (m.correction = 'denovo' AND m.matched_top_peaks >= ?))
         """
 
         params = [
@@ -292,37 +373,52 @@ class IdentificationMixin:
             int(tool_id),
             float(min_score),
             float(max_abs_ppm),
+            float(max_abs_ppm),
+            float(intensity_coverage),
             float(intensity_coverage),
             int(canonical_length[0]),
             int(canonical_length[1]),
             int(spectre_peaks_count),
             int(ions_matched),
+            int(ions_matched),
+            int(top_peaks_covered),
             int(top_peaks_covered),
         ]
 
         if min_quality is not None:
-            query += " AND i.quality IS NOT NULL AND i.quality >= ?"
+            query += (" AND ((i.quality IS NOT NULL AND i.quality >= ?) "
+                      "OR (m.correction = 'denovo' AND m.quality IS NOT NULL AND m.quality >= ?))")
+            params.append(float(min_quality))
             params.append(float(min_quality))
 
         if min_lcrr is not None:
-            query += " AND i.lcrr IS NOT NULL AND i.lcrr >= ?"
+            query += (" AND ((i.lcrr IS NOT NULL AND i.lcrr >= ?) "
+                      "OR (m.correction = 'denovo' AND m.lcrr IS NOT NULL AND m.lcrr >= ?))")
+            params.append(float(min_lcrr))
             params.append(float(min_lcrr))
 
         if max_unconfirmed_ptms is not None:
-            query += " AND i.unconfirmed_ptms IS NOT NULL AND i.unconfirmed_ptms <= ?"
+            query += (" AND ((i.unconfirmed_ptms IS NOT NULL AND i.unconfirmed_ptms <= ?) "
+                      "OR (m.correction = 'denovo' AND m.unconfirmed_ptms IS NOT NULL "
+                      "AND m.unconfirmed_ptms <= ?))")
+            params.append(int(max_unconfirmed_ptms))
             params.append(int(max_unconfirmed_ptms))
 
         if max_fdr is not None:
             query += " AND (i.fdr IS NULL OR i.fdr <= ?)"
             params.append(float(max_fdr))
 
+        query += " ORDER BY i.id"
+
         rows = await self._fetchall(query, tuple(params))
-        return pd.DataFrame(rows) if rows else pd.DataFrame()
+        df = pd.DataFrame(rows) if rows else pd.DataFrame()
+        return self._collapse_preferred_rows(df, criterion)
 
     async def get_all_idents_for_preferred(
             self,
             spectra_file_id: int,
             tool_id: int,
+            criterion: str = 'ppm',
     ):
         """
         Return ALL identifications for a spectra file + tool without any quality
@@ -330,35 +426,65 @@ class IdentificationMixin:
         identification from this tool is a candidate for preferred selection
         regardless of PPM, score, coverage, length, etc.
 
+        The LEFT JOIN on ``peptide_match`` is restricted to
+        ``correction = 'denovo'`` rows, so substitution candidates and
+        ``correction = 'ilc'`` rows never contribute an extra row here.
+        Multiple de novo matches of the same identification (different
+        proteins) are collapsed to one row per ``i.id`` by
+        :meth:`_collapse_preferred_rows` using ``criterion``.
+
         Returns the same columns as ``get_idents_for_preferred`` so the two
         DataFrames can be concatenated safely downstream.
 
         Args:
             spectra_file_id: spectre_file.id to filter by
             tool_id: tool.id to filter by
+            criterion: collapse criterion — ``'ppm'`` (lowest ``eff_abs_ppm``)
+                       or ``'intensity'`` (highest ``eff_intensity_coverage``).
+                       Any other value raises ``ValueError``.
         """
+        if criterion not in ('ppm', 'intensity'):
+            raise ValueError(
+                f"Invalid criterion {criterion!r}; expected 'ppm' or 'intensity'."
+            )
+
         query = """
             SELECT
-                i.id, i.spectre_id, i.tool_id, i.ppm, i.intensity_coverage, i.score, i.lcrr, i.unconfirmed_ptms, i.fdr,
+                i.id, i.spectre_id, i.tool_id, i.score, i.fdr,
                 s.spectre_file_id,
-                m.matched_ppm, m.matched_coverage_percent
+                CASE WHEN m.matched_ppm IS NOT NULL THEN abs(m.matched_ppm) ELSE abs(i.ppm) END AS eff_abs_ppm,
+                CASE WHEN m.matched_coverage_percent IS NOT NULL THEN m.matched_coverage_percent ELSE i.intensity_coverage END AS eff_intensity_coverage,
+                i.ppm, i.intensity_coverage, i.lcrr, i.unconfirmed_ptms
             FROM identification i
             LEFT JOIN spectre s ON i.spectre_id = s.id
-            LEFT JOIN (
-                SELECT
-                    identification_id,
-                    min(abs(matched_ppm)) AS matched_ppm,
-                    min(matched_coverage_percent) AS matched_coverage_percent
-                FROM peptide_match
-                GROUP BY identification_id
-            ) m ON i.id = m.identification_id
-            WHERE
-                s.spectre_file_id = ? AND
-                i.tool_id = ?
+            LEFT JOIN peptide_match m
+                   ON m.identification_id = i.id AND m.correction = 'denovo'
+            WHERE s.spectre_file_id = ? AND i.tool_id = ?
+            ORDER BY i.id
         """
         params = (int(spectra_file_id), int(tool_id))
         rows = await self._fetchall(query, params)
-        return pd.DataFrame(rows) if rows else pd.DataFrame()
+        df = pd.DataFrame(rows) if rows else pd.DataFrame()
+        return self._collapse_preferred_rows(df, criterion)
+
+    @staticmethod
+    def _collapse_preferred_rows(df: pd.DataFrame, criterion: str) -> pd.DataFrame:
+        """
+        Collapse multiple de novo match rows of the same identification into one.
+
+        A LEFT JOIN on peptide_match may yield several rows per identification
+        (different proteins). Sort by the effective criterion value and keep
+        the best row per identification id:
+        - 'ppm'       -> lowest eff_abs_ppm (NULLs last)
+        - 'intensity' -> highest eff_intensity_coverage (NULLs last)
+        """
+        if df.empty or 'id' not in df.columns:
+            return df
+        if criterion == 'ppm':
+            df = df.sort_values(['id', 'eff_abs_ppm'], ascending=[True, True], na_position='last')
+        else:
+            df = df.sort_values(['id', 'eff_intensity_coverage'], ascending=[True, False], na_position='last')
+        return df.drop_duplicates(subset=['id'], keep='first').reset_index(drop=True)
 
     async def update_identification_coverage(
         self,
@@ -544,10 +670,26 @@ class IdentificationMixin:
             id, ppm, theor_mass, override_charge,
             intensity_coverage, ions_matched, ion_match_type, top_peaks_covered,
             source_sequence, isotope_offset, quality, lcrr, unconfirmed_ptms, override_pepmass, has_ptm
+
+        source_ppm handling:
+            ``source_ppm`` stores the previous ``ppm`` value the first time
+            ``ppm`` actually changes for a row. "Change" means the new ``ppm``
+            differs from the old one by more than 1e-9 (a new value of None
+            also counts as a change when the old ppm was not None). Once
+            ``source_ppm`` has been written it is preserved on subsequent calls,
+            so it always holds the *original* ppm captured before the first
+            recalculation. SQLite evaluates every RHS expression (including the
+            ``ppm`` referenced inside the CASE condition) against the OLD row,
+            which is what makes this "first change only" behaviour possible in
+            a single UPDATE.
         """
         query = """
             UPDATE identification
             SET
+                source_ppm = CASE
+                    WHEN source_ppm IS NULL AND ppm IS NOT NULL
+                         AND (? IS NULL OR abs(ppm - ?) > 1e-9)
+                    THEN ppm ELSE source_ppm END,
                 sequence = ?,
                 ppm = ?,
                 theor_mass = ?,
@@ -572,9 +714,13 @@ class IdentificationMixin:
             result_seq = data_row.get('sequence')
             source_sequence_value = src_seq if (src_seq and src_seq != result_seq) else None
 
+            new_ppm = data_row.get('ppm')
+
             params.append((
+                new_ppm,
+                new_ppm,
                 result_seq,
-                data_row.get('ppm'),
+                new_ppm,
                 data_row.get('theor_mass'),
                 data_row.get('override_charge'),
                 data_row.get('intensity_coverage'),
@@ -598,8 +744,10 @@ class IdentificationMixin:
         идентификаций проекта. Действия:
 
         - где source_sequence не пусто → sequence восстанавливается из source_sequence;
+        - ppm восстанавливается из source_ppm (исходное значение до первой
+          пересчёта), после чего source_ppm обнуляется (NULL);
         - обнуляются (NULL): intensity_coverage, ions_matched, ion_match_type,
-          top_peaks_covered, override_charge, isotope_offset, ppm, theor_mass,
+          top_peaks_covered, override_charge, isotope_offset, theor_mass,
           quality, lcrr, unconfirmed_ptms, override_pepmass, has_ptm, source_sequence;
         - is_preferred → 0.
 
@@ -615,7 +763,8 @@ class IdentificationMixin:
                 top_peaks_covered = NULL,
                 override_charge = NULL,
                 isotope_offset = NULL,
-                ppm = NULL,
+                ppm = source_ppm,
+                source_ppm = NULL,
                 theor_mass = NULL,
                 quality = NULL,
                 lcrr = NULL,
