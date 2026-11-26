@@ -195,7 +195,7 @@ class PlotMixin:
                     'gene': None,
                     'is_preferred': row['is_preferred'],
                     'ppm': row['ppm'],
-                    'score': row['score'],
+                    'score': round(row['score'], 2) if row['score'] is not None else None,
                     'intensity_coverage': row['intensity_coverage'],
                     'quality': row['quality'],
                     'lcrr': row['lcrr'],
@@ -205,32 +205,26 @@ class PlotMixin:
                 tool_seqs.add(tool_seq)
             if get_matched and row.get('protein_id', None) is not None and row['matched_sequence_modified'] != row['sequence']:
                 tool_seq_protein = f'{row["tool"]}:{row["matched_sequence_modified"]}'
-                if tool_seq_protein not in tool_seqs:
+                if tool_seq_protein not in tool_seqs and row['identity'] < 1.0:
                     tool_seqs.add(tool_seq_protein)
                     plots.append({
-                        'tool': row['tool'],
+                        'tool': f"{row['tool']} (match)",
                         'sequence': row['matched_sequence_modified'],
                         'protein_id': row['protein_id'],
                         'gene': row['gene'],
                         'is_preferred': row['is_preferred'],
                         'ppm': row['matched_ppm'] if row['matched_ppm'] is not None else row['ppm'],
-                        'score': row['score'],
+                        'score': None,
                         'intensity_coverage': (
-                            row['matched_coverage_percent']
-                            if row['matched_coverage_percent'] is not None
-                            else row['intensity_coverage']
+                            row['matched_coverage_percent'] if row['matched_coverage_percent'] is not None else row['coverage_percent']
                         ),
                         # Quality/LCRR are recalculated only for de novo-corrected
                         # matches; for exact (I/L) matches fall back to identification.
                         'quality': (
-                            row['matched_quality']
-                            if row['correction'] == 'denovo' and row['matched_quality'] is not None
-                            else (row['quality'] if row['correction'] != 'denovo' else None)
+                            row['matched_quality'] if row['matched_quality'] is not None else row['quality']
                         ),
                         'lcrr': (
-                            row['matched_lcrr']
-                            if row['correction'] == 'denovo' and row['matched_lcrr'] is not None
-                            else (row['lcrr'] if row['correction'] != 'denovo' else None)
+                            row['matched_lcrr'] if row['matched_lcrr'] is not None else row['lcrr']
                         ),
                         'matched': True,
                         'identity': row['identity']
