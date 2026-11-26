@@ -4,8 +4,9 @@ Per-row protein mapping worker (process-pool safe).
 Contains the CPU-bound part of the ``identity < 1.0`` branch of
 ``map_proteins`` (see ``protein_map.py``): recalculation of PPM and ion
 coverage for a BLAST partial match, application of Match Correction
-Criteria (ppm / lcrr / quality / intensity_coverage — strict improvement),
-and the optional AA-substitution fallback.
+Criteria (ppm / lcrr / quality / intensity_coverage — ALL selected criteria
+must be "not worse" than the identification), and the optional
+AA-substitution fallback.
 
 This module is fully self-contained:
 
@@ -103,38 +104,31 @@ def _check_correction_criteria(
     match_intensity_percent: float | None,
 ) -> bool:
     """
-    Return ``True`` if at least one of the selected criteria is satisfied,
-    i.e. the recalculated match is a *strict* improvement over the original
-    identification on that metric.
+    Return ``True`` if ALL selected criteria are satisfied, i.e. the
+    recalculated match is **not worse** than the original identification
+    on every selected metric (AND logic, non-strict comparison).
 
     All inputs are NaN/None-safe: ``_safe_float`` must have been applied to
     the values passed in, so that ``None`` (and not ``NaN``) is the only
     sentinel for "metric not available".
 
-    Improvement table (strict ``<`` / ``>``):
+    Comparison table ("not worse than"):
 
-    | Criterion           | Improvement                                          |
-    | -------------------- | ---------------------------------------------------- |
-    | ``'ppm'``              | ``abs(match_abs_ppm) < abs(ident_ppm)``; if           |
-    |                      | ``ident_ppm is None`` — any non-None ``match_abs_ppm``. |
-    | ``'lcrr'``             | ``match_lcrr > ident_lcrr``; if ``ident_lcrr is None`` |
-    |                      | — any non-None ``match_lcrr``.                        |
-    | ``'quality'``          | ``match_quality > ident_quality``; if                 |
-    |                      | ``ident_quality is None`` — any non-None             |
-    |                      | ``match_quality``.                                   |
-    | ``'intensity_coverage'`` | ``match_intensity_percent >                        |
-    |                      | ident_intensity_coverage``; if                       |
-    |                      | ``ident_intensity_coverage is None`` — any non-None  |
-    |                      | ``match_intensity_percent``.                         |
+    - ``'ppm'``: ``abs(match_abs_ppm) <= abs(ident_ppm)``
+    - ``'lcrr'``: ``match_lcrr >= ident_lcrr``
+    - ``'quality'``: ``match_quality >= ident_quality``
+    - ``'intensity_coverage'``:
+      ``match_intensity_percent >= ident_intensity_coverage``
 
     Rules:
 
     - Empty ``criteria`` → ``True`` (always accept).
+    - If the ``ident_*`` value for a criterion is ``None`` (metric not
+      calculated) — any non-None ``match_*`` value satisfies that criterion.
     - If the ``match_*`` value for a criterion is ``None`` — that criterion
-      cannot be satisfied.
-    - Unknown criterion strings (including the legacy ``'ions_matched'`` and
-      ``'top10_ions_matched'``) are silently ignored.
-    - Returns ``True`` as soon as at least one criterion is satisfied.
+      FAILS (and with AND logic the whole check fails).
+    - Unknown criterion strings (including the legacy ``'ions_matched'``
+      and ``'top10_ions_matched'``) are silently ignored.
     """
     if not criteria:
         # No criteria selected — always accept
@@ -143,40 +137,35 @@ def _check_correction_criteria(
     for c in criteria:
         if c == 'ppm':
             if match_abs_ppm is None:
-                continue
-            if ident_ppm is None:
-                return True
-            if abs(match_abs_ppm) < abs(ident_ppm):
-                return True
+                return False
+            if ident_ppm is not None and abs(match_abs_ppm) > abs(ident_ppm):
+                return False
 
         elif c == 'lcrr':
             if match_lcrr is None:
-                continue
-            if ident_lcrr is None:
-                return True
-            if match_lcrr > ident_lcrr:
-                return True
+                return False
+            if ident_lcrr is not None and match_lcrr < ident_lcrr:
+                return False
 
         elif c == 'quality':
             if match_quality is None:
-                continue
-            if ident_quality is None:
-                return True
-            if match_quality > ident_quality:
-                return True
+                return False
+            if ident_quality is not None and match_quality < ident_quality:
+                return False
 
         elif c == 'intensity_coverage':
             if match_intensity_percent is None:
-                continue
-            if ident_intensity_coverage is None:
-                return True
-            if match_intensity_percent > ident_intensity_coverage:
-                return True
+                return False
+            if (
+                ident_intensity_coverage is not None
+                and match_intensity_percent < ident_intensity_coverage
+            ):
+                return False
 
         # Unknown criteria (e.g. legacy 'ions_matched' / 'top10_ions_matched')
         # are silently ignored.
 
-    return False
+    return True
 
 
 def _ident_passes_tool_thresholds(row: dict, tool_params: dict) -> bool:
