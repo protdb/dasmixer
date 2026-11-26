@@ -120,10 +120,14 @@ def generate_spectrum_plot(
             - intensity: float - peak intensity
             - ion_type: str | None - matched ion type ('a', 'b', 'y', etc.)
             - label: str | None - annotation text (e.g., 'b5-H2O')
+            - is_precursor: bool - True for full-length (precursor) matches (optional; defaults to False if missing)
+            - display_label: str | None - annotation text ('P...' for precursor peaks, else same as label)
         font_size: Font size for axis labels and annotations
         
     Returns:
-        Plotly Figure object with spectrum plot(s)
+        Plotly Figure object with spectrum plot(s). Precursor peaks are
+        drawn with a black bar outline, a black 'P...' annotation and a
+        ' (Precursor peak)' suffix in the hover text.
         
     Example:
         >>> import pandas as pd
@@ -163,13 +167,15 @@ def generate_spectrum_plot(
     
     # Plot each spectrum
     for row_no, df, header in zip(range(1, num_plots + 1), data, headers):
-        # Add bars for each peak
+        # Add bars for each peak (invisible markers carry hover text)
+        is_prec = df.get('is_precursor', pd.Series(False, index=df.index)).fillna(False).astype(bool)
+        suffix = np.where(is_prec, ' (Precursor peak)', '')
         fig.add_trace(go.Scatter(
             x=df['mz'],
             y=df['intensity'],
-            customdata=np.stack((df['frag_seq'], df['label']), axis=-1),
+            customdata=np.stack((df['frag_seq'], df['label'], suffix), axis=-1),
             hovertemplate=(
-                "%{customdata[1]} %{customdata[0]}<br>M/z: %{x}, Int.: %{y}<extra></extra>"
+                "%{customdata[1]} %{customdata[0]}%{customdata[2]}<br>M/z: %{x}, Int.: %{y}<extra></extra>"
             ),
             marker = {'color': "rgba(0,0,0,0)"},
             mode='markers'
@@ -180,6 +186,10 @@ def generate_spectrum_plot(
                 color = get_ion_type_color(row['ion_type'])
             else:
                 color = 'lightgray'
+            # Precursor peaks get a black outline (never use bool(nan) — it is True).
+            is_prec_value = row.get('is_precursor')
+            is_prec = bool(is_prec_value) if pd.notna(is_prec_value) else False
+            line_color = 'black' if is_prec else color
             # Add bar trace
             fig.add_trace(
                 go.Bar(
@@ -187,7 +197,7 @@ def generate_spectrum_plot(
                     y=[row['intensity']],
                     marker={
                         'color': 'lightgray',
-                        'line': {'color': color, 'width': 2}
+                        'line': {'color': line_color, 'width': 2}
                     },
                     showlegend=False,
                     hovertext=None
@@ -200,14 +210,20 @@ def generate_spectrum_plot(
         # Add annotations for matched ions
         matched_ions = df[df['ion_type'].notna()]
         for _, row in matched_ions.iterrows():
+            # Precursor peaks use the 'P...' label in black; others use label + ion color.
+            is_prec_value = row.get('is_precursor')
+            is_prec = bool(is_prec_value) if pd.notna(is_prec_value) else False
+            display = row.get('display_label')
+            if not isinstance(display, str) or not display:
+                display = row.get('label', '')
             fig.add_annotation(
                 x=row['mz'],
                 y=row['intensity'],
-                text=row.get('label', ''),
+                text=display,
                 showarrow=False,
                 yshift=10,
                 font={
-                    'color': get_ion_type_color(row['ion_type']),
+                    'color': 'black' if is_prec else get_ion_type_color(row['ion_type']),
                     'size': font_size * 0.6  # Slightly smaller for annotations
                 },
                 row=row_no,

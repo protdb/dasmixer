@@ -45,6 +45,8 @@ The percentage of total fragment ion current in the experimental spectrum that i
 
 $$I_c = \frac{\sum i_{\text{frag}}}{\sum i_{\text{all}}} \times 100$$
 
+> **Note:** The precursor peak (a fragment ion that spans the entire peptide sequence) **is included** in Intensity Coverage.
+
 ### PPM Error
 
 The precursor mass error in parts per million (ppm), measuring the relative difference between the experimental precursor $m/z$ reported in the spectrum and the theoretical $m/z$ of the identified peptide sequence (accounting for PTMs and charge):
@@ -65,6 +67,8 @@ Here:
 
 **Peaks covered** (`ions_matched`) is the total number of experimental spectrum peaks matched to theoretical fragment ions. **Top peaks** (`top_peaks_covered`) counts how many of the 10 most intense peaks in the experimental spectrum are explained by theoretical fragments.
 
+> **Note:** The precursor peak is **excluded** from both of these metrics.
+
 ### Quality
 
 **Identification Quality** is an index measuring the completeness of backbone bond cleavage coverage across the selected ion series, based on:
@@ -82,6 +86,8 @@ Where:
 * $N_{\text{match}}$ is the number of unique backbone cleavage positions matched per ion series. Duplicate matches of the same fragment with different charge states or neutral losses (e.g., `y6`, `y6++`, and `y6-NH3`) are counted as a single matched fragment ion
 * $L$ is the amino acid length of the peptide sequence
 
+> **Note:** The precursor peak is **excluded** from the Quality calculation.
+
 ### Longest Consecutive Run Ratio (LCRR)
 
 **LCRR** measures the longest uninterrupted sequence of consecutive fragment ions of the same series found in the spectrum, normalized by the peptide length.
@@ -94,6 +100,8 @@ y2, y3, y3++, y4-NH3, y6, y7, y9, b2, b4, b5, b7
 
 In this case, the LCRR value is `0.3`, because the longest consecutive run has length 3 (`y2, y3, y4`) and the peptide length is 10. Variants such as `y3` and `y3++` are treated as a single cleavage position (just as in the Quality metric), and `y5` is missing, which breaks the run.
 
+> **Note:** The precursor peak is **excluded** from LCRR.
+
 ### Unconfirmed PTMs
 
 > **Note:** This metric is subject to further refinement in upcoming versions.
@@ -105,6 +113,8 @@ Because each fragment ion covers only a prefix or suffix of the precursor peptid
 $$\text{Unconfirmed} = \text{PTM}(\text{peptide}) - \max_{i}\left(\text{PTM}(\text{fragment}_i)\right)$$
 
 where $\text{fragment}_i$ is a matched fragment ion sequence, $\text{peptide}$ is the full precursor sequence, and $\text{PTM}(\cdot)$ counts the number of modifications in a ProForma sequence.
+
+> **Note:** A full-length (precursor) match spans the entire peptide and therefore confirms every PTM, so it **is included** in the Unconfirmed PTMs metric.
 
 ## Spectrum and Identification Correction
 

@@ -104,7 +104,7 @@ Once ready, the annotated spectrum is displayed directly below the table:
 
 ![Peptide plot displayed](img/peptide_plot_displayed.png){data-description="Annotated MS/MS fragmentation plot with b- and y-ion series highlighted in colour and peak labels."}
 
-Matched fragment ion series (*b*, *y*, etc.) are highlighted in distinct colors with peak labels (`b3`, `y7-H2O`, etc.), while unmatched experimental peaks are drawn in gray. If multiple identifications exist for the selected spectrum, DASMixer stacks subplots vertically — one panel per identification — so you can visually compare how competing sequences explain the same spectrum. Preferred identifications are marked with a star (`★`).
+Matched fragment ion series (*b*, *y*, etc.) are highlighted in distinct colors with peak labels (`b3`, `y7-H2O`, etc.), while unmatched experimental peaks are drawn in gray. Fragment ions that span the entire peptide sequence are drawn as **precursor peaks** with a black bar outline and a `P`-prefixed label (for example `P`, `P-H2O`, or `P+2`); hovering over such a peak appends `(Precursor peak)` to the tooltip. If multiple identifications exist for the selected spectrum, DASMixer stacks subplots vertically — one panel per identification — so you can visually compare how competing sequences explain the same spectrum. Preferred identifications are marked with a star (`★`).
 
 > **Plot sizing tip:** The inline preview image is scaled to fit your current DASMixer window width. To generate a wider image, maximize the application window and click the plot icon (or **Apply settings**) again. You can also change the global **Plot aspect ratio** in [Settings](configuration.md).
 

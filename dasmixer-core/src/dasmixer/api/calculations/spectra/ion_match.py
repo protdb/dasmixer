@@ -1,5 +1,5 @@
 """Ion matching functionality for peptide identification validation."""
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Literal
 
 import pandas as pd
@@ -40,6 +40,16 @@ def _get_matched_intensity_percentage(
     return matched_intensity / total_intensity
 
 
+def is_precursor_match(match: FragmentMatch, full_sequence: str) -> bool:
+    """True if the matched fragment covers the whole peptide sequence.
+
+    ``full_sequence`` must be the normalised ProForma string produced by
+    ``Fragmenter(sequence).annotation.serialize()`` *after* ``fragment()``
+    (labile modifications already popped).
+    """
+    return match.fragment.sequence == full_sequence
+
+
 @dataclass
 class IonMatchParameters:
     """
@@ -77,6 +87,8 @@ class MatchResult:
         parameters: Parameters used for this matching
         fragments: All theoretical fragments generated
         fragment_matches: Experimental peaks matched to theoretical fragments
+        precursor_matches: Matches whose fragment covers the whole peptide
+                           sequence (precursor peaks)
         intensity_percent: Percentage of total experimental intensity
                           that was matched to theoretical fragments
     """
@@ -91,6 +103,7 @@ class MatchResult:
     quality: float
     longest_consec_run_rate: float
     unconfirmed_ptms: int
+    precursor_matches: list[FragmentMatch] = field(default_factory=list)
 
 def match_predictions(
     params: IonMatchParameters,
@@ -150,13 +163,16 @@ def match_predictions(
 
     # Generate theoretical fragments
     logger.debug("match_predictions params=%s sequence=%s", params, sequence)
-    frags = Fragmenter(sequence).fragment(
+    fragmenter = Fragmenter(sequence)
+    frags = fragmenter.fragment(
         params.ions,
         params.charges,
         water_loss=params.water_loss,
         ammonia_loss=params.ammonia_loss,
     )
-    
+    # Normalised ProForma sequence *after* fragment() (labile mods popped).
+    full_sequence = fragmenter.annotation.serialize()
+
     # Match experimental peaks to theoretical fragments using PPM tolerance
     matches = get_fragment_matches(
         frags,
@@ -167,7 +183,11 @@ def match_predictions(
         mode=params.mode,
     )
 
-    ion_matches = {k: max(v) for k, v in get_match_coverage(matches).items()}
+    # Split off precursor (full-length) matches; metrics use the rest.
+    precursor_matches = [m for m in matches if is_precursor_match(m, full_sequence)]
+    metric_matches = [m for m in matches if not is_precursor_match(m, full_sequence)]
+
+    ion_matches = {k: max(v) for k, v in get_match_coverage(metric_matches).items()}
     max_matches = max(ion_matches.values()) if ion_matches else 0
     try:
         max_matches_type = next(k for k, v in ion_matches.items() if v == max_matches)
@@ -180,10 +200,10 @@ def match_predictions(
         top10_int = top_ints[9]
     except IndexError:
         top10_int = top_ints[-1]
-    top10_intensity_matches = len([x for x in matches if x.intensity >= top10_int])
+    top10_intensity_matches = len([x for x in metric_matches if x.intensity >= top10_int])
 
     quality = calculate_peptide_quality(
-        matches,
+        metric_matches,
         sequence,
         params.ions
     )
@@ -195,7 +215,7 @@ def match_predictions(
     )
 
     lcrr = calculate_longest_consec_run_ratio(
-        matches,
+        metric_matches,
         sequence
     )
 
@@ -216,7 +236,8 @@ def match_predictions(
         top_matched_ion_type=max_matches_type,
         quality=quality,
         longest_consec_run_rate=lcrr,
-        unconfirmed_ptms=unconfirmed_ptms
+        unconfirmed_ptms=unconfirmed_ptms,
+        precursor_matches=precursor_matches
     )
 
 
@@ -242,6 +263,8 @@ def get_matches_dataframe(
             - intensity: float - experimental intensity
             - ion_type: str | None - matched ion type (e.g., 'b', 'y', 'a')
             - label: str | None - formatted label for annotation (e.g., 'b5-H2O+2')
+            - is_precursor: bool - True if the matched fragment covers the whole peptide (precursor peak)
+            - display_label: str | None - annotation text ('P...' for precursor peaks, else same as label)
             - frag_seq: str | None - fragment sequence
             - theor_mz: float | None - theoretical m/z of matched fragment
             
@@ -268,10 +291,13 @@ def get_matches_dataframe(
         exp_df['label'] = None
         exp_df['frag_seq'] = None
         exp_df['theor_mz'] = None
+        exp_df['is_precursor'] = False
+        exp_df['display_label'] = None
         return exp_df
     
     # Build match data
     match_data = []
+    precursor_ids = {id(m) for m in match_result.precursor_matches}
     for match in match_result.fragment_matches:
         # Format charge
         charge_str = f'+{match.fragment.charge}' if match.fragment.charge > 1 else ''
@@ -289,14 +315,20 @@ def get_matches_dataframe(
             loss_label = '-H2O'
         else:
             loss_label = f'{loss_value:+.2f}'
-        
+
+        is_precursor = id(match) in precursor_ids
+        base_label = f'{match.fragment.ion_type}{ion_pos}{loss_label}{charge_str}'
+        display_label = f'P{loss_label}{charge_str}' if is_precursor else base_label
+
         match_data.append({
             'mz': match.mz,
             'ion_type': match.fragment.ion_type,
             'ion_pos': ion_pos,
-            'label': f'{match.fragment.ion_type}{ion_pos}{loss_label}{charge_str}',
+            'label': base_label,
             'frag_seq': match.fragment.sequence,
             'theor_mz': match.fragment.mz,
+            'is_precursor': is_precursor,
+            'display_label': display_label,
         })
     
     # Create matches DataFrame and merge with experimental data
@@ -307,5 +339,7 @@ def get_matches_dataframe(
         how='left',
         on='mz'
     )
-    
+
+    result['is_precursor'] = result['is_precursor'].fillna(False).astype(bool)
+
     return result

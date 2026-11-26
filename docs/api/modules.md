@@ -106,10 +106,11 @@ Parses FASTA files and returns a `pd.DataFrame` with columns: `id, fasta_name, s
 
 **`match_predictions(params, mz, intensity, charges, sequence)`** → `MatchResult`
 
-Uses `peptacular.fragmentation.Fragmenter` to generate theoretical fragments and `peptacular.score.get_fragment_matches` to match to experimental peaks.
+Uses `peptacular.fragmentation.Fragmenter` to generate theoretical fragments and `peptacular.score.get_fragment_matches` to match to experimental peaks. Precursor (full-length) matches are excluded from Quality, LCRR, `max_ion_matches`, and `top10_intensity_matches`, but are included in `intensity_percent` and `unconfirmed_ptms`.
 
 **`MatchResult`** fields:
 - `fragment_matches: list[FragmentMatch]`
+- `precursor_matches: list[FragmentMatch]` — matches whose fragment spans the whole peptide (precursor peaks)
 - `intensity_percent: float` — % of total intensity matched
 - `max_ion_matches: int` — max consecutive ions per type
 - `top10_intensity_matches: int` — matched peaks among top-10 by intensity
@@ -117,7 +118,7 @@ Uses `peptacular.fragmentation.Fragmenter` to generate theoretical fragments and
 
 **`get_matches_dataframe(match_result, mz, intensity)`** → `pd.DataFrame`
 
-Creates a DataFrame joining experimental spectrum with matched fragment annotations. Columns: `mz, intensity, ion_type, label, frag_seq, theor_mz`. Used by `plot_matches.py` for visualization.
+Creates a DataFrame joining experimental spectrum with matched fragment annotations. Columns: `mz, intensity, ion_type, label, is_precursor, display_label, frag_seq, theor_mz`. `is_precursor` (`bool`) marks precursor (full-length) matches; `display_label` is the annotation text (`P...` for precursor peaks, otherwise the same as `label`). Used by `plot_matches.py` for visualization.
 
 ### Identification Processor (`calculations/spectra/identification_processor.py`)
 

@@ -2,7 +2,11 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/dasmixer.iml" filepath="$PROJECT_DIR$/.idea/dasmixer.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/dasmixer-cli.iml" filepath="$PROJECT_DIR$/.idea/dasmixer-cli.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/dasmixer-core.iml" filepath="$PROJECT_DIR$/.idea/dasmixer-core.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/dasmixer-gui.iml" filepath="$PROJECT_DIR$/.idea/dasmixer-gui.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/dasmixer-workspace.iml" filepath="$PROJECT_DIR$/.idea/dasmixer-workspace.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/dasmixer@1.iml" filepath="$PROJECT_DIR$/.idea/dasmixer@1.iml" />
     </modules>
   </component>
 </project>

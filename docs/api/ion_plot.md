@@ -44,6 +44,11 @@ The plot is generated for one spectrum and **all of its identifications** — on
 subplot per identification, just like in the GUI. Preferred identifications are
 marked with a ★ in the subplot title.
 
+Fragment ions that span the entire peptide sequence are drawn as **precursor
+peaks** with a black bar outline and a `P`-prefixed label (for example `P`,
+`P-H2O`, or `P+2`); hovering over such a peak appends `(Precursor peak)` to the
+tooltip.
+
 ---
 
 ## Project Settings for Ion Matching
@@ -83,6 +88,10 @@ passes them into `go.Bar` / `go.Annotation` individually, three categories of
 | `df['mz']` / `df['intensity']` cells | `numpy.float64` | Not a `json.JSONEncoder` subclass by default |
 | Custom hover templates with array refs | numpy arrays in `customdata` | Become `{"type": "ndarray", ...}` blobs in plain `to_json()` |
 | `pd.Timestamp` values from spectrum metadata | `pd.Timestamp` | `datetime` subclass, serialised differently by stdlib vs. plotly |
+
+Since DASMixer 0.7.5a3 the hover `customdata` carries three elements per peak —
+`frag_seq`, `label`, and a `(Precursor peak)` suffix that is an empty string for
+non-precursor peaks (see the precursor-peak note in the Overview).
 
 There are two safe ways to handle this:
 
